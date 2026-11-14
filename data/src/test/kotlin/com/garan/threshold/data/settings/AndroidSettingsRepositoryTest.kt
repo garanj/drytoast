@@ -31,6 +31,7 @@ class AndroidSettingsRepositoryTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
+    private var currentBootCount: Int = 10
     private lateinit var repository: AndroidSettingsRepository
 
     private val chromeKey = ComponentKey("com.android.chrome", "com.google.android.apps.chrome.Main")
@@ -39,12 +40,17 @@ class AndroidSettingsRepositoryTest {
 
     @Before
     fun setUp() {
+        currentBootCount = 10
         val testFile = tmpFolder.newFile("test_settings.preferences_pb")
         val dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
             produceFile = { testFile },
         )
-        repository = AndroidSettingsRepository(dataStore, ioDispatcher = testDispatcher)
+        repository = AndroidSettingsRepository(
+            dataStore = dataStore,
+            ioDispatcher = testDispatcher,
+            bootCountProvider = { currentBootCount },
+        )
     }
 
     @Test
@@ -599,5 +605,102 @@ class AndroidSettingsRepositoryTest {
         assertThat(secondSnapshot.baseProfile.appAssignments).isSameInstanceAs(firstSnapshot.baseProfile.appAssignments)
         assertThat(secondSnapshot.baseProfile.quickActions).isSameInstanceAs(firstSnapshot.baseProfile.quickActions)
         assertThat(secondSnapshot.nfcLatches).isSameInstanceAs(firstSnapshot.nfcLatches)
+    }
+
+    @Test
+    fun requireRebootForSettingsChange_enablesImmediately_stagesSubsequentMutationsUntilReboot() =
+        runTest(testDispatcher) {
+            // 1. Enabling requireRebootForSettingsChange while OFF applies immediately to live
+            repository.updateGeneralSettings(
+                GeneralSettings(requireRebootForSettingsChange = true),
+            )
+            val afterEnable = repository.getSettings()
+            assertThat(afterEnable.general.requireRebootForSettingsChange).isTrue()
+            assertThat(afterEnable.hasPendingRebootChanges).isFalse()
+
+            // 2. Subsequent edits stage to stagedShadow without changing active live settings
+            repository.updateBaseProfile(
+                BaseProfileSettings(
+                    defaultFriction = FrictionChoice.DRAG_SORT,
+                    appAssignments = mapOf(socialKey to AppAssignment.Blocked),
+                ),
+            )
+            val whileStaged = repository.getSettings()
+            assertThat(whileStaged.hasPendingRebootChanges).isTrue()
+            // Live remains unchanged:
+            assertThat(whileStaged.baseProfile.defaultFriction).isEqualTo(FrictionChoice.TYPED_INTENTION)
+            assertThat(whileStaged.baseProfile.appAssignments).isEmpty()
+            // Editable snapshot reflects staged changes:
+            assertThat(whileStaged.editableSnapshot.baseProfile.defaultFriction).isEqualTo(FrictionChoice.DRAG_SORT)
+            assertThat(whileStaged.editableSnapshot.baseProfile.appAssignments[socialKey])
+                .isEqualTo(AppAssignment.Blocked)
+
+            // 3. Toggling requireRebootForSettingsChange OFF stages in shadow, and further edits STILL stage!
+            repository.updateGeneralSettings(
+                whileStaged.editableSnapshot.general.copy(
+                    requireRebootForSettingsChange = false,
+                    showUnlocks = false,
+                ),
+            )
+            val afterStagingDisable = repository.getSettings()
+            assertThat(afterStagingDisable.general.requireRebootForSettingsChange).isTrue()
+            assertThat(afterStagingDisable.general.showUnlocks).isTrue()
+            assertThat(afterStagingDisable.editableSnapshot.general.requireRebootForSettingsChange).isFalse()
+            assertThat(afterStagingDisable.editableSnapshot.general.showUnlocks).isFalse()
+
+            // 4. Explicit promotion on boot applies shadow to live and clears pending flag
+            val promoted = repository.promotePendingSettingsOnBoot()
+            assertThat(promoted).isTrue()
+            val afterBoot = repository.getSettings()
+            assertThat(afterBoot.hasPendingRebootChanges).isFalse()
+            assertThat(afterBoot.general.requireRebootForSettingsChange).isFalse()
+            assertThat(afterBoot.general.showUnlocks).isFalse()
+            assertThat(afterBoot.baseProfile.defaultFriction).isEqualTo(FrictionChoice.DRAG_SORT)
+            assertThat(afterBoot.baseProfile.appAssignments[socialKey]).isEqualTo(AppAssignment.Blocked)
+        }
+
+    @Test
+    fun requireRebootForSettingsChange_revertToLiveOrDiscardClearsPendingShadow() = runTest(testDispatcher) {
+        repository.updateGeneralSettings(GeneralSettings(requireRebootForSettingsChange = true))
+
+        // Stage a change to showUnlocks
+        repository.updateGeneralSettings(
+            GeneralSettings(requireRebootForSettingsChange = true, showUnlocks = false),
+        )
+        assertThat(repository.getSettings().hasPendingRebootChanges).isTrue()
+
+        // Changing it back to match live automatically clears stagedShadow
+        repository.updateGeneralSettings(
+            GeneralSettings(requireRebootForSettingsChange = true, showUnlocks = true),
+        )
+        assertThat(repository.getSettings().hasPendingRebootChanges).isFalse()
+        assertThat(repository.getSettings().stagedShadow).isNull()
+
+        // Stage another change and discardPendingChanges()
+        repository.updateGeneralSettings(
+            GeneralSettings(requireRebootForSettingsChange = true, showRest = false),
+        )
+        assertThat(repository.getSettings().hasPendingRebootChanges).isTrue()
+        repository.discardPendingChanges()
+        assertThat(repository.getSettings().hasPendingRebootChanges).isFalse()
+        assertThat(repository.getSettings().editableSnapshot.general.showRest).isTrue()
+    }
+
+    @Test
+    fun requireRebootForSettingsChange_bootCountIncrementAutoPromotesShadow() = runTest(testDispatcher) {
+        repository.updateGeneralSettings(GeneralSettings(requireRebootForSettingsChange = true))
+        repository.updateGeneralSettings(
+            GeneralSettings(requireRebootForSettingsChange = true, showUnlocks = false),
+        )
+
+        // Same boot count (e.g., Force Stop and restart without reboot) -> still staged
+        assertThat(repository.getSettings().hasPendingRebootChanges).isTrue()
+        assertThat(repository.getSettings().general.showUnlocks).isTrue()
+
+        // Kernel boot count increments -> automatically promoted on read
+        currentBootCount = 11
+        val afterRebootRead = repository.getSettings()
+        assertThat(afterRebootRead.hasPendingRebootChanges).isFalse()
+        assertThat(afterRebootRead.general.showUnlocks).isFalse()
     }
 }

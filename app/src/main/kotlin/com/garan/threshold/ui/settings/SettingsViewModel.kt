@@ -32,6 +32,8 @@ data class SettingsUiState(
     val savedTriggers: ImmutableList<SavedTrigger> = persistentListOf(),
     val availableApps: ImmutableList<InstalledApp> = persistentListOf(),
     val isLoading: Boolean = true,
+    val hasPendingRebootChanges: Boolean = false,
+    val isRequireRebootActiveOnLive: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -52,12 +54,15 @@ class SettingsViewModel(
     init {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.observeSettings().collect { settings ->
+                val editable = settings.editableSnapshot
                 _uiState.update { current ->
                     current.copy(
-                        general = settings.general,
-                        baseProfile = settings.baseProfile,
-                        customProfiles = settings.customProfiles.toImmutableList(),
-                        savedTriggers = settings.savedTriggers.toImmutableList(),
+                        general = editable.general,
+                        baseProfile = editable.baseProfile,
+                        customProfiles = editable.customProfiles.toImmutableList(),
+                        savedTriggers = editable.savedTriggers.toImmutableList(),
+                        hasPendingRebootChanges = settings.hasPendingRebootChanges,
+                        isRequireRebootActiveOnLive = settings.general.requireRebootForSettingsChange,
                     )
                 }
             }
@@ -105,35 +110,48 @@ class SettingsViewModel(
 
     fun updateShowUnlocks(show: Boolean) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().general
+            val current = settingsRepository.getSettings().editableSnapshot.general
             settingsRepository.updateGeneralSettings(current.copy(showUnlocks = show))
         }
     }
 
     fun updateShowRest(show: Boolean) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().general
+            val current = settingsRepository.getSettings().editableSnapshot.general
             settingsRepository.updateGeneralSettings(current.copy(showRest = show))
         }
     }
 
     fun updateRequireFullTyping(requireFull: Boolean) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().general
+            val current = settingsRepository.getSettings().editableSnapshot.general
             settingsRepository.updateGeneralSettings(current.copy(requireFullTypingOfGuardedApps = requireFull))
+        }
+    }
+
+    fun updateRequireRebootForSettingsChange(requireReboot: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(current.copy(requireRebootForSettingsChange = requireReboot))
+        }
+    }
+
+    fun discardPendingChanges() {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.discardPendingChanges()
         }
     }
 
     fun updateDefaultFriction(friction: FrictionChoice) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().baseProfile
+            val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             settingsRepository.updateBaseProfile(current.copy(defaultFriction = friction))
         }
     }
 
     fun addQuickAction(component: ComponentKey) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().baseProfile
+            val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             if (current.quickActions.size < BaseProfileSettings.MAX_QUICK_ACTIONS &&
                 component !in current.quickActions
             ) {
@@ -146,7 +164,7 @@ class SettingsViewModel(
 
     fun removeQuickAction(component: ComponentKey) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().baseProfile
+            val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             settingsRepository.updateBaseProfile(
                 current.copy(quickActions = current.quickActions - component),
             )
@@ -155,7 +173,7 @@ class SettingsViewModel(
 
     fun reorderQuickActions(reordered: List<ComponentKey>) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().baseProfile
+            val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             if (reordered.size <= BaseProfileSettings.MAX_QUICK_ACTIONS) {
                 settingsRepository.updateBaseProfile(current.copy(quickActions = reordered))
             }
@@ -164,7 +182,7 @@ class SettingsViewModel(
 
     fun saveAppAssignments(assignments: Map<ComponentKey, AppAssignment>) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().baseProfile
+            val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             settingsRepository.updateBaseProfile(current.copy(appAssignments = assignments))
         }
     }
@@ -192,7 +210,7 @@ class SettingsViewModel(
 
     fun saveCustomProfileAppAssignments(profileId: String, assignments: Map<ComponentKey, AppAssignment>) {
         viewModelScope.launch(ioDispatcher) {
-            val current = settingsRepository.getSettings().customProfiles
+            val current = settingsRepository.getSettings().editableSnapshot.customProfiles
             val target = current.firstOrNull { it.id == profileId } ?: return@launch
             val updated = target.copy(appAssignments = assignments)
             settingsRepository.saveCustomProfile(updated)

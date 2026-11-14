@@ -232,4 +232,60 @@ class SettingsViewModelTest {
         assertThat(viewModel.uiState.value.availableApps).hasSize(3)
         assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
+
+    @Test
+    fun requireRebootForSettingsChange_stagesMultiStepEditsAndSupportsDiscardAndBootPromotion() =
+        runTest(testDispatcher) {
+            advanceUntilIdle()
+
+            // Enable requireRebootForSettingsChange -> takes effect immediately on live
+            viewModel.updateRequireRebootForSettingsChange(true)
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.general.requireRebootForSettingsChange).isTrue()
+            assertThat(viewModel.uiState.value.isRequireRebootActiveOnLive).isTrue()
+            assertThat(viewModel.uiState.value.hasPendingRebootChanges).isFalse()
+
+            // Perform multi-step edits: toggle showUnlocks AND add a quick action AND stage disabling requireReboot
+            viewModel.updateShowUnlocks(false)
+            advanceUntilIdle()
+            viewModel.addQuickAction(chromeComponent)
+            advanceUntilIdle()
+            viewModel.updateRequireRebootForSettingsChange(false)
+            advanceUntilIdle()
+
+            val stagedUi = viewModel.uiState.value
+            assertThat(stagedUi.hasPendingRebootChanges).isTrue()
+            assertThat(stagedUi.isRequireRebootActiveOnLive).isTrue()
+            assertThat(stagedUi.general.showUnlocks).isFalse()
+            assertThat(stagedUi.general.requireRebootForSettingsChange).isFalse()
+            assertThat(stagedUi.baseProfile.quickActions).containsExactly(chromeComponent)
+
+            // Active live settings in repository remain untouched until reboot
+            val liveSettings = fakeRepository.getSettings()
+            assertThat(liveSettings.general.showUnlocks).isTrue()
+            assertThat(liveSettings.general.requireRebootForSettingsChange).isTrue()
+            assertThat(liveSettings.baseProfile.quickActions).isEmpty()
+
+            // Discard pending changes -> UI reverts to active live settings
+            viewModel.discardPendingChanges()
+            advanceUntilIdle()
+            val afterDiscard = viewModel.uiState.value
+            assertThat(afterDiscard.hasPendingRebootChanges).isFalse()
+            assertThat(afterDiscard.general.showUnlocks).isTrue()
+            assertThat(afterDiscard.general.requireRebootForSettingsChange).isTrue()
+            assertThat(afterDiscard.baseProfile.quickActions).isEmpty()
+
+            // Stage again and promote on boot
+            viewModel.updateShowRest(false)
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.hasPendingRebootChanges).isTrue()
+            fakeRepository.promotePendingSettingsOnBoot()
+            advanceUntilIdle()
+
+            val afterBoot = viewModel.uiState.value
+            assertThat(afterBoot.hasPendingRebootChanges).isFalse()
+            assertThat(afterBoot.general.showRest).isFalse()
+            assertThat(fakeRepository.getSettings().general.showRest).isFalse()
+        }
 }

@@ -1,11 +1,14 @@
 package com.garan.threshold.data.settings
 
 import android.content.Context
+import android.provider.Settings
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.garan.threshold.core.model.AppAssignment
@@ -25,6 +28,7 @@ import com.garan.threshold.core.model.NfcTriggerMode
 import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.model.SavedTrigger
 import com.garan.threshold.core.model.ScheduleTrigger
+import com.garan.threshold.core.model.StagedSettingsSnapshot
 import com.garan.threshold.core.model.ThresholdSettings
 import com.garan.threshold.core.model.TimeOfDay
 import com.garan.threshold.core.model.TimeWindow
@@ -50,17 +54,25 @@ val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(na
 class AndroidSettingsRepository(
     private val dataStore: DataStore<Preferences>,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val bootCountProvider: () -> Int? = { null },
 ) : SettingsRepository {
 
     constructor(context: Context, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(
         dataStore = (context.applicationContext ?: context).settingsDataStore,
         ioDispatcher = ioDispatcher,
+        bootCountProvider = {
+            val appContext = context.applicationContext ?: context
+            runCatching {
+                Settings.Global.getInt(appContext.contentResolver, Settings.Global.BOOT_COUNT)
+            }.getOrNull()
+        },
     )
 
     private object Keys {
         val SHOW_UNLOCKS = booleanPreferencesKey("show_unlocks")
         val SHOW_REST = booleanPreferencesKey("show_rest")
         val REQUIRE_FULL_TYPING = booleanPreferencesKey("require_full_typing")
+        val REQUIRE_REBOOT = booleanPreferencesKey("require_reboot_for_settings_change")
         val HAS_SEEN_FIRST_RUN_HINT = booleanPreferencesKey("has_seen_first_run_hint")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
@@ -69,6 +81,8 @@ class AndroidSettingsRepository(
         val SAVED_TRIGGERS = stringPreferencesKey("saved_triggers")
         val NFC_LATCHES = stringPreferencesKey("nfc_latches")
         val NFC_DAILY_USAGE = stringPreferencesKey("nfc_daily_usage")
+        val STAGED_SHADOW = stringPreferencesKey("staged_shadow_settings")
+        val STAGED_AT_BOOT_COUNT = intPreferencesKey("staged_at_boot_count")
     }
 
     private val cacheLock = Any()
@@ -84,6 +98,8 @@ class AndroidSettingsRepository(
     private var cachedNfcLatches: Map<String, NfcLatchState> = emptyMap()
     private var cachedNfcDailyUsageRaw: String? = null
     private var cachedNfcDailyUsage: Map<String, NfcDailyUsage> = emptyMap()
+    private var cachedStagedShadowRaw: String? = null
+    private var cachedStagedShadow: StagedSettingsSnapshot? = null
 
     override fun observeSettings(): Flow<ThresholdSettings> = dataStore.data
         .catch { exception ->
@@ -103,10 +119,10 @@ class AndroidSettingsRepository(
     override suspend fun updateGeneralSettings(general: GeneralSettings) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                prefs[Keys.SHOW_UNLOCKS] = general.showUnlocks
-                prefs[Keys.SHOW_REST] = general.showRest
-                prefs[Keys.REQUIRE_FULL_TYPING] = general.requireFullTypingOfGuardedApps
                 prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] = general.hasSeenFirstRunHint
+                mutateConfiguration(prefs) { snapshot ->
+                    snapshot.copy(general = general.copy(hasSeenFirstRunHint = snapshot.general.hasSeenFirstRunHint))
+                }
             }
         }
     }
@@ -114,9 +130,9 @@ class AndroidSettingsRepository(
     override suspend fun updateBaseProfile(baseProfile: BaseProfileSettings) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                prefs[Keys.DEFAULT_FRICTION] = baseProfile.defaultFriction.name
-                prefs[Keys.QUICK_ACTIONS] = baseProfile.quickActions.joinToString(";") { it.flattenToString() }
-                prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(baseProfile.appAssignments)
+                mutateConfiguration(prefs) { snapshot ->
+                    snapshot.copy(baseProfile = baseProfile)
+                }
             }
         }
     }
@@ -132,7 +148,9 @@ class AndroidSettingsRepository(
     override suspend fun updateCustomProfiles(profiles: List<CustomProfile>) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(profiles)
+                mutateConfiguration(prefs) { snapshot ->
+                    snapshot.copy(customProfiles = profiles)
+                }
             }
         }
     }
@@ -140,14 +158,16 @@ class AndroidSettingsRepository(
     override suspend fun saveCustomProfile(profile: CustomProfile) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                val current = deserializeCustomProfiles(prefs[Keys.CUSTOM_PROFILES].orEmpty())
-                val existingIndex = current.indexOfFirst { it.id == profile.id }
-                val updated = if (existingIndex >= 0) {
-                    current.toMutableList().apply { set(existingIndex, profile) }
-                } else {
-                    current + profile
+                mutateConfiguration(prefs) { snapshot ->
+                    val current = snapshot.customProfiles
+                    val existingIndex = current.indexOfFirst { it.id == profile.id }
+                    val updated = if (existingIndex >= 0) {
+                        current.toMutableList().apply { set(existingIndex, profile) }
+                    } else {
+                        current + profile
+                    }
+                    snapshot.copy(customProfiles = updated)
                 }
-                prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(updated)
             }
         }
     }
@@ -155,9 +175,9 @@ class AndroidSettingsRepository(
     override suspend fun deleteCustomProfile(profileId: String) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                val current = deserializeCustomProfiles(prefs[Keys.CUSTOM_PROFILES].orEmpty())
-                val updated = current.filter { it.id != profileId }
-                prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(updated)
+                mutateConfiguration(prefs) { snapshot ->
+                    snapshot.copy(customProfiles = snapshot.customProfiles.filter { it.id != profileId })
+                }
             }
         }
     }
@@ -165,28 +185,15 @@ class AndroidSettingsRepository(
     override suspend fun saveTrigger(trigger: SavedTrigger) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                val currentSettings = mapToSettings(prefs)
-                val current = currentSettings.savedTriggers
-                val existingIndex = current.indexOfFirst { it.id == trigger.id }
-                val updated = if (existingIndex >= 0) {
-                    current.toMutableList().apply { set(existingIndex, trigger) }
-                } else {
-                    current + trigger
-                }
-                prefs[Keys.SAVED_TRIGGERS] = serializeSavedTriggers(updated)
-
-                val existingLatch = currentSettings.nfcLatches[trigger.id]
-                if (existingLatch != null) {
-                    val updatedLatches = LinkedHashMap(currentSettings.nfcLatches)
-                    val reconciled = (trigger.trigger as? ProfileTrigger.Nfc)
-                        ?.nfc
-                        ?.let { existingLatch.reconcileWith(it, nowEpochMillis = 0L) }
-                    if (reconciled == null) {
-                        updatedLatches.remove(trigger.id)
+                mutateConfiguration(prefs) { snapshot ->
+                    val current = snapshot.savedTriggers
+                    val existingIndex = current.indexOfFirst { it.id == trigger.id }
+                    val updated = if (existingIndex >= 0) {
+                        current.toMutableList().apply { set(existingIndex, trigger) }
                     } else {
-                        updatedLatches[trigger.id] = reconciled
+                        current + trigger
                     }
-                    prefs[Keys.NFC_LATCHES] = serializeNfcLatches(updatedLatches)
+                    snapshot.copy(savedTriggers = updated)
                 }
             }
         }
@@ -195,25 +202,116 @@ class AndroidSettingsRepository(
     override suspend fun deleteTrigger(triggerId: String) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
-                val currentSettings = mapToSettings(prefs)
-                val updatedTriggers = currentSettings.savedTriggers.filter { it.id != triggerId }
-                val updatedProfiles = currentSettings.customProfiles.map { profile ->
-                    if (triggerId in profile.referencedTriggerIds) {
-                        profile.withoutTrigger(triggerId)
-                    } else {
-                        profile
+                mutateConfiguration(prefs) { snapshot ->
+                    val updatedTriggers = snapshot.savedTriggers.filter { it.id != triggerId }
+                    val updatedProfiles = snapshot.customProfiles.map { profile ->
+                        if (triggerId in profile.referencedTriggerIds) {
+                            profile.withoutTrigger(triggerId)
+                        } else {
+                            profile
+                        }
                     }
+                    snapshot.copy(
+                        savedTriggers = updatedTriggers,
+                        customProfiles = updatedProfiles,
+                    )
                 }
-                prefs[Keys.SAVED_TRIGGERS] = serializeSavedTriggers(updatedTriggers)
-                prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(updatedProfiles)
-                if (triggerId in currentSettings.nfcLatches) {
-                    val updatedLatches = currentSettings.nfcLatches - triggerId
-                    prefs[Keys.NFC_LATCHES] = serializeNfcLatches(updatedLatches)
+            }
+        }
+    }
+
+    override suspend fun discardPendingChanges() {
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                prefs.remove(Keys.STAGED_SHADOW)
+                prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+            }
+        }
+    }
+
+    private fun promoteStagedShadowInPrefs(prefs: MutablePreferences): Boolean {
+        val rawShadow = prefs[Keys.STAGED_SHADOW].orEmpty()
+        if (rawShadow.isBlank()) return false
+        val currentLive = mapToLiveSettingsOnly(prefs)
+        val shadowSnapshot = deserializeStagedSnapshot(rawShadow, currentLive.general.hasSeenFirstRunHint)
+        if (shadowSnapshot != null) {
+            writeLiveSnapshot(prefs, currentLive, shadowSnapshot)
+        }
+        prefs.remove(Keys.STAGED_SHADOW)
+        prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+        return shadowSnapshot != null
+    }
+
+    override suspend fun promotePendingSettingsOnBoot(): Boolean = withContext(ioDispatcher) {
+        var promoted = false
+        dataStore.edit { prefs ->
+            promoted = promoteStagedShadowInPrefs(prefs)
+        }
+        promoted
+    }
+
+    private fun mutateConfiguration(
+        prefs: MutablePreferences,
+        transform: (StagedSettingsSnapshot) -> StagedSettingsSnapshot,
+    ) {
+        val stagedAtBootCount = prefs[Keys.STAGED_AT_BOOT_COUNT]
+        val currentBootCount = bootCountProvider()
+        if (stagedAtBootCount != null && currentBootCount != null && currentBootCount > stagedAtBootCount) {
+            promoteStagedShadowInPrefs(prefs)
+        }
+
+        val currentSettings = mapToSettings(prefs)
+        if (!currentSettings.general.requireRebootForSettingsChange) {
+            val updated = transform(currentSettings.toStagedSnapshot())
+            writeLiveSnapshot(prefs, currentSettings, updated)
+            prefs.remove(Keys.STAGED_SHADOW)
+            prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+        } else {
+            val baseEditable = currentSettings.editableSnapshot
+            val updatedShadow = transform(baseEditable)
+            if (currentSettings.hasSameConfigurationAs(updatedShadow)) {
+                prefs.remove(Keys.STAGED_SHADOW)
+                prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+            } else {
+                prefs[Keys.STAGED_SHADOW] = serializeStagedSnapshot(updatedShadow)
+                if (!prefs.contains(Keys.STAGED_AT_BOOT_COUNT)) {
+                    currentBootCount?.let { prefs[Keys.STAGED_AT_BOOT_COUNT] = it }
                 }
-                if (triggerId in currentSettings.nfcDailyUsage) {
-                    val updatedUsage = currentSettings.nfcDailyUsage - triggerId
-                    prefs[Keys.NFC_DAILY_USAGE] = serializeNfcDailyUsage(updatedUsage)
-                }
+            }
+        }
+    }
+
+    private fun writeLiveSnapshot(
+        prefs: MutablePreferences,
+        previousLive: ThresholdSettings,
+        updated: StagedSettingsSnapshot,
+    ) {
+        prefs[Keys.SHOW_UNLOCKS] = updated.general.showUnlocks
+        prefs[Keys.SHOW_REST] = updated.general.showRest
+        prefs[Keys.REQUIRE_FULL_TYPING] = updated.general.requireFullTypingOfGuardedApps
+        prefs[Keys.REQUIRE_REBOOT] = updated.general.requireRebootForSettingsChange
+        prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
+        prefs[Keys.QUICK_ACTIONS] = updated.baseProfile.quickActions.joinToString(";") { it.flattenToString() }
+        prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
+        prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(updated.customProfiles)
+        prefs[Keys.SAVED_TRIGGERS] = serializeSavedTriggers(updated.savedTriggers)
+
+        val updatedTriggersById = updated.savedTriggers.associateBy { it.id }
+        if (previousLive.nfcLatches.isNotEmpty()) {
+            val reconciledLatches = LinkedHashMap<String, NfcLatchState>()
+            for ((triggerId, existingLatch) in previousLive.nfcLatches) {
+                val nfcSpec = (updatedTriggersById[triggerId]?.trigger as? ProfileTrigger.Nfc)?.nfc ?: continue
+                val reconciled = existingLatch.reconcileWith(nfcSpec, nowEpochMillis = 0L) ?: continue
+                reconciledLatches[triggerId] = reconciled
+            }
+            if (reconciledLatches != previousLive.nfcLatches) {
+                prefs[Keys.NFC_LATCHES] = serializeNfcLatches(reconciledLatches)
+            }
+        }
+        if (previousLive.nfcDailyUsage.isNotEmpty()) {
+            val prunedUsage = previousLive.nfcDailyUsage.filterKeys { it in updatedTriggersById }
+            if (prunedUsage != previousLive.nfcDailyUsage) {
+                prefs[Keys.NFC_DAILY_USAGE] = serializeNfcDailyUsage(prunedUsage)
             }
         }
     }
@@ -260,14 +358,94 @@ class AndroidSettingsRepository(
                 prefs[Keys.QUICK_ACTIONS] = prunedQuickActions.joinToString(";") { it.flattenToString() }
                 prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(prunedAssignments)
                 prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(prunedProfiles)
+
+                val existingShadow = currentSettings.stagedShadow
+                if (existingShadow != null) {
+                    val prunedShadowQuickActions = existingShadow.baseProfile.quickActions.filter {
+                        it !in keys && it.packageName !in removedPkgNames
+                    }
+                    val prunedShadowAssignments = existingShadow.baseProfile.appAssignments.filter { (comp, _) ->
+                        comp !in keys && comp.packageName !in removedPkgNames
+                    }
+                    val prunedShadowProfiles = existingShadow.customProfiles.map { profile ->
+                        val pruned = profile.appAssignments.filter { (comp, _) ->
+                            comp !in keys && comp.packageName !in removedPkgNames
+                        }
+                        val shouldDisable = pruned.isEmpty() && profile.appAssignments.isNotEmpty()
+                        profile.copy(
+                            appAssignments = pruned,
+                            enabled = if (shouldDisable) false else profile.enabled,
+                        )
+                    }
+                    val prunedShadow = existingShadow.copy(
+                        baseProfile = existingShadow.baseProfile.copy(
+                            quickActions = prunedShadowQuickActions,
+                            appAssignments = prunedShadowAssignments,
+                        ),
+                        customProfiles = prunedShadowProfiles,
+                    )
+                    val prunedLive = currentSettings.copy(
+                        baseProfile = currentSettings.baseProfile.copy(
+                            quickActions = prunedQuickActions,
+                            appAssignments = prunedAssignments,
+                        ),
+                        customProfiles = prunedProfiles,
+                    )
+                    if (prunedLive.hasSameConfigurationAs(prunedShadow)) {
+                        prefs.remove(Keys.STAGED_SHADOW)
+                        prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+                    } else {
+                        prefs[Keys.STAGED_SHADOW] = serializeStagedSnapshot(prunedShadow)
+                    }
+                }
             }
         }
     }
 
     private fun mapToSettings(prefs: Preferences): ThresholdSettings {
+        val live = mapToLiveSettingsOnly(prefs)
+        val stagedShadowRaw = prefs[Keys.STAGED_SHADOW].orEmpty()
+        if (stagedShadowRaw.isBlank()) return live
+
+        val rawSnapshot = synchronized(cacheLock) {
+            if (stagedShadowRaw == cachedStagedShadowRaw) {
+                cachedStagedShadow
+            } else {
+                val parsed = deserializeStagedSnapshot(stagedShadowRaw, live.general.hasSeenFirstRunHint)
+                cachedStagedShadowRaw = stagedShadowRaw
+                cachedStagedShadow = parsed
+                parsed
+            }
+        } ?: return live
+
+        val snapshot = rawSnapshot.copy(
+            general = rawSnapshot.general.copy(hasSeenFirstRunHint = live.general.hasSeenFirstRunHint),
+        )
+
+        val stagedAtBootCount = prefs[Keys.STAGED_AT_BOOT_COUNT]
+        val currentBootCount = bootCountProvider()
+        if (stagedAtBootCount != null && currentBootCount != null && currentBootCount > stagedAtBootCount) {
+            return live.copy(
+                general = snapshot.general,
+                baseProfile = snapshot.baseProfile,
+                customProfiles = snapshot.customProfiles,
+                savedTriggers = snapshot.savedTriggers,
+                stagedShadow = null,
+            )
+        }
+
+        return if (live.hasSameConfigurationAs(snapshot)) {
+            live
+        } else {
+            live.copy(stagedShadow = snapshot)
+        }
+    }
+
+    private fun mapToLiveSettingsOnly(prefs: Preferences): ThresholdSettings {
         val showUnlocks = prefs[Keys.SHOW_UNLOCKS] ?: true
         val showRest = prefs[Keys.SHOW_REST] ?: true
         val requireFullTyping = prefs[Keys.REQUIRE_FULL_TYPING] ?: false
+        val requireReboot = prefs[Keys.REQUIRE_REBOOT] ?: false
         val hasSeenHint = prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] ?: false
 
         val frictionName = prefs[Keys.DEFAULT_FRICTION]
@@ -377,6 +555,7 @@ class AndroidSettingsRepository(
                 showUnlocks = showUnlocks,
                 showRest = showRest,
                 requireFullTypingOfGuardedApps = requireFullTyping,
+                requireRebootForSettingsChange = requireReboot,
                 hasSeenFirstRunHint = hasSeenHint,
             ),
             baseProfile = BaseProfileSettings(
@@ -389,6 +568,66 @@ class AndroidSettingsRepository(
             nfcLatches = nfcLatches,
             nfcDailyUsage = nfcDailyUsage,
         )
+    }
+
+    private fun serializeStagedSnapshot(snapshot: StagedSettingsSnapshot): String {
+        val obj = JSONObject()
+        obj.put("showUnlocks", snapshot.general.showUnlocks)
+        obj.put("showRest", snapshot.general.showRest)
+        obj.put("requireFullTyping", snapshot.general.requireFullTypingOfGuardedApps)
+        obj.put("requireReboot", snapshot.general.requireRebootForSettingsChange)
+        obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
+        obj.put(
+            "quickActions",
+            snapshot.baseProfile.quickActions.joinToString(";") { it.flattenToString() },
+        )
+        obj.put("appAssignments", serializeAppAssignments(snapshot.baseProfile.appAssignments))
+        obj.put("customProfiles", serializeCustomProfiles(snapshot.customProfiles))
+        obj.put("savedTriggers", serializeSavedTriggers(snapshot.savedTriggers))
+        return obj.toString()
+    }
+
+    private fun deserializeStagedSnapshot(raw: String, liveHasSeenFirstRunHint: Boolean): StagedSettingsSnapshot? {
+        if (raw.isBlank()) return null
+        return runCatching {
+            val obj = JSONObject(raw)
+            val showUnlocks = obj.optBoolean("showUnlocks", true)
+            val showRest = obj.optBoolean("showRest", true)
+            val requireFullTyping = obj.optBoolean("requireFullTyping", false)
+            val requireReboot = obj.optBoolean("requireReboot", false)
+            val defaultFriction = runCatching {
+                FrictionChoice.valueOf(
+                    obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
+                )
+            }.getOrDefault(FrictionChoice.TYPED_INTENTION)
+            val quickActionsRaw = obj.optString("quickActions", "")
+            val quickActions = if (quickActionsRaw.isBlank()) {
+                emptyList()
+            } else {
+                quickActionsRaw.split(";")
+                    .filter { it.isNotBlank() }
+                    .mapNotNull { runCatching { ComponentKey.fromFlatString(it) }.getOrNull() }
+            }
+            val appAssignments = deserializeAppAssignments(obj.optString("appAssignments", ""))
+            val customProfiles = deserializeCustomProfiles(obj.optString("customProfiles", ""))
+            val savedTriggers = deserializeSavedTriggers(obj.optString("savedTriggers", ""))
+            StagedSettingsSnapshot(
+                general = GeneralSettings(
+                    showUnlocks = showUnlocks,
+                    showRest = showRest,
+                    requireFullTypingOfGuardedApps = requireFullTyping,
+                    requireRebootForSettingsChange = requireReboot,
+                    hasSeenFirstRunHint = liveHasSeenFirstRunHint,
+                ),
+                baseProfile = BaseProfileSettings(
+                    defaultFriction = defaultFriction,
+                    appAssignments = appAssignments,
+                    quickActions = quickActions,
+                ),
+                customProfiles = customProfiles,
+                savedTriggers = savedTriggers,
+            )
+        }.getOrNull()
     }
 
     private fun serializeAppAssignments(assignments: Map<ComponentKey, AppAssignment>): String =

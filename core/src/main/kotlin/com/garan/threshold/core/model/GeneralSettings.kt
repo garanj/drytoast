@@ -7,10 +7,22 @@ package com.garan.threshold.core.model
  * @property showRest Whether to display rest duration anti-metric on the home surface.
  * @property requireFullTypingOfGuardedApps When true, guarded apps in search results require typing their full name.
  * @property hasSeenFirstRunHint Whether the user has seen or dismissed the first-run onboarding hint.
+ * @property requireRebootForSettingsChange When true, all configuration changes are staged in shadow settings
+ *   and only take effect after the device is rebooted.
  */
 data class GeneralSettings(
     val showUnlocks: Boolean = true,
     val showRest: Boolean = true,
     val requireFullTypingOfGuardedApps: Boolean = false,
     val hasSeenFirstRunHint: Boolean = false,
-)
+    val requireRebootForSettingsChange: Boolean = false,
+) {
+    /**
+     * Returns `true` if the user-configurable general settings match [other], ignoring
+     * runtime-only flags such as [hasSeenFirstRunHint].
+     */
+    fun hasSameConfigurationAs(other: GeneralSettings): Boolean = showUnlocks == other.showUnlocks &&
+        showRest == other.showRest &&
+        requireFullTypingOfGuardedApps == other.requireFullTypingOfGuardedApps &&
+        requireRebootForSettingsChange == other.requireRebootForSettingsChange
+}

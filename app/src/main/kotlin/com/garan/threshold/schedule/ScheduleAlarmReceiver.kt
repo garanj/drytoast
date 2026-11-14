@@ -33,6 +33,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val container = ThresholdAppContainer.from(appContext)
+                if (action == Intent.ACTION_BOOT_COMPLETED) {
+                    val promoted = container.settingsRepository.promotePendingSettingsOnBoot()
+                    if (promoted) {
+                        ScheduleTransitionNotifier.notifyTransition()
+                    }
+                }
                 val settings = container.settingsRepository.getSettings()
                 container.scheduleAlarmScheduler.syncNextScheduleAlarm(
                     profiles = settings.customProfiles,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -51,9 +53,16 @@ import com.garan.threshold.core.model.FrictionChoice
 import com.garan.threshold.ui.search.SearchKeyboardOptions
 
 object SettingsTestTags {
+    const val SETTINGS_LIST = "settings_list"
     const val NAV_PROFILES = "settings_nav_profiles"
     const val NAV_CONFIGURE_APPS = "settings_nav_configure_apps"
     const val ADD_QUICK_ACTION = "settings_add_quick_action"
+    const val PENDING_REBOOT_BANNER = "settings_pending_reboot_banner"
+    const val DISCARD_PENDING_CHANGES_BUTTON = "settings_discard_pending_changes"
+    const val TOGGLE_REQUIRE_REBOOT = "settings_toggle_require_reboot"
+    const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
+    const val CONFIRM_REQUIRE_REBOOT_BUTTON = "settings_confirm_require_reboot_button"
+    const val CANCEL_REQUIRE_REBOOT_BUTTON = "settings_cancel_require_reboot_button"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -70,10 +79,13 @@ fun ThresholdSettingsScreen(
     onRemoveQuickAction: (ComponentKey) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProfiles: () -> Unit = {},
+    onUpdateRequireReboot: (Boolean) -> Unit = {},
+    onDiscardPendingChanges: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
     var showAddQuickActionSheet by remember { mutableStateOf(false) }
+    var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val guardedCount = uiState.baseProfile.appAssignments.values.count { it is AppAssignment.Guarded }
@@ -112,9 +124,48 @@ fun ThresholdSettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(SettingsTestTags.SETTINGS_LIST)
                 .consumeWindowInsets(innerPadding),
             contentPadding = innerPadding,
         ) {
+            if (uiState.hasPendingRebootChanges) {
+                item(key = "pending_reboot_banner") {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.banner_pending_reboot_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = stringResource(R.string.banner_pending_reboot_body),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        trailingContent = {
+                            TextButton(
+                                onClick = onDiscardPendingChanges,
+                                modifier = Modifier.testTag(SettingsTestTags.DISCARD_PENDING_CHANGES_BUTTON),
+                            ) {
+                                Text(text = stringResource(R.string.action_discard_pending_changes))
+                            }
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(SettingsTestTags.PENDING_REBOOT_BANNER),
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp,
+                    )
+                }
+            }
+
             // SECTION 1: QUICK ACTIONS
             item(key = "header_quick_actions") {
                 SettingsSectionHeader(title = stringResource(R.string.section_quick_actions))
@@ -305,6 +356,22 @@ fun ThresholdSettingsScreen(
                 )
             }
 
+            item(key = "toggle_require_reboot") {
+                SettingsToggleItem(
+                    label = stringResource(R.string.setting_require_reboot),
+                    supportingText = stringResource(R.string.setting_require_reboot_summary),
+                    checked = uiState.general.requireRebootForSettingsChange,
+                    onCheckedChange = { newChecked ->
+                        if (newChecked && !uiState.isRequireRebootActiveOnLive) {
+                            showConfirmRequireRebootDialog = true
+                        } else {
+                            onUpdateRequireReboot(newChecked)
+                        }
+                    },
+                    modifier = Modifier.testTag(SettingsTestTags.TOGGLE_REQUIRE_REBOOT),
+                )
+            }
+
             item(key = "divider_3") {
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -405,6 +472,38 @@ fun ThresholdSettingsScreen(
             }
         }
     }
+
+    if (showConfirmRequireRebootDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmRequireRebootDialog = false },
+            title = {
+                Text(text = stringResource(R.string.dialog_require_reboot_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.dialog_require_reboot_message))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmRequireRebootDialog = false
+                        onUpdateRequireReboot(true)
+                    },
+                    modifier = Modifier.testTag(SettingsTestTags.CONFIRM_REQUIRE_REBOOT_BUTTON),
+                ) {
+                    Text(text = stringResource(R.string.action_enable))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showConfirmRequireRebootDialog = false },
+                    modifier = Modifier.testTag(SettingsTestTags.CANCEL_REQUIRE_REBOOT_BUTTON),
+                ) {
+                    Text(text = stringResource(R.string.action_cancel))
+                }
+            },
+            modifier = Modifier.testTag(SettingsTestTags.CONFIRM_REQUIRE_REBOOT_DIALOG),
+        )
+    }
 }
 
 @Composable
@@ -424,6 +523,7 @@ private fun SettingsToggleItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    supportingText: String? = null,
 ) {
     ListItem(
         headlineContent = {
@@ -431,6 +531,16 @@ private fun SettingsToggleItem(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
             )
+        },
+        supportingContent = if (supportingText != null) {
+            {
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        } else {
+            null
         },
         trailingContent = {
             Switch(

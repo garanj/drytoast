@@ -77,4 +77,16 @@ interface SettingsRepository {
      * and optional daily usage counters ([NfcDailyUsage] keyed by [SavedTrigger.id]).
      */
     suspend fun updateNfcLatches(latches: Map<String, NfcLatchState>, dailyUsage: Map<String, NfcDailyUsage>? = null) {}
+
+    /**
+     * Discards any staged shadow settings awaiting a reboot, reverting the editable configuration
+     * back to the currently active live settings.
+     */
+    suspend fun discardPendingChanges() {}
+
+    /**
+     * Promotes any staged shadow settings to the active live settings upon device reboot.
+     * Returns `true` if pending shadow settings were promoted.
+     */
+    suspend fun promotePendingSettingsOnBoot(): Boolean = false
 }
