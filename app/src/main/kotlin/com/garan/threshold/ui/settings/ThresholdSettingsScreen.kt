@@ -63,6 +63,10 @@ object SettingsTestTags {
     const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
     const val CONFIRM_REQUIRE_REBOOT_BUTTON = "settings_confirm_require_reboot_button"
     const val CANCEL_REQUIRE_REBOOT_BUTTON = "settings_cancel_require_reboot_button"
+    const val SET_BLACK_WALLPAPER_ACTION = "settings_set_black_wallpaper"
+    const val CONFIRM_BLACK_WALLPAPER_DIALOG = "settings_confirm_black_wallpaper_dialog"
+    const val CONFIRM_BLACK_WALLPAPER_BUTTON = "settings_confirm_black_wallpaper_button"
+    const val CANCEL_BLACK_WALLPAPER_BUTTON = "settings_cancel_black_wallpaper_button"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -81,11 +85,13 @@ fun ThresholdSettingsScreen(
     onNavigateToProfiles: () -> Unit = {},
     onUpdateRequireReboot: (Boolean) -> Unit = {},
     onDiscardPendingChanges: () -> Unit = {},
+    onApplyPureBlackWallpaper: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
     var showAddQuickActionSheet by remember { mutableStateOf(false) }
     var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
+    var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val guardedCount = uiState.baseProfile.appAssignments.values.count { it is AppAssignment.Guarded }
@@ -372,6 +378,34 @@ fun ThresholdSettingsScreen(
                 )
             }
 
+            item(key = "action_set_black_wallpaper") {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.action_set_black_wallpaper),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.action_set_black_wallpaper_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.SET_BLACK_WALLPAPER_ACTION)
+                        .clickable { showConfirmBlackWallpaperDialog = true },
+                )
+            }
+
             item(key = "divider_3") {
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -502,6 +536,38 @@ fun ThresholdSettingsScreen(
                 }
             },
             modifier = Modifier.testTag(SettingsTestTags.CONFIRM_REQUIRE_REBOOT_DIALOG),
+        )
+    }
+
+    if (showConfirmBlackWallpaperDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmBlackWallpaperDialog = false },
+            title = {
+                Text(text = stringResource(R.string.dialog_black_wallpaper_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.dialog_black_wallpaper_message))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmBlackWallpaperDialog = false
+                        onApplyPureBlackWallpaper()
+                    },
+                    modifier = Modifier.testTag(SettingsTestTags.CONFIRM_BLACK_WALLPAPER_BUTTON),
+                ) {
+                    Text(text = stringResource(R.string.action_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showConfirmBlackWallpaperDialog = false },
+                    modifier = Modifier.testTag(SettingsTestTags.CANCEL_BLACK_WALLPAPER_BUTTON),
+                ) {
+                    Text(text = stringResource(R.string.action_cancel))
+                }
+            },
+            modifier = Modifier.testTag(SettingsTestTags.CONFIRM_BLACK_WALLPAPER_DIALOG),
         )
     }
 }

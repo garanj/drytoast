@@ -1,12 +1,11 @@
 # Current Task
 
-- **Active Issue**: [#96](https://github.com/garanj/threshold/issues/96) — `feat(settings): allow locking and unlocking settings via ADB broadcast`
-- **Branch**: `feat/96-adb-lock-settings`
+- **Active Issue**: [#98](https://github.com/garanj/threshold/issues/98) — `feat(wallpaper): add one-tap pure black wallpaper utility action`
+- **Branch**: `feat/98-black-wallpaper-utility`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:core`: Add `isSettingsLocked: Boolean = false` to `ThresholdSettings` and `suspend fun setSettingsLocked(locked: Boolean)` to `SettingsRepository`
-- [x] `:data`: Implement `Keys.SETTINGS_LOCKED`, `setSettingsLocked(locked)`, and guard `mutateConfiguration` and `discardPendingChanges()` in `AndroidSettingsRepository` when `isSettingsLocked` is `true`
-- [x] `:app`: Create `SettingsLockReceiver` registered in `AndroidManifest.xml` with `android:permission="android.permission.DUMP"`, update `MainActivity` and `SettingsViewModel` so locked settings show `"Settings are locked"` toast on long-press / `:settings` and kick out of open settings routes
-- [x] Add unit & Robolectric tests for `SettingsLockReceiver` ADB broadcasts, `AndroidSettingsRepository` double-protection, and UI entry-point locking
+- [x] `:core`: Define `WallpaperController` port (`applyPureBlackWallpaper(): Boolean`)
+- [x] `:data`: Implement `AndroidWallpaperController` with ephemeral 1x1 black `Bitmap` and unit tests
+- [x] `:app`: Add `SET_WALLPAPER` permission to `AndroidManifest.xml`, wire `WallpaperController` in `ThresholdAppContainer` & `MainActivity`, add `"Set pure black wallpaper"` action + confirmation `AlertDialog` in `ThresholdSettingsScreen` and `:wallpaper` search action in `ThresholdHomeScreen`
 - [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

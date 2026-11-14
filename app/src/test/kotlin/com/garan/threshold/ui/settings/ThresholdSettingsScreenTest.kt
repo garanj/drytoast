@@ -97,4 +97,39 @@ class ThresholdSettingsScreenTest {
 
         assertThat(discardClicked).isTrue()
     }
+
+    @Test
+    fun setPureBlackWallpaperAction_showsConfirmationDialogAndInvokesCallbackOnConfirm() {
+        var appliedWallpaper = false
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(isLoading = false),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                    onApplyPureBlackWallpaper = { appliedWallpaper = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.SET_BLACK_WALLPAPER_ACTION))
+        composeRule.onNodeWithTag(SettingsTestTags.SET_BLACK_WALLPAPER_ACTION)
+            .performClick()
+
+        assertThat(appliedWallpaper).isFalse()
+        composeRule.onNodeWithTag(SettingsTestTags.CONFIRM_BLACK_WALLPAPER_DIALOG)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(SettingsTestTags.CONFIRM_BLACK_WALLPAPER_BUTTON)
+            .performClick()
+        assertThat(appliedWallpaper).isTrue()
+    }
 }
