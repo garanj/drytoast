@@ -73,12 +73,12 @@
   - **Filter Counter Header Bar**: Minimalist horizontal summary bar (`[ ALL (count) ]  [ BLOCKED (count) ]  [ GUARDED (count) ]  [ ALLOW (count) ]`) allowing instant audit/filtering of restricted apps without losing single-list stability.
   - **Unified App Configuration List**: Replace multi-list triage with a single alphabetical list of all installed apps, each with its multi-state toggle.
   - **Friction Override Integration**: Expandable row or inline options for app-level friction override when set to `Guard`.
-- [ ] **Task 3.3: Custom Profiles & Cascading Resolution Engine (`:core` / `:data`)**
+- [x] **Task 3.3: Custom Profiles & Cascading Resolution Engine (`:core` / `:data`)**
   - Profile triggers: Schedules (start day/time to end day/time), NFC (duration timer and/or tap-to-relock), Geofence (list of lat/long/radii), Manual.
   - User-ordered cascading evaluation: Top-to-bottom active profile evaluation with base profile fallback.
   - Dynamic profile disable invariant when all app rules are removed due to uninstallation.
   - Zero-allocation cached effective ruleset computation.
-- [ ] **Task 3.4: Custom Profile Management UI (`:app`)**
+- [x] **Task 3.4: Custom Profile Management UI (`:app`)**
   - Profile list management (create, edit, delete, enable/disable, reorder).
   - Reusing the unified multi-state toggle app configuration screen for custom profile overrides.
   - Live active profile indicator below the clock.
@@ -89,9 +89,8 @@
   - Swipeable multi-step introduction educating the user on Threshold's philosophy, intent gatekeeping, and tactile mechanics.
   - Direct "Set Threshold as Default Launcher" prompt (`RoleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)`).
   - Seamless handoff into Threshold home screen upon role grant.
-- [ ] **Task 3.7: Wallpaper & Lock Screen Sync (`:data` / `:app`)**
-  - Solid AMOLED black / profile color wallpaper application.
-  - Opt-in `syncLockScreenWallpaper` toggle (`FLAG_LOCK`).
+- [x] **Task 3.7: Pure Black Wallpaper Utility Action (`:core` / `:data` / `:app`)**
+  - One-tap utility action in Settings and `:wallpaper` search shortcut applying a solid `#000000` AMOLED black wallpaper to system and lock screen (#98).
 
 ---
 

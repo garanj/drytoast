@@ -257,6 +257,20 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, getString(R.string.toast_settings_locked), Toast.LENGTH_SHORT).show()
     }
 
+    private fun applyPureBlackWallpaper() {
+        lifecycleScope.launch {
+            val applied = appContainer.wallpaperController.applyPureBlackWallpaper()
+            if (applied) {
+                appContainer.hapticEngine.targetSnap()
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.toast_black_wallpaper_applied),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -270,6 +284,11 @@ class MainActivity : ComponentActivity() {
             label = "Threshold Settings",
             shortcutKeyword = ":settings",
         )
+        val wallpaperAction = ActionCandidate(
+            id = "wallpaper",
+            label = "Set Pure Black Wallpaper",
+            shortcutKeyword = ":wallpaper",
+        )
 
         searchViewModel = ViewModelProvider(
             this,
@@ -279,7 +298,7 @@ class MainActivity : ComponentActivity() {
                     packageIndexSource = container.packageIndexSource,
                     hapticEngine = container.hapticEngine,
                     dialerPackageResolver = container.dialerPackageResolver,
-                    actions = listOf(settingsAction),
+                    actions = listOf(settingsAction, wallpaperAction),
                     settingsRepository = container.settingsRepository,
                     clockSource = container.activeClockSource,
                     scheduleAlarmScheduler = container.scheduleAlarmScheduler,
@@ -416,6 +435,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
+                                onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                             )
                         }
 
@@ -442,6 +462,7 @@ class MainActivity : ComponentActivity() {
                                 onRemoveQuickAction = settingsViewModel::removeQuickAction,
                                 onUpdateRequireReboot = settingsViewModel::updateRequireRebootForSettingsChange,
                                 onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
+                                onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                             )
                         }
 

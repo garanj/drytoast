@@ -9,6 +9,7 @@ import com.garan.threshold.data.haptics.AndroidHapticEngine
 import com.garan.threshold.data.location.AndroidLocationSource
 import com.garan.threshold.data.packageindex.AndroidPackageIndexSource
 import com.garan.threshold.data.settings.AndroidSettingsRepository
+import com.garan.threshold.data.wallpaper.AndroidWallpaperController
 import com.garan.threshold.nfc.AndroidNfcReaderSource
 import com.garan.threshold.schedule.AndroidProfileCapabilityChecker
 import com.garan.threshold.schedule.AndroidScheduleAlarmScheduler
@@ -34,6 +35,7 @@ class ThresholdAppContainer(context: Context) {
     val locationSource by lazy { AndroidLocationSource(appContext) }
     val antiMetricsRepository by lazy { AndroidAntiMetricsRepository(appContext) }
     val nfcReaderSource by lazy { AndroidNfcReaderSource(appContext, hapticEngine) }
+    val wallpaperController by lazy { AndroidWallpaperController(appContext) }
 
     @Volatile
     var clockOverrideForTesting: ClockSource? = null

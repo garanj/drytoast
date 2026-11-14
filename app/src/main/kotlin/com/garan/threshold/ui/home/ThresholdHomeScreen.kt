@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
@@ -96,12 +97,14 @@ fun ThresholdHomeScreen(
     statusText: String? = null,
     onOpenSettings: () -> Unit = {},
     onResolveCapabilityIssue: (ProfileCapability) -> Unit = {},
+    onApplyPureBlackWallpaper: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var showCapabilityFaultSheet by remember { mutableStateOf(false) }
+    var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
 
     val metrics by antiMetricsRepository?.metrics?.collectAsStateWithLifecycle()
         ?: remember { mutableStateOf(null) }
@@ -300,9 +303,15 @@ fun ThresholdHomeScreen(
                                 }
                             }
                             is SearchItem.Action -> {
-                                if (item.id == "settings") {
-                                    resetSearchAndHideIme()
-                                    onOpenSettings()
+                                when (item.id) {
+                                    "settings" -> {
+                                        resetSearchAndHideIme()
+                                        onOpenSettings()
+                                    }
+                                    "wallpaper" -> {
+                                        resetSearchAndHideIme()
+                                        showConfirmBlackWallpaperDialog = true
+                                    }
                                 }
                             }
                         }
@@ -344,6 +353,35 @@ fun ThresholdHomeScreen(
                         onResolveCapabilityIssue(capability)
                     },
                     onDismiss = { showCapabilityFaultSheet = false },
+                )
+            }
+
+            if (showConfirmBlackWallpaperDialog) {
+                AlertDialog(
+                    onDismissRequest = { showConfirmBlackWallpaperDialog = false },
+                    title = {
+                        Text(text = stringResource(R.string.dialog_black_wallpaper_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.dialog_black_wallpaper_message))
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showConfirmBlackWallpaperDialog = false
+                                onApplyPureBlackWallpaper()
+                            },
+                        ) {
+                            Text(text = stringResource(R.string.action_apply))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showConfirmBlackWallpaperDialog = false },
+                        ) {
+                            Text(text = stringResource(R.string.action_cancel))
+                        }
+                    },
                 )
             }
         }

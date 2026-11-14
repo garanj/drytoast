@@ -28,6 +28,12 @@
     <string name="banner_pending_reboot_body">Restart your device to apply staged changes to active settings.</string>
     <string name="action_discard_pending_changes">Discard</string>
     <string name="toast_settings_locked">Settings are locked</string>
+    <string name="action_set_black_wallpaper">Set pure black wallpaper</string>
+    <string name="action_set_black_wallpaper_summary">Apply solid AMOLED black to system and lock screen</string>
+    <string name="dialog_black_wallpaper_title">Set pure black wallpaper?</string>
+    <string name="dialog_black_wallpaper_message">This will replace your current system and lock screen wallpaper with solid AMOLED black.</string>
+    <string name="action_apply">Apply</string>
+    <string name="toast_black_wallpaper_applied">Pure black wallpaper applied</string>
     <string name="section_app_configuration">App Configuration</string>
     <string name="card_guarded_apps">Guarded Apps</string>
     <string name="card_blocked_apps">Blocked Apps</string>
