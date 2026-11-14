@@ -89,4 +89,10 @@ interface SettingsRepository {
      * Returns `true` if pending shadow settings were promoted.
      */
     suspend fun promotePendingSettingsOnBoot(): Boolean = false
+
+    /**
+     * Locks or unlocks all user configuration changes (controlled via ADB broadcast).
+     * While locked, all user configuration mutations to both live and shadow settings are rejected.
+     */
+    suspend fun setSettingsLocked(locked: Boolean) {}
 }

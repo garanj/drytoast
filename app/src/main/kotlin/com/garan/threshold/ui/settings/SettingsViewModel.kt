@@ -34,6 +34,7 @@ data class SettingsUiState(
     val isLoading: Boolean = true,
     val hasPendingRebootChanges: Boolean = false,
     val isRequireRebootActiveOnLive: Boolean = false,
+    val isSettingsLocked: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -63,6 +64,7 @@ class SettingsViewModel(
                         savedTriggers = editable.savedTriggers.toImmutableList(),
                         hasPendingRebootChanges = settings.hasPendingRebootChanges,
                         isRequireRebootActiveOnLive = settings.general.requireRebootForSettingsChange,
+                        isSettingsLocked = settings.isSettingsLocked,
                     )
                 }
             }

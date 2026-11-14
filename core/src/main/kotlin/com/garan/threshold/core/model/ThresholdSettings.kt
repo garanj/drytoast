@@ -27,6 +27,7 @@ data class ThresholdSettings(
     val nfcLatches: Map<String, NfcLatchState> = emptyMap(),
     val nfcDailyUsage: Map<String, NfcDailyUsage> = emptyMap(),
     val stagedShadow: StagedSettingsSnapshot? = null,
+    val isSettingsLocked: Boolean = false,
 ) {
     val savedTriggersById: Map<String, SavedTrigger> =
         savedTriggers.associateBy { it.id }

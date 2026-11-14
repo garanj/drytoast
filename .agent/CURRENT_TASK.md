@@ -1,12 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#94](https://github.com/garanj/threshold/issues/94) — `feat(settings): require reboot for settings changes`
-- **Branch**: `feat/94-require-reboot-for-settings-changes`
+- **Active Issue**: [#96](https://github.com/garanj/threshold/issues/96) — `feat(settings): allow locking and unlocking settings via ADB broadcast`
+- **Branch**: `feat/96-adb-lock-settings`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] File GitHub Issue #94 and checkout branch `feat/94-require-reboot-for-settings-changes`
-- [x] `:core`: Add `requireRebootForSettingsChange` to `GeneralSettings`, `StagedSettingsSnapshot` and `stagedShadow` to `ThresholdSettings`, and `discardPendingChanges()` / `promotePendingSettingsOnBoot()` to `SettingsRepository`
-- [x] `:data`: Implement staged shadow persistence, `Settings.Global.BOOT_COUNT` comparison, and `promotePendingSettingsOnBoot()` / `discardPendingChanges()` in `AndroidSettingsRepository`
-- [x] `:app`: Wire `Intent.ACTION_BOOT_COMPLETED` promotion in `ScheduleAlarmReceiver`, update `SettingsViewModel` to read/mutate `editableSnapshot`, and add confirmation dialog + pending changes badge/discard banner in `ThresholdSettingsScreen`
+- [x] `:core`: Add `isSettingsLocked: Boolean = false` to `ThresholdSettings` and `suspend fun setSettingsLocked(locked: Boolean)` to `SettingsRepository`
+- [x] `:data`: Implement `Keys.SETTINGS_LOCKED`, `setSettingsLocked(locked)`, and guard `mutateConfiguration` and `discardPendingChanges()` in `AndroidSettingsRepository` when `isSettingsLocked` is `true`
+- [x] `:app`: Create `SettingsLockReceiver` registered in `AndroidManifest.xml` with `android:permission="android.permission.DUMP"`, update `MainActivity` and `SettingsViewModel` so locked settings show `"Settings are locked"` toast on long-press / `:settings` and kick out of open settings routes
+- [x] Add unit & Robolectric tests for `SettingsLockReceiver` ADB broadcasts, `AndroidSettingsRepository` double-protection, and UI entry-point locking
 - [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

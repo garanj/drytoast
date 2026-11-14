@@ -703,4 +703,65 @@ class AndroidSettingsRepositoryTest {
         assertThat(afterRebootRead.hasPendingRebootChanges).isFalse()
         assertThat(afterRebootRead.general.showUnlocks).isFalse()
     }
+
+    @Test
+    fun setSettingsLocked_rejectsAllLiveAndShadowMutationsWhileLocked_butAllowsBootPromotion() =
+        runTest(testDispatcher) {
+            // 1. Lock settings while in standard mode -> live mutations are rejected
+            repository.setSettingsLocked(true)
+            assertThat(repository.getSettings().isSettingsLocked).isTrue()
+
+            repository.updateGeneralSettings(GeneralSettings(showUnlocks = false))
+            repository.updateBaseProfile(
+                BaseProfileSettings(
+                    defaultFriction = FrictionChoice.DRAG_SORT,
+                    appAssignments = mapOf(socialKey to AppAssignment.Blocked),
+                ),
+            )
+            repository.saveCustomProfile(
+                com.garan.threshold.core.model.CustomProfile(id = "work", name = "Work"),
+            )
+
+            val lockedSettings = repository.getSettings()
+            assertThat(lockedSettings.general.showUnlocks).isTrue()
+            assertThat(lockedSettings.baseProfile.defaultFriction).isEqualTo(FrictionChoice.TYPED_INTENTION)
+            assertThat(lockedSettings.baseProfile.appAssignments).isEmpty()
+            assertThat(lockedSettings.customProfiles).isEmpty()
+
+            // 2. Unlock, enable requireRebootForSettingsChange, and stage a shadow change
+            repository.setSettingsLocked(false)
+            assertThat(repository.getSettings().isSettingsLocked).isFalse()
+
+            repository.updateGeneralSettings(GeneralSettings(requireRebootForSettingsChange = true))
+            repository.updateGeneralSettings(
+                GeneralSettings(requireRebootForSettingsChange = true, showUnlocks = false),
+            )
+            assertThat(repository.getSettings().hasPendingRebootChanges).isTrue()
+
+            // 3. Re-lock settings while shadow changes are pending:
+            //    - Cannot modify or discard the staged shadow
+            //    - Rebooting still promotes the existing staged shadow to live
+            repository.setSettingsLocked(true)
+            repository.updateGeneralSettings(
+                GeneralSettings(
+                    requireRebootForSettingsChange = true,
+                    showUnlocks = false,
+                    showRest = false,
+                ),
+            )
+            repository.discardPendingChanges()
+
+            val whileLockedWithShadow = repository.getSettings()
+            assertThat(whileLockedWithShadow.hasPendingRebootChanges).isTrue()
+            assertThat(whileLockedWithShadow.editableSnapshot.general.showUnlocks).isFalse()
+            assertThat(whileLockedWithShadow.editableSnapshot.general.showRest).isTrue()
+
+            // Reboot promotes the pre-existing shadow even while settings remain locked
+            val promoted = repository.promotePendingSettingsOnBoot()
+            assertThat(promoted).isTrue()
+            val afterBoot = repository.getSettings()
+            assertThat(afterBoot.isSettingsLocked).isTrue()
+            assertThat(afterBoot.hasPendingRebootChanges).isFalse()
+            assertThat(afterBoot.general.showUnlocks).isFalse()
+        }
 }

@@ -83,6 +83,7 @@ class AndroidSettingsRepository(
         val NFC_DAILY_USAGE = stringPreferencesKey("nfc_daily_usage")
         val STAGED_SHADOW = stringPreferencesKey("staged_shadow_settings")
         val STAGED_AT_BOOT_COUNT = intPreferencesKey("staged_at_boot_count")
+        val SETTINGS_LOCKED = booleanPreferencesKey("settings_locked")
     }
 
     private val cacheLock = Any()
@@ -119,6 +120,7 @@ class AndroidSettingsRepository(
     override suspend fun updateGeneralSettings(general: GeneralSettings) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
+                if (prefs[Keys.SETTINGS_LOCKED] == true) return@edit
                 prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] = general.hasSeenFirstRunHint
                 mutateConfiguration(prefs) { snapshot ->
                     snapshot.copy(general = general.copy(hasSeenFirstRunHint = snapshot.general.hasSeenFirstRunHint))
@@ -223,8 +225,17 @@ class AndroidSettingsRepository(
     override suspend fun discardPendingChanges() {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
+                if (prefs[Keys.SETTINGS_LOCKED] == true) return@edit
                 prefs.remove(Keys.STAGED_SHADOW)
                 prefs.remove(Keys.STAGED_AT_BOOT_COUNT)
+            }
+        }
+    }
+
+    override suspend fun setSettingsLocked(locked: Boolean) {
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                prefs[Keys.SETTINGS_LOCKED] = locked
             }
         }
     }
@@ -254,6 +265,8 @@ class AndroidSettingsRepository(
         prefs: MutablePreferences,
         transform: (StagedSettingsSnapshot) -> StagedSettingsSnapshot,
     ) {
+        if (prefs[Keys.SETTINGS_LOCKED] == true) return
+
         val stagedAtBootCount = prefs[Keys.STAGED_AT_BOOT_COUNT]
         val currentBootCount = bootCountProvider()
         if (stagedAtBootCount != null && currentBootCount != null && currentBootCount > stagedAtBootCount) {
@@ -447,6 +460,7 @@ class AndroidSettingsRepository(
         val requireFullTyping = prefs[Keys.REQUIRE_FULL_TYPING] ?: false
         val requireReboot = prefs[Keys.REQUIRE_REBOOT] ?: false
         val hasSeenHint = prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] ?: false
+        val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
 
         val frictionName = prefs[Keys.DEFAULT_FRICTION]
         val defaultFriction = frictionName?.let {
@@ -567,6 +581,7 @@ class AndroidSettingsRepository(
             savedTriggers = migratedTriggers,
             nfcLatches = nfcLatches,
             nfcDailyUsage = nfcDailyUsage,
+            isSettingsLocked = isSettingsLocked,
         )
     }
 
