@@ -69,6 +69,7 @@ class ArchitectureAndConfigGuardTest {
         assertThat(manifest).contains("""android:icon="@mipmap/ic_launcher"""")
         assertThat(manifest).contains("""android:roundIcon="@mipmap/ic_launcher_round"""")
         assertThat(manifest).contains("""android:label="@string/app_name"""")
+        assertThat(manifest).contains("""android.intent.category.LAUNCHER""")
 
         val mipmapAnyDpi = File(rootDir, "app/src/main/res/mipmap-anydpi-v26")
         assertThat(File(mipmapAnyDpi, "ic_launcher.xml").exists()).isTrue()
