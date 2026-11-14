@@ -27,6 +27,7 @@
     <string name="banner_pending_reboot_title">Pending settings changes</string>
     <string name="banner_pending_reboot_body">Restart your device to apply staged changes to active settings.</string>
     <string name="action_discard_pending_changes">Discard</string>
+    <string name="toast_settings_locked">Settings are locked</string>
     <string name="section_app_configuration">App Configuration</string>
     <string name="card_guarded_apps">Guarded Apps</string>
     <string name="card_blocked_apps">Blocked Apps</string>

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -252,6 +253,10 @@ class MainActivity : ComponentActivity() {
         runCatching { startActivity(intent) }
     }
 
+    private fun showSettingsLockedToast() {
+        Toast.makeText(this, getString(R.string.toast_settings_locked), Toast.LENGTH_SHORT).show()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -327,6 +332,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(settingsUiState.isSettingsLocked, topRoute) {
+                    if (settingsUiState.isSettingsLocked && backStack.size > 1) {
+                        while (backStack.size > 1) {
+                            backStack.removeLastOrNull()
+                        }
+                        showSettingsLockedToast()
+                    }
+                }
+
                 @OptIn(ExperimentalComposeUiApi::class)
                 NavDisplay(
                     backStack = backStack,
@@ -366,7 +380,9 @@ class MainActivity : ComponentActivity() {
                                 onDismissIme = { ImeUtils.dismissIme(this@MainActivity) },
                                 antiMetricsRepository = antiMetricsRepository,
                                 onOpenSettings = {
-                                    if (backStack.lastOrNull() != ThresholdRoute.Settings) {
+                                    if (settingsUiState.isSettingsLocked) {
+                                        showSettingsLockedToast()
+                                    } else if (backStack.lastOrNull() != ThresholdRoute.Settings) {
                                         backStack.add(ThresholdRoute.Settings)
                                     }
                                 },
@@ -390,8 +406,12 @@ class MainActivity : ComponentActivity() {
                                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                             }
                                             val opened = runCatching { startActivity(nfcIntent) }.isSuccess
-                                            if (!opened && backStack.lastOrNull() != ThresholdRoute.Profiles) {
-                                                backStack.add(ThresholdRoute.Profiles)
+                                            if (!opened) {
+                                                if (settingsUiState.isSettingsLocked) {
+                                                    showSettingsLockedToast()
+                                                } else if (backStack.lastOrNull() != ThresholdRoute.Profiles) {
+                                                    backStack.add(ThresholdRoute.Profiles)
+                                                }
                                             }
                                         }
                                     }

@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -70,6 +71,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 
 internal const val SETTINGS_LONG_PRESS_TIMEOUT_MS = 3_000L
+const val HOME_CANVAS_TEST_TAG = "home_canvas_root"
 
 /**
  * Top-level home screen for Threshold.
@@ -238,6 +240,7 @@ fun ThresholdHomeScreen(
             ThresholdHomeCanvas(
                 modifier = Modifier
                     .fillMaxSize()
+                    .testTag(HOME_CANVAS_TEST_TAG)
                     .customLongClickable(
                         longPressTimeoutMillis = SETTINGS_LONG_PRESS_TIMEOUT_MS,
                         onLongClick = {

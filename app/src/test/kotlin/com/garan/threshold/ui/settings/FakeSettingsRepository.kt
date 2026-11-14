@@ -54,7 +54,9 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
 
     private fun mutateConfiguration(transform: (StagedSettingsSnapshot) -> StagedSettingsSnapshot) {
         _settings.update { current ->
-            if (!current.general.requireRebootForSettingsChange) {
+            if (current.isSettingsLocked) {
+                current
+            } else if (!current.general.requireRebootForSettingsChange) {
                 val updated = transform(current.toStagedSnapshot())
                 applyLiveSnapshot(current, updated)
             } else {
@@ -69,7 +71,13 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
     }
 
     override suspend fun updateGeneralSettings(general: GeneralSettings) {
-        _settings.update { it.copy(general = it.general.copy(hasSeenFirstRunHint = general.hasSeenFirstRunHint)) }
+        _settings.update { current ->
+            if (current.isSettingsLocked) {
+                current
+            } else {
+                current.copy(general = current.general.copy(hasSeenFirstRunHint = general.hasSeenFirstRunHint))
+            }
+        }
         mutateConfiguration { snapshot ->
             snapshot.copy(general = general)
         }
@@ -200,7 +208,13 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
     }
 
     override suspend fun discardPendingChanges() {
-        _settings.update { it.copy(stagedShadow = null) }
+        _settings.update { current ->
+            if (current.isSettingsLocked) current else current.copy(stagedShadow = null)
+        }
+    }
+
+    override suspend fun setSettingsLocked(locked: Boolean) {
+        _settings.update { it.copy(isSettingsLocked = locked) }
     }
 
     override suspend fun promotePendingSettingsOnBoot(): Boolean {
