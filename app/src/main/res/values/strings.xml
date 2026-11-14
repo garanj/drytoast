@@ -9,7 +9,16 @@
     <string name="badge_action">ACTION</string>
 
     <!-- Onboarding Hints -->
-    <string name="hint_long_press_to_configure">long-press to configure</string>
+    <string name="hint_long_press_to_configure">Press and hold to configure</string>
+
+    <!-- Onboarding Wizard -->
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_set_default_launcher">Set Threshold as Default Launcher</string>
+    <string name="onboarding_enter_threshold">Enter Threshold</string>
+    <string name="onboarding_default_launcher_required_warning">Default home launcher role is required to complete setup.</string>
+    <string name="onboarding_default_launcher_active">DEFAULT HOME LAUNCHER ACTIVE</string>
+    <string name="onboarding_default_launcher_pending">STATUS: NOT SET AS DEFAULT LAUNCHER</string>
 
     <!-- Settings & App Configuration -->
     <string name="settings_title">Settings</string>

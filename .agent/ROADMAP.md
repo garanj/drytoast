@@ -84,11 +84,11 @@
   - Live active profile indicator below the clock.
 - [ ] **Task 3.5: Launcher Management & Restore Launcher Action (`:app`)**
   - Button in Threshold Settings to switch / restore previous default launcher (via `RoleManager` / `ACTION_MANAGE_DEFAULT_APPS_SETTINGS` / `ACTION_HOME_SETTINGS`).
-- [ ] **Task 3.6: Onboarding Flow & First-Run Educational Wizard (`:app`)**
+- [x] **Task 3.6: Onboarding Flow & First-Run Educational Wizard (`:app`)**
   - First-launch detection from Play Store / external launcher (checking if `RoleManager.isRoleHeld(RoleManager.ROLE_HOME)` is false).
   - Swipeable multi-step introduction educating the user on Threshold's philosophy, intent gatekeeping, and tactile mechanics.
   - Direct "Set Threshold as Default Launcher" prompt (`RoleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)`).
-  - Seamless handoff into Threshold home screen upon role grant.
+  - Seamless handoff into Threshold home screen upon role grant (#100).
 - [x] **Task 3.7: Pure Black Wallpaper Utility Action (`:core` / `:data` / `:app`)**
   - One-tap utility action in Settings and `:wallpaper` search shortcut applying a solid `#000000` AMOLED black wallpaper to system and lock screen (#98).
 

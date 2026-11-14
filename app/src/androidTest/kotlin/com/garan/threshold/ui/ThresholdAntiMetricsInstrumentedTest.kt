@@ -35,6 +35,11 @@ class ThresholdAntiMetricsInstrumentedTest {
 
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
+        val container = com.garan.threshold.ThresholdAppContainer.from(instrumentation.targetContext)
+        container.defaultLauncherOverrideForTesting = true
+        kotlinx.coroutines.runBlocking {
+            container.settingsRepository.setHasCompletedOnboarding(true)
+        }
     }
 
     @After

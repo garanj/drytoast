@@ -72,6 +72,11 @@ class ThresholdGeoProfileInstrumentedTest {
 
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
+        val container = com.garan.threshold.ThresholdAppContainer.from(targetContext)
+        container.defaultLauncherOverrideForTesting = true
+        runBlocking {
+            container.settingsRepository.setHasCompletedOnboarding(true)
+        }
     }
 
     @After

@@ -32,6 +32,7 @@ data class SettingsUiState(
     val savedTriggers: ImmutableList<SavedTrigger> = persistentListOf(),
     val availableApps: ImmutableList<InstalledApp> = persistentListOf(),
     val isLoading: Boolean = true,
+    val isSettingsLoaded: Boolean = false,
     val hasPendingRebootChanges: Boolean = false,
     val isRequireRebootActiveOnLive: Boolean = false,
     val isSettingsLocked: Boolean = false,
@@ -62,6 +63,7 @@ class SettingsViewModel(
                         baseProfile = editable.baseProfile,
                         customProfiles = editable.customProfiles.toImmutableList(),
                         savedTriggers = editable.savedTriggers.toImmutableList(),
+                        isSettingsLoaded = true,
                         hasPendingRebootChanges = settings.hasPendingRebootChanges,
                         isRequireRebootActiveOnLive = settings.general.requireRebootForSettingsChange,
                         isSettingsLocked = settings.isSettingsLocked,
@@ -141,6 +143,12 @@ class SettingsViewModel(
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setHasCompletedOnboarding(true)
         }
     }
 

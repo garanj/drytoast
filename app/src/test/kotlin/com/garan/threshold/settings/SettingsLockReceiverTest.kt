@@ -49,9 +49,16 @@ class SettingsLockReceiverTest {
     @Before
     fun setUp() {
         ShadowToast.reset()
+        val container = ThresholdAppContainer.from(context)
+        container.defaultLauncherOverrideForTesting = true
         runBlocking {
-            ThresholdAppContainer.from(context).settingsRepository.setSettingsLocked(false)
+            container.settingsRepository.setHasCompletedOnboarding(true)
+            container.settingsRepository.setSettingsLocked(false)
         }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.activity.settingsViewModel.uiState.value.general.hasCompletedOnboarding
+        }
+        composeRule.waitForIdle()
     }
 
     @Test

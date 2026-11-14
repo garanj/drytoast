@@ -13,6 +13,7 @@ import com.garan.threshold.data.wallpaper.AndroidWallpaperController
 import com.garan.threshold.nfc.AndroidNfcReaderSource
 import com.garan.threshold.schedule.AndroidProfileCapabilityChecker
 import com.garan.threshold.schedule.AndroidScheduleAlarmScheduler
+import com.garan.threshold.ui.launcher.AndroidLauncherRoleController
 import com.garan.threshold.ui.launcher.DialerPackageResolver
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -48,6 +49,20 @@ class ThresholdAppContainer(context: Context) {
 
     @Volatile
     var nowEpochMillisOverrideForTesting: Long? = null
+
+    @Volatile
+    var defaultLauncherOverrideForTesting: Boolean? = null
+        set(value) {
+            field = value
+            launcherRoleController.refresh()
+        }
+
+    val launcherRoleController by lazy {
+        AndroidLauncherRoleController(
+            context = appContext,
+            overrideProvider = { defaultLauncherOverrideForTesting },
+        )
+    }
 
     val activeClockSource: ClockSource = ClockSource {
         clockOverrideForTesting?.now() ?: SystemClockSource.now()
