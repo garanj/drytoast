@@ -420,6 +420,8 @@ class MainActivity : ComponentActivity() {
                                 onUpdateDefaultFriction = settingsViewModel::updateDefaultFriction,
                                 onAddQuickAction = settingsViewModel::addQuickAction,
                                 onRemoveQuickAction = settingsViewModel::removeQuickAction,
+                                onUpdateRequireReboot = settingsViewModel::updateRequireRebootForSettingsChange,
+                                onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
                             )
                         }
 

@@ -18,6 +18,15 @@
     <string name="setting_show_unlocks">Show unlocks</string>
     <string name="setting_show_rest">Show rest</string>
     <string name="setting_require_full_typing">Require full typing of guarded apps</string>
+    <string name="setting_require_reboot">Require reboot for settings changes</string>
+    <string name="setting_require_reboot_summary">Changes to settings, apps, profiles, and triggers take effect after device restart</string>
+    <string name="dialog_require_reboot_title">Require reboot for settings changes?</string>
+    <string name="dialog_require_reboot_message">Once enabled, any future changes to settings, app rules, profiles, or triggers—including turning this setting off—will only take effect after you restart your device.</string>
+    <string name="action_enable">Enable</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="banner_pending_reboot_title">Pending settings changes</string>
+    <string name="banner_pending_reboot_body">Restart your device to apply staged changes to active settings.</string>
+    <string name="action_discard_pending_changes">Discard</string>
     <string name="section_app_configuration">App Configuration</string>
     <string name="card_guarded_apps">Guarded Apps</string>
     <string name="card_blocked_apps">Blocked Apps</string>
