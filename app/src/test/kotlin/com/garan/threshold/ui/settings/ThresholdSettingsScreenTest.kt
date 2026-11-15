@@ -1,11 +1,14 @@
 package com.garan.threshold.ui.settings
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.ui.theme.ThresholdTheme
 import com.google.common.truth.Truth.assertThat
@@ -131,5 +134,62 @@ class ThresholdSettingsScreenTest {
         composeRule.onNodeWithTag(SettingsTestTags.CONFIRM_BLACK_WALLPAPER_BUTTON)
             .performClick()
         assertThat(appliedWallpaper).isTrue()
+    }
+
+    @Test
+    fun feedbackButton_displaysAtBottomOfSettingsAndInvokesCallback() {
+        var feedbackClicked = false
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(isLoading = false),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                    onSendFeedback = { feedbackClicked = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.FEEDBACK_BUTTON))
+        composeRule.onNodeWithTag(SettingsTestTags.FEEDBACK_BUTTON)
+            .assertIsDisplayed()
+            .performClick()
+
+        assertThat(feedbackClicked).isTrue()
+    }
+
+    @Test
+    fun feedbackEmailIntentFactory_createsMailtoIntentWithExpectedRecipientSubjectAndBody() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent = FeedbackEmailIntentFactory.createFeedbackEmailIntent(
+            context = context,
+            appVersion = "0.1.0",
+            androidVersion = "17 (SDK 37)",
+            deviceModel = "Google Pixel 9a",
+        )
+
+        assertThat(intent.action).isEqualTo(Intent.ACTION_SENDTO)
+        assertThat(intent.dataString).isEqualTo("mailto:")
+        assertThat(intent.getStringArrayExtra(Intent.EXTRA_EMAIL)?.toList())
+            .containsExactly("plop@plop.com")
+        assertThat(intent.getStringExtra(Intent.EXTRA_SUBJECT))
+            .isEqualTo("Threshold feedback")
+        assertThat(intent.getStringExtra(Intent.EXTRA_TEXT)).isEqualTo(
+            """
+            App version: 0.1.0
+            Android version: 17 (SDK 37)
+            Device: Google Pixel 9a
+
+            Add your feedback here.
+            """.trimIndent(),
+        )
     }
 }

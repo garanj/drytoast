@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -22,6 +23,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -67,6 +69,7 @@ object SettingsTestTags {
     const val CONFIRM_BLACK_WALLPAPER_DIALOG = "settings_confirm_black_wallpaper_dialog"
     const val CONFIRM_BLACK_WALLPAPER_BUTTON = "settings_confirm_black_wallpaper_button"
     const val CANCEL_BLACK_WALLPAPER_BUTTON = "settings_cancel_black_wallpaper_button"
+    const val FEEDBACK_BUTTON = "settings_feedback_button"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -86,6 +89,7 @@ fun ThresholdSettingsScreen(
     onUpdateRequireReboot: (Boolean) -> Unit = {},
     onDiscardPendingChanges: () -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
+    onSendFeedback: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
@@ -441,6 +445,30 @@ fun ThresholdSettingsScreen(
                         title = stringResource(R.string.friction_random),
                         selected = currentFriction == FrictionChoice.RANDOM,
                         onSelect = { onUpdateDefaultFriction(FrictionChoice.RANDOM) },
+                    )
+                }
+            }
+
+            item(key = "divider_4") {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            item(key = "action_feedback") {
+                OutlinedButton(
+                    onClick = onSendFeedback,
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
+                        .testTag(SettingsTestTags.FEEDBACK_BUTTON),
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_feedback_is_a_gift),
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
             }
