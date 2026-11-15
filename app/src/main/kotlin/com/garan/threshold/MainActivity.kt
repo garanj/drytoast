@@ -47,6 +47,7 @@ import com.garan.threshold.ui.motion.ThresholdMotion
 import com.garan.threshold.ui.onboarding.OnboardingScreen
 import com.garan.threshold.ui.search.SearchViewModel
 import com.garan.threshold.ui.settings.ConfigureAppsScreen
+import com.garan.threshold.ui.settings.FeedbackEmailIntentFactory
 import com.garan.threshold.ui.settings.ProfilesScreen
 import com.garan.threshold.ui.settings.SettingsViewModel
 import com.garan.threshold.ui.settings.ThresholdSettingsScreen
@@ -367,6 +368,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun launchFeedbackEmail() {
+        appContainer.hapticEngine.rotaryDetent()
+        val intent = FeedbackEmailIntentFactory.createFeedbackEmailIntent(this)
+        val launched = runCatching { startActivity(intent) }.isSuccess
+        if (!launched) {
+            Toast.makeText(this, getString(R.string.toast_no_email_app), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -377,13 +387,18 @@ class MainActivity : ComponentActivity() {
 
         val settingsAction = ActionCandidate(
             id = "settings",
-            label = "Threshold Settings",
+            label = getString(R.string.action_threshold_settings),
             shortcutKeyword = ":settings",
         )
         val wallpaperAction = ActionCandidate(
             id = "wallpaper",
-            label = "Set Pure Black Wallpaper",
+            label = getString(R.string.action_set_black_wallpaper_command),
             shortcutKeyword = ":wallpaper",
+        )
+        val feedbackAction = ActionCandidate(
+            id = "feedback",
+            label = getString(R.string.action_send_feedback),
+            shortcutKeyword = ":feedback",
         )
 
         searchViewModel = ViewModelProvider(
@@ -394,7 +409,7 @@ class MainActivity : ComponentActivity() {
                     packageIndexSource = container.packageIndexSource,
                     hapticEngine = container.hapticEngine,
                     dialerPackageResolver = container.dialerPackageResolver,
-                    actions = listOf(settingsAction, wallpaperAction),
+                    actions = listOf(settingsAction, wallpaperAction, feedbackAction),
                     settingsRepository = container.settingsRepository,
                     clockSource = container.activeClockSource,
                     scheduleAlarmScheduler = container.scheduleAlarmScheduler,
@@ -576,6 +591,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
+                                onSendFeedback = ::launchFeedbackEmail,
                             )
                         }
 
@@ -603,6 +619,7 @@ class MainActivity : ComponentActivity() {
                                 onUpdateRequireReboot = settingsViewModel::updateRequireRebootForSettingsChange,
                                 onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
+                                onSendFeedback = ::launchFeedbackEmail,
                             )
                         }
 

@@ -118,6 +118,14 @@
     <string name="dialog_black_wallpaper_message">This will replace your current system and lock screen wallpaper with solid AMOLED black.</string>
     <string name="action_apply">Apply</string>
     <string name="toast_black_wallpaper_applied">Pure black wallpaper applied</string>
+    <string name="action_threshold_settings">Threshold Settings</string>
+    <string name="action_set_black_wallpaper_command">Set Pure Black Wallpaper</string>
+    <string name="action_send_feedback">Send Feedback</string>
+    <string name="action_feedback_is_a_gift">Feedback is a gift!</string>
+    <string name="feedback_email_recipient" translatable="false">plop@plop.com</string>
+    <string name="feedback_email_subject">Threshold feedback</string>
+    <string name="feedback_email_body_template">App version: %1$s\nAndroid version: %2$s\nDevice: %3$s\n\nAdd your feedback here.</string>
+    <string name="toast_no_email_app">No email app found</string>
     <string name="section_app_configuration">App Configuration</string>
     <string name="card_guarded_apps">Guarded Apps</string>
     <string name="card_blocked_apps">Blocked Apps</string>

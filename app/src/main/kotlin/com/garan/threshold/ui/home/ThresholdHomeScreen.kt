@@ -98,6 +98,7 @@ fun ThresholdHomeScreen(
     onOpenSettings: () -> Unit = {},
     onResolveCapabilityIssue: (ProfileCapability) -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
+    onSendFeedback: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -311,6 +312,10 @@ fun ThresholdHomeScreen(
                                     "wallpaper" -> {
                                         resetSearchAndHideIme()
                                         showConfirmBlackWallpaperDialog = true
+                                    }
+                                    "feedback" -> {
+                                        resetSearchAndHideIme()
+                                        onSendFeedback()
                                     }
                                 }
                             }
