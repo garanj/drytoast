@@ -42,7 +42,10 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
             current.nfcDailyUsage
         }
         return current.copy(
-            general = updated.general.copy(hasSeenFirstRunHint = current.general.hasSeenFirstRunHint),
+            general = updated.general.copy(
+                hasSeenFirstRunHint = current.general.hasSeenFirstRunHint,
+                hasCompletedOnboarding = current.general.hasCompletedOnboarding,
+            ),
             baseProfile = updated.baseProfile,
             customProfiles = updated.customProfiles,
             savedTriggers = updated.savedTriggers,
@@ -75,7 +78,12 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
             if (current.isSettingsLocked) {
                 current
             } else {
-                current.copy(general = current.general.copy(hasSeenFirstRunHint = general.hasSeenFirstRunHint))
+                current.copy(
+                    general = current.general.copy(
+                        hasSeenFirstRunHint = general.hasSeenFirstRunHint,
+                        hasCompletedOnboarding = general.hasCompletedOnboarding,
+                    ),
+                )
             }
         }
         mutateConfiguration { snapshot ->
@@ -91,6 +99,10 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
 
     override suspend fun setHasSeenFirstRunHint(hasSeen: Boolean) {
         _settings.update { it.copy(general = it.general.copy(hasSeenFirstRunHint = hasSeen)) }
+    }
+
+    override suspend fun setHasCompletedOnboarding(completed: Boolean) {
+        _settings.update { it.copy(general = it.general.copy(hasCompletedOnboarding = completed)) }
     }
 
     override suspend fun removeApps(keys: Set<ComponentKey>) {

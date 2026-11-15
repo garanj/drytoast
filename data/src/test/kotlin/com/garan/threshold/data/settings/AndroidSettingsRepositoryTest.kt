@@ -764,4 +764,29 @@ class AndroidSettingsRepositoryTest {
             assertThat(afterBoot.hasPendingRebootChanges).isFalse()
             assertThat(afterBoot.general.showUnlocks).isFalse()
         }
+
+    @Test
+    fun setHasCompletedOnboarding_persistsFlagIndependentlyOfStagedRebootChanges() = runTest(testDispatcher) {
+        assertThat(repository.getSettings().general.hasCompletedOnboarding).isFalse()
+
+        repository.setHasCompletedOnboarding(true)
+        assertThat(repository.getSettings().general.hasCompletedOnboarding).isTrue()
+
+        repository.updateGeneralSettings(
+            GeneralSettings(
+                requireRebootForSettingsChange = true,
+                hasCompletedOnboarding = true,
+            ),
+        )
+        repository.updateGeneralSettings(
+            GeneralSettings(
+                requireRebootForSettingsChange = true,
+                showUnlocks = false,
+                hasCompletedOnboarding = true,
+            ),
+        )
+        val staged = repository.getSettings()
+        assertThat(staged.general.hasCompletedOnboarding).isTrue()
+        assertThat(staged.editableSnapshot.general.hasCompletedOnboarding).isTrue()
+    }
 }

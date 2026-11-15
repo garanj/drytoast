@@ -32,9 +32,11 @@ data class SettingsUiState(
     val savedTriggers: ImmutableList<SavedTrigger> = persistentListOf(),
     val availableApps: ImmutableList<InstalledApp> = persistentListOf(),
     val isLoading: Boolean = true,
+    val isSettingsLoaded: Boolean = false,
     val hasPendingRebootChanges: Boolean = false,
     val isRequireRebootActiveOnLive: Boolean = false,
     val isSettingsLocked: Boolean = false,
+    val showRoleRequiredWarning: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -52,16 +54,27 @@ class SettingsViewModel(
     @Volatile
     private var loadJob: Job? = null
 
+    @Volatile
+    private var onboardingCompletedOverride: Boolean? = null
+
     init {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.observeSettings().collect { settings ->
                 val editable = settings.editableSnapshot
+                val overrideVal = onboardingCompletedOverride
+                if (overrideVal != null && editable.general.hasCompletedOnboarding == overrideVal) {
+                    onboardingCompletedOverride = null
+                }
+                val resolvedGeneral = onboardingCompletedOverride?.let {
+                    editable.general.copy(hasCompletedOnboarding = it)
+                } ?: editable.general
                 _uiState.update { current ->
                     current.copy(
-                        general = editable.general,
+                        general = resolvedGeneral,
                         baseProfile = editable.baseProfile,
                         customProfiles = editable.customProfiles.toImmutableList(),
                         savedTriggers = editable.savedTriggers.toImmutableList(),
+                        isSettingsLoaded = true,
                         hasPendingRebootChanges = settings.hasPendingRebootChanges,
                         isRequireRebootActiveOnLive = settings.general.requireRebootForSettingsChange,
                         isSettingsLocked = settings.isSettingsLocked,
@@ -141,6 +154,50 @@ class SettingsViewModel(
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()
+        }
+    }
+
+    fun setShowRoleRequiredWarning(show: Boolean) {
+        if (_uiState.value.showRoleRequiredWarning == show) return
+        _uiState.update { current ->
+            current.copy(showRoleRequiredWarning = show)
+        }
+    }
+
+    fun completeOnboarding() {
+        val currentState = _uiState.value
+        if (currentState.isSettingsLoaded &&
+            currentState.general.hasCompletedOnboarding &&
+            onboardingCompletedOverride == null
+        ) {
+            return
+        }
+        onboardingCompletedOverride = true
+        _uiState.update { current ->
+            current.copy(
+                general = current.general.copy(hasCompletedOnboarding = true),
+                showRoleRequiredWarning = false,
+            )
+        }
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setHasCompletedOnboarding(true)
+        }
+    }
+
+    fun resetOnboarding() {
+        val currentState = _uiState.value
+        if (currentState.isSettingsLoaded &&
+            !currentState.general.hasCompletedOnboarding &&
+            onboardingCompletedOverride == null
+        ) {
+            return
+        }
+        onboardingCompletedOverride = false
+        _uiState.update { current ->
+            current.copy(general = current.general.copy(hasCompletedOnboarding = false))
+        }
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setHasCompletedOnboarding(false)
         }
     }
 

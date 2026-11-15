@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -23,6 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -44,6 +44,7 @@ import com.garan.threshold.schedule.ScheduleTransitionNotifier
 import com.garan.threshold.ui.home.ThresholdHomeScreen
 import com.garan.threshold.ui.launcher.AndroidAppLauncher
 import com.garan.threshold.ui.motion.ThresholdMotion
+import com.garan.threshold.ui.onboarding.OnboardingScreen
 import com.garan.threshold.ui.search.SearchViewModel
 import com.garan.threshold.ui.settings.ConfigureAppsScreen
 import com.garan.threshold.ui.settings.ProfilesScreen
@@ -56,6 +57,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ThresholdRoute : NavKey {
+    @Serializable
+    data object Onboarding : ThresholdRoute
+
     @Serializable
     data object Home : ThresholdRoute
 
@@ -110,6 +114,54 @@ class MainActivity : ComponentActivity() {
 
     private val homeIntentResetCounter = mutableIntStateOf(0)
 
+    private val defaultLauncherRoleLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        handleDefaultLauncherRoleResult()
+    }
+
+    internal fun isLaunchedAsStandardAppTask(): Boolean = intent?.hasCategory(Intent.CATEGORY_LAUNCHER) == true &&
+        intent?.hasCategory(Intent.CATEGORY_HOME) != true
+
+    internal fun handleDefaultLauncherRoleResult() {
+        val granted = appContainer.launcherRoleController.refresh()
+        if (granted) {
+            appContainer.pendingOnboardingRoleRequest = false
+            appContainer.hapticEngine.targetSnap()
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(false)
+                settingsViewModel.completeOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                }
+            }
+        } else {
+            appContainer.pendingOnboardingRoleRequest = false
+            appContainer.hapticEngine.resistanceDetent()
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(true)
+                settingsViewModel.resetOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(false)
+                }
+            }
+        }
+    }
+
+    internal fun requestDefaultLauncherRole() {
+        appContainer.pendingOnboardingRoleRequest = true
+        if (::settingsViewModel.isInitialized) {
+            settingsViewModel.completeOnboarding()
+        }
+        val intent = appContainer.launcherRoleController.createRequestRoleIntent()
+        val launched = runCatching { defaultLauncherRoleLauncher.launch(intent) }.isSuccess
+        if (!launched) {
+            handleDefaultLauncherRoleResult()
+        }
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // As a root home launcher, never delegate to super.onBackPressed() which finishes the activity
@@ -129,11 +181,50 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         appContainer.nfcReaderSource.enableForegroundReader(this)
+        val isDefault = appContainer.launcherRoleController.refresh()
+        if (isDefault) {
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(false)
+            }
+            if (appContainer.pendingOnboardingRoleRequest) {
+                appContainer.pendingOnboardingRoleRequest = false
+                appContainer.hapticEngine.targetSnap()
+                if (::settingsViewModel.isInitialized) {
+                    settingsViewModel.completeOnboarding()
+                } else {
+                    lifecycleScope.launch {
+                        appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                    }
+                }
+            }
+        } else {
+            if (appContainer.pendingOnboardingRoleRequest) {
+                appContainer.pendingOnboardingRoleRequest = false
+                if (::settingsViewModel.isInitialized) {
+                    settingsViewModel.setShowRoleRequiredWarning(true)
+                }
+                appContainer.hapticEngine.resistanceDetent()
+            }
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.resetOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(false)
+                }
+            }
+        }
     }
 
     override fun onPause() {
         appContainer.nfcReaderSource.disableForegroundReader(this)
         super.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (appContainer.launcherRoleController.isDefaultLauncher() && isLaunchedAsStandardAppTask()) {
+            finishAndRemoveTask()
+        }
     }
 
     @androidx.annotation.VisibleForTesting
@@ -198,6 +289,11 @@ class MainActivity : ComponentActivity() {
                 searchViewModel.reconcileForTesting()
             }
         }
+    }
+
+    @androidx.annotation.VisibleForTesting
+    fun setDefaultLauncherForTesting(isDefault: Boolean?) {
+        appContainer.defaultLauncherOverrideForTesting = isDefault
     }
 
     @androidx.annotation.VisibleForTesting
@@ -322,6 +418,12 @@ class MainActivity : ComponentActivity() {
             },
         )[SettingsViewModel::class.java]
 
+        if (container.launcherRoleController.isDefaultLauncher() && container.pendingOnboardingRoleRequest) {
+            container.pendingOnboardingRoleRequest = false
+            hapticEngine.targetSnap()
+            settingsViewModel.completeOnboarding()
+        }
+
         // IMPORTANT MEMORY INVARIANT (< 25 MB Typographic Mode / < 35 MB CI PSS Ceiling):
         // Never call searchViewModel.ensureIndexLoaded() eagerly in onCreate().
         // Resolving LauncherActivityInfo.getLabel() across all installed apps causes Android's
@@ -330,14 +432,42 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ThresholdTheme {
-                val backStack = rememberNavBackStack(ThresholdRoute.Home)
+                val initialRoute = if (container.launcherRoleController.isDefaultLauncher()) {
+                    ThresholdRoute.Home
+                } else {
+                    ThresholdRoute.Onboarding
+                }
+                val backStack = rememberNavBackStack(initialRoute)
                 val resetTrigger by homeIntentResetCounter
-                val settingsUiState by settingsViewModel.uiState.collectAsState()
-                val currentLocation by locationSource.currentLocation.collectAsState()
-                val locationTelemetry by locationSource.telemetry.collectAsState()
+                val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+                val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow
+                    .collectAsStateWithLifecycle()
+                val currentLocation by locationSource.currentLocation.collectAsStateWithLifecycle()
+                val locationTelemetry by locationSource.telemetry.collectAsStateWithLifecycle()
+                val requiresOnboarding =
+                    (!settingsUiState.general.hasCompletedOnboarding && !container.pendingOnboardingRoleRequest) ||
+                        !isDefaultLauncher
+
+                LaunchedEffect(settingsUiState.isSettingsLoaded, requiresOnboarding) {
+                    if (!settingsUiState.isSettingsLoaded) return@LaunchedEffect
+                    if (requiresOnboarding) {
+                        if (backStack.firstOrNull() != ThresholdRoute.Onboarding) {
+                            backStack.clear()
+                            backStack.add(ThresholdRoute.Onboarding)
+                        } else {
+                            while (backStack.size > 1) {
+                                backStack.removeLastOrNull()
+                            }
+                        }
+                    } else if (backStack.firstOrNull() == ThresholdRoute.Onboarding) {
+                        backStack.clear()
+                        backStack.add(ThresholdRoute.Home)
+                    }
+                }
 
                 LaunchedEffect(resetTrigger) {
                     if (resetTrigger > 0) {
+                        settingsViewModel.setShowRoleRequiredWarning(false)
                         while (backStack.size > 1) {
                             backStack.removeLastOrNull()
                         }
@@ -391,6 +521,16 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     entryProvider = entryProvider {
+                        entry<ThresholdRoute.Onboarding> {
+                            OnboardingScreen(
+                                isDefaultLauncher = isDefaultLauncher,
+                                onRequestDefaultLauncher = ::requestDefaultLauncherRole,
+                                onCompleteOnboarding = settingsViewModel::completeOnboarding,
+                                showRoleRequiredWarning = settingsUiState.showRoleRequiredWarning,
+                                hapticEngine = hapticEngine,
+                            )
+                        }
+
                         entry<ThresholdRoute.Home> {
                             ThresholdHomeScreen(
                                 viewModel = searchViewModel,

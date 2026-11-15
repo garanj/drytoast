@@ -78,8 +78,9 @@ fun TypedIntentionSurface(
     modifier: Modifier = Modifier,
     hapticEngine: HapticEngine = NoOpHapticEngine,
     overridePhrase: String? = null,
+    embedded: Boolean = false,
 ) {
-    BackHandler(enabled = true) {
+    BackHandler(enabled = !embedded) {
         onDismiss()
     }
 
@@ -103,8 +104,10 @@ fun TypedIntentionSurface(
     val isComplete = session.isComplete
 
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(embedded) {
+        if (!embedded) {
+            focusRequester.requestFocus()
+        }
     }
 
     var textFieldValue by remember {
@@ -119,8 +122,19 @@ fun TypedIntentionSurface(
         )
     }
 
-    Box(
-        modifier = modifier
+    val containerModifier = if (embedded) {
+        modifier
+            .fillMaxWidth()
+            .background(AmoledBlack)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                focusRequester.requestFocus()
+            }
+            .padding(horizontal = 16.dp, vertical = 20.dp)
+    } else {
+        modifier
             .fillMaxSize()
             .background(AmoledBlack)
             .safeDrawingPadding()
@@ -131,13 +145,20 @@ fun TypedIntentionSurface(
             ) {
                 focusRequester.requestFocus()
             }
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-    ) {
+            .padding(horizontal = 24.dp, vertical = 32.dp)
+    }
+
+    val columnModifier = if (embedded) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+    }
+
+    Box(modifier = containerModifier) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.CenterStart)
-                .verticalScroll(rememberScrollState()),
+            modifier = columnModifier.align(Alignment.CenterStart),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(

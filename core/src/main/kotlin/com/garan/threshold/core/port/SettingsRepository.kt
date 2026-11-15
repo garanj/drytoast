@@ -42,6 +42,11 @@ interface SettingsRepository {
     suspend fun setHasSeenFirstRunHint(hasSeen: Boolean)
 
     /**
+     * Sets whether the first-run onboarding wizard has been completed.
+     */
+    suspend fun setHasCompletedOnboarding(completed: Boolean) {}
+
+    /**
      * Removes specified app components from assignments and quick action slots (e.g. upon uninstallation).
      */
     suspend fun removeApps(keys: Set<ComponentKey>)

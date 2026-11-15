@@ -69,6 +69,8 @@ class ArchitectureAndConfigGuardTest {
         assertThat(manifest).contains("""android:icon="@mipmap/ic_launcher"""")
         assertThat(manifest).contains("""android:roundIcon="@mipmap/ic_launcher_round"""")
         assertThat(manifest).contains("""android:label="@string/app_name"""")
+        assertThat(manifest).contains("""android.intent.category.LAUNCHER""")
+        assertThat(manifest).contains("""android:excludeFromRecents="true"""")
 
         val mipmapAnyDpi = File(rootDir, "app/src/main/res/mipmap-anydpi-v26")
         assertThat(File(mipmapAnyDpi, "ic_launcher.xml").exists()).isTrue()
@@ -115,5 +117,23 @@ class ArchitectureAndConfigGuardTest {
         val mainActivityContent = File(appSourceDir, "com/garan/threshold/MainActivity.kt").readText()
         assertThat(mainActivityContent).contains("NavDisplay")
         assertThat(mainActivityContent).contains("rememberNavBackStack")
+
+        val onboardingFile = File(appSourceDir, "com/garan/threshold/ui/onboarding/OnboardingScreen.kt")
+        assertThat(onboardingFile.exists()).isTrue()
+        val hardcodedStringViolations = mutableListOf<String>()
+        var insideTestTagsObject = false
+        onboardingFile.useLines { lines ->
+            lines.forEachIndexed { index, line ->
+                val trimmed = line.trim()
+                if (trimmed.startsWith("object OnboardingTestTags")) {
+                    insideTestTagsObject = true
+                } else if (insideTestTagsObject && trimmed == "}") {
+                    insideTestTagsObject = false
+                } else if (!insideTestTagsObject && trimmed.contains("\"")) {
+                    hardcodedStringViolations.add("OnboardingScreen.kt:${index + 1} -> $trimmed")
+                }
+            }
+        }
+        assertThat(hardcodedStringViolations).isEmpty()
     }
 }

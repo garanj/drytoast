@@ -47,6 +47,11 @@ class ThresholdScheduleProfileInstrumentedTest {
 
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
+        val container = com.garan.threshold.ThresholdAppContainer.from(instrumentation.targetContext)
+        container.defaultLauncherOverrideForTesting = true
+        runBlocking {
+            container.settingsRepository.setHasCompletedOnboarding(true)
+        }
     }
 
     @After

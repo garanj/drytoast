@@ -74,6 +74,7 @@ class AndroidSettingsRepository(
         val REQUIRE_FULL_TYPING = booleanPreferencesKey("require_full_typing")
         val REQUIRE_REBOOT = booleanPreferencesKey("require_reboot_for_settings_change")
         val HAS_SEEN_FIRST_RUN_HINT = booleanPreferencesKey("has_seen_first_run_hint")
+        val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
         val APP_ASSIGNMENTS = stringPreferencesKey("app_assignments")
@@ -122,8 +123,14 @@ class AndroidSettingsRepository(
             dataStore.edit { prefs ->
                 if (prefs[Keys.SETTINGS_LOCKED] == true) return@edit
                 prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] = general.hasSeenFirstRunHint
+                prefs[Keys.HAS_COMPLETED_ONBOARDING] = general.hasCompletedOnboarding
                 mutateConfiguration(prefs) { snapshot ->
-                    snapshot.copy(general = general.copy(hasSeenFirstRunHint = snapshot.general.hasSeenFirstRunHint))
+                    snapshot.copy(
+                        general = general.copy(
+                            hasSeenFirstRunHint = snapshot.general.hasSeenFirstRunHint,
+                            hasCompletedOnboarding = snapshot.general.hasCompletedOnboarding,
+                        ),
+                    )
                 }
             }
         }
@@ -142,7 +149,17 @@ class AndroidSettingsRepository(
     override suspend fun setHasSeenFirstRunHint(hasSeen: Boolean) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
+                if (prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] == hasSeen) return@edit
                 prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] = hasSeen
+            }
+        }
+    }
+
+    override suspend fun setHasCompletedOnboarding(completed: Boolean) {
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                if (prefs[Keys.HAS_COMPLETED_ONBOARDING] == completed) return@edit
+                prefs[Keys.HAS_COMPLETED_ONBOARDING] = completed
             }
         }
     }
@@ -244,7 +261,11 @@ class AndroidSettingsRepository(
         val rawShadow = prefs[Keys.STAGED_SHADOW].orEmpty()
         if (rawShadow.isBlank()) return false
         val currentLive = mapToLiveSettingsOnly(prefs)
-        val shadowSnapshot = deserializeStagedSnapshot(rawShadow, currentLive.general.hasSeenFirstRunHint)
+        val shadowSnapshot = deserializeStagedSnapshot(
+            raw = rawShadow,
+            liveHasSeenFirstRunHint = currentLive.general.hasSeenFirstRunHint,
+            liveHasCompletedOnboarding = currentLive.general.hasCompletedOnboarding,
+        )
         if (shadowSnapshot != null) {
             writeLiveSnapshot(prefs, currentLive, shadowSnapshot)
         }
@@ -424,7 +445,11 @@ class AndroidSettingsRepository(
             if (stagedShadowRaw == cachedStagedShadowRaw) {
                 cachedStagedShadow
             } else {
-                val parsed = deserializeStagedSnapshot(stagedShadowRaw, live.general.hasSeenFirstRunHint)
+                val parsed = deserializeStagedSnapshot(
+                    raw = stagedShadowRaw,
+                    liveHasSeenFirstRunHint = live.general.hasSeenFirstRunHint,
+                    liveHasCompletedOnboarding = live.general.hasCompletedOnboarding,
+                )
                 cachedStagedShadowRaw = stagedShadowRaw
                 cachedStagedShadow = parsed
                 parsed
@@ -432,7 +457,10 @@ class AndroidSettingsRepository(
         } ?: return live
 
         val snapshot = rawSnapshot.copy(
-            general = rawSnapshot.general.copy(hasSeenFirstRunHint = live.general.hasSeenFirstRunHint),
+            general = rawSnapshot.general.copy(
+                hasSeenFirstRunHint = live.general.hasSeenFirstRunHint,
+                hasCompletedOnboarding = live.general.hasCompletedOnboarding,
+            ),
         )
 
         val stagedAtBootCount = prefs[Keys.STAGED_AT_BOOT_COUNT]
@@ -460,6 +488,7 @@ class AndroidSettingsRepository(
         val requireFullTyping = prefs[Keys.REQUIRE_FULL_TYPING] ?: false
         val requireReboot = prefs[Keys.REQUIRE_REBOOT] ?: false
         val hasSeenHint = prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] ?: false
+        val hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
 
         val frictionName = prefs[Keys.DEFAULT_FRICTION]
@@ -571,6 +600,7 @@ class AndroidSettingsRepository(
                 requireFullTypingOfGuardedApps = requireFullTyping,
                 requireRebootForSettingsChange = requireReboot,
                 hasSeenFirstRunHint = hasSeenHint,
+                hasCompletedOnboarding = hasCompletedOnboarding,
             ),
             baseProfile = BaseProfileSettings(
                 defaultFriction = defaultFriction,
@@ -602,7 +632,11 @@ class AndroidSettingsRepository(
         return obj.toString()
     }
 
-    private fun deserializeStagedSnapshot(raw: String, liveHasSeenFirstRunHint: Boolean): StagedSettingsSnapshot? {
+    private fun deserializeStagedSnapshot(
+        raw: String,
+        liveHasSeenFirstRunHint: Boolean,
+        liveHasCompletedOnboarding: Boolean = false,
+    ): StagedSettingsSnapshot? {
         if (raw.isBlank()) return null
         return runCatching {
             val obj = JSONObject(raw)
@@ -633,6 +667,7 @@ class AndroidSettingsRepository(
                     requireFullTypingOfGuardedApps = requireFullTyping,
                     requireRebootForSettingsChange = requireReboot,
                     hasSeenFirstRunHint = liveHasSeenFirstRunHint,
+                    hasCompletedOnboarding = liveHasCompletedOnboarding,
                 ),
                 baseProfile = BaseProfileSettings(
                     defaultFriction = defaultFriction,

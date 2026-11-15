@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -97,10 +98,18 @@ fun DragSortSurface(
     hapticEngine: HapticEngine = NoOpHapticEngine,
     pairCount: Int = 6,
     seed: Long? = null,
+    embedded: Boolean = false,
+    onDragActiveChanged: (Boolean) -> Unit = {},
 ) {
-    BackHandler(onBack = onDismiss)
+    BackHandler(enabled = !embedded, onBack = onDismiss)
 
     val currentHapticEngine by rememberUpdatedState(hapticEngine)
+    val currentOnDragActiveChanged by rememberUpdatedState(onDragActiveChanged)
+    DisposableEffect(Unit) {
+        onDispose {
+            currentOnDragActiveChanged(false)
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val targetPainters = rememberGlyphPainters()
     val draggablePainters = rememberGlyphPainters()
@@ -109,13 +118,20 @@ fun DragSortSurface(
 
     val effectiveSeed = remember(seed) { seed ?: Random.Default.nextLong() }
 
-    Column(
-        modifier = modifier
+    val rootModifier = if (embedded) {
+        modifier
+            .fillMaxSize()
+            .background(AmoledBlack)
+            .testTag("drag_sort_surface")
+    } else {
+        modifier
             .fillMaxSize()
             .background(AmoledBlack)
             .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-            .testTag("drag_sort_surface"),
-    ) {
+            .testTag("drag_sort_surface")
+    }
+
+    Column(modifier = rootModifier) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
@@ -190,16 +206,21 @@ fun DragSortSurface(
                             val draggedId = closestId ?: return@awaitEachGesture
                             snapBackJobs[draggedId]?.cancel()
                             activeDragId = draggedId
+                            currentOnDragActiveChanged(true)
                             currentHapticEngine.rotaryDetent()
 
-                            val completedNormally = drag(down.id) { change ->
-                                val delta = change.positionChange()
-                                change.consume()
-                                val current = currentPositions[draggedId]
-                                currentPositions[draggedId] = Offset(
-                                    x = (current.x + delta.x).coerceIn(0f, widthPx),
-                                    y = (current.y + delta.y).coerceIn(0f, heightPx),
-                                )
+                            val completedNormally = try {
+                                drag(down.id) { change ->
+                                    val delta = change.positionChange()
+                                    change.consume()
+                                    val current = currentPositions[draggedId]
+                                    currentPositions[draggedId] = Offset(
+                                        x = (current.x + delta.x).coerceIn(0f, widthPx),
+                                        y = (current.y + delta.y).coerceIn(0f, heightPx),
+                                    )
+                                }
+                            } finally {
+                                currentOnDragActiveChanged(false)
                             }
 
                             activeDragId = null
@@ -314,7 +335,7 @@ fun DragSortSurface(
         // Bottom Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite)
         Box(
             modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+                .padding(horizontal = if (embedded) 16.dp else 24.dp, vertical = if (embedded) 12.dp else 24.dp),
         ) {
             AnimatedContent(
                 targetState = isComplete,

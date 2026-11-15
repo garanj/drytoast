@@ -97,8 +97,9 @@ fun CaretTracingSurface(
     modifier: Modifier = Modifier,
     hapticEngine: HapticEngine = NoOpHapticEngine,
     totalDurationMs: Long = 17_000L,
+    embedded: Boolean = false,
 ) {
-    BackHandler(onBack = onDismiss)
+    BackHandler(enabled = !embedded, onBack = onDismiss)
 
     val currentHapticEngine by rememberUpdatedState(hapticEngine)
 
@@ -183,13 +184,20 @@ fun CaretTracingSurface(
         }
     }
 
-    Column(
-        modifier = modifier
+    val rootModifier = if (embedded) {
+        modifier
+            .fillMaxSize()
+            .background(AmoledBlack)
+            .testTag("caret_tracing_surface")
+    } else {
+        modifier
             .fillMaxSize()
             .background(AmoledBlack)
             .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-            .testTag("caret_tracing_surface"),
-    ) {
+            .testTag("caret_tracing_surface")
+    }
+
+    Column(modifier = rootModifier) {
         // Centered Canvas Area
         Box(
             modifier = Modifier
@@ -276,7 +284,7 @@ fun CaretTracingSurface(
         // Bottom Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite)
         Box(
             modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+                .padding(horizontal = if (embedded) 16.dp else 24.dp, vertical = if (embedded) 12.dp else 24.dp),
         ) {
             AnimatedContent(
                 targetState = isComplete,
