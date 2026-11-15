@@ -28,8 +28,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -37,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,12 +52,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.garan.threshold.R
 import com.garan.threshold.core.model.FrictionChoice
 import com.garan.threshold.core.port.HapticEngine
 import com.garan.threshold.core.port.NoOpHapticEngine
+import com.garan.threshold.ui.friction.CaretTracingSurface
+import com.garan.threshold.ui.friction.DragSortSurface
+import com.garan.threshold.ui.friction.TypedIntentionSurface
 import com.garan.threshold.ui.motion.ThresholdMotion
 import com.garan.threshold.ui.settings.BaseToggleState
 import com.garan.threshold.ui.settings.ThresholdIcons
@@ -95,6 +99,7 @@ fun OnboardingScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { ONBOARDING_PAGE_COUNT })
     val coroutineScope = rememberCoroutineScope()
+    var isCheckpointDragActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
@@ -251,6 +256,7 @@ fun OnboardingScreen(
 
             HorizontalPager(
                 state = pagerState,
+                userScrollEnabled = !isCheckpointDragActive,
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(OnboardingTestTags.PAGER),
@@ -258,7 +264,11 @@ fun OnboardingScreen(
                 when (page) {
                     0 -> InstrumentPhilosophyPage()
                     1 -> DeliberateLaunchPage()
-                    2 -> IntentionalFrictionPage(hapticEngine = hapticEngine)
+                    2 -> IntentionalFrictionPage(
+                        hapticEngine = hapticEngine,
+                        isDragActive = isCheckpointDragActive,
+                        onDragActiveChanged = { isCheckpointDragActive = it },
+                    )
                     3 -> ContextualProfilesPage()
                     4 -> TamperResistancePage()
                     5 -> SetDefaultLauncherPage(
@@ -360,9 +370,14 @@ private fun DeliberateLaunchPage() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
+private fun IntentionalFrictionPage(
+    hapticEngine: HapticEngine,
+    isDragActive: Boolean = false,
+    onDragActiveChanged: (Boolean) -> Unit = {},
+) {
     var selectedToggleState by rememberSaveable { mutableStateOf(BaseToggleState.GUARD) }
     var selectedFrictionChoice by rememberSaveable { mutableStateOf(FrictionChoice.TYPED_INTENTION) }
+    var demoResetNonce by rememberSaveable { mutableIntStateOf(0) }
 
     val toggleStatusDescription = when (selectedToggleState) {
         BaseToggleState.ALLOW -> stringResource(R.string.onboarding_p3_status_allow)
@@ -389,6 +404,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
         title = stringResource(R.string.onboarding_p3_title),
         subtitle = stringResource(R.string.onboarding_p3_subtitle),
         body = stringResource(R.string.onboarding_p3_body),
+        scrollEnabled = !isDragActive,
     ) {
         Column(
             modifier = Modifier
@@ -526,6 +542,58 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag(OnboardingTestTags.FRICTION_PREVIEW_DESCRIPTION),
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val demoAppLabel = stringResource(R.string.onboarding_p3_demo_app_name)
+            key(selectedFrictionChoice, demoResetNonce) {
+                when (selectedFrictionChoice) {
+                    FrictionChoice.TYPED_INTENTION, FrictionChoice.RANDOM -> {
+                        TypedIntentionSurface(
+                            appLabel = demoAppLabel,
+                            onConfirmOpen = { demoResetNonce++ },
+                            onDismiss = { demoResetNonce++ },
+                            hapticEngine = hapticEngine,
+                            embedded = true,
+                        )
+                    }
+                    FrictionChoice.DRAG_SORT -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp),
+                        ) {
+                            DragSortSurface(
+                                onConfirmOpen = { demoResetNonce++ },
+                                onDismiss = { demoResetNonce++ },
+                                hapticEngine = hapticEngine,
+                                pairCount = 3,
+                                embedded = true,
+                                onDragActiveChanged = onDragActiveChanged,
+                            )
+                        }
+                    }
+                    FrictionChoice.CARET_TRACING -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp),
+                        ) {
+                            CaretTracingSurface(
+                                onConfirmOpen = { demoResetNonce++ },
+                                onDismiss = { demoResetNonce++ },
+                                hapticEngine = hapticEngine,
+                                totalDurationMs = 8_500L,
+                                embedded = true,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -587,49 +655,50 @@ private fun SetDefaultLauncherPage(isDefaultLauncher: Boolean, showRoleRequiredW
         subtitle = stringResource(R.string.onboarding_p6_subtitle),
         body = stringResource(R.string.onboarding_p6_body),
     ) {
-        ListItem(
-            leadingContent = if (isDefaultLauncher) {
-                {
-                    Icon(
-                        imageVector = ThresholdIcons.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            } else {
-                null
-            },
-            headlineContent = {
-                Text(
-                    text = if (isDefaultLauncher) {
-                        stringResource(R.string.onboarding_default_launcher_active)
-                    } else {
-                        stringResource(R.string.onboarding_default_launcher_pending)
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDefaultLauncher) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .padding(horizontal = 16.dp, vertical = 18.dp)
                 .testTag(OnboardingTestTags.DEFAULT_LAUNCHER_STATUS),
-        )
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isDefaultLauncher) {
+                Icon(
+                    imageVector = ThresholdIcons.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+            Text(
+                text = if (isDefaultLauncher) {
+                    stringResource(R.string.onboarding_default_launcher_active)
+                } else {
+                    stringResource(R.string.onboarding_default_launcher_pending)
+                },
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = if (isDefaultLauncher) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
 
         if (showRoleRequiredWarning && !isDefaultLauncher) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.onboarding_default_launcher_required_warning),
                 style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.testTag(OnboardingTestTags.ROLE_REQUIRED_WARNING),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.ROLE_REQUIRED_WARNING),
             )
         }
     }
@@ -641,12 +710,13 @@ private fun OnboardingPageContainer(
     title: String,
     subtitle: String,
     body: String,
+    scrollEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState(), enabled = scrollEnabled)
             .padding(horizontal = 24.dp, vertical = 24.dp),
     ) {
         Text(

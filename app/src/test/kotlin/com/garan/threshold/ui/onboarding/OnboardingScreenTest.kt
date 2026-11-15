@@ -136,7 +136,7 @@ class OnboardingScreenTest {
         composeRule.onNodeWithTag(OnboardingTestTags.INTERACTIVE_TOGGLE_STATUS)
             .assertTextContains("BLOCK: Hidden from search results and disabled in quick actions.", substring = true)
 
-        // Tap Drag-to-Match checkpoint chip -> updates preview description
+        // Tap Drag-to-Match checkpoint chip -> updates preview description and hosts embedded DragSortSurface
         composeRule.onNodeWithTag(OnboardingTestTags.FRICTION_CHIP_PREFIX + FrictionChoice.DRAG_SORT.name)
             .performScrollTo()
             .performClick()
@@ -144,8 +144,11 @@ class OnboardingScreenTest {
         composeRule.onNodeWithTag(OnboardingTestTags.FRICTION_PREVIEW_DESCRIPTION)
             .performScrollTo()
             .assertTextContains("Drag geometric glyph pairs", substring = true)
+        composeRule.onNodeWithTag("drag_sort_surface")
+            .performScrollTo()
+            .assertIsDisplayed()
 
-        // Tap Caret Tracing checkpoint chip -> updates preview description
+        // Tap Caret Tracing checkpoint chip -> updates preview description and hosts embedded CaretTracingSurface
         composeRule.onNodeWithTag(OnboardingTestTags.FRICTION_CHIP_PREFIX + FrictionChoice.CARET_TRACING.name)
             .performScrollTo()
             .performClick()
@@ -153,6 +156,9 @@ class OnboardingScreenTest {
         composeRule.onNodeWithTag(OnboardingTestTags.FRICTION_PREVIEW_DESCRIPTION)
             .performScrollTo()
             .assertTextContains("Trace the Threshold caret steadily", substring = true)
+        composeRule.onNodeWithTag("caret_tracing_surface")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
