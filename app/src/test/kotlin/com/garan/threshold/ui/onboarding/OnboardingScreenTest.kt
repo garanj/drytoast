@@ -301,10 +301,48 @@ class OnboardingScreenTest {
                     assertThat(homeActivity.settingsViewModel.uiState.value.general.hasCompletedOnboarding).isTrue()
                     assertThat(container.pendingOnboardingRoleRequest).isFalse()
 
-                    // And the bootstrap CATEGORY_LAUNCHER task finishes itself when stopped
+                    // And the bootstrap CATEGORY_LAUNCHER task finishes and removes itself when stopped
                     bootstrapController.pause().stop()
                     assertThat(bootstrapActivity.isFinishing).isTrue()
                 }
+            }
+        } finally {
+            container.pendingOnboardingRoleRequest = false
+            container.defaultLauncherOverrideForTesting = true
+            runBlocking {
+                container.settingsRepository.setHasCompletedOnboarding(true)
+            }
+        }
+    }
+
+    @Test
+    fun mainActivity_whenLaunchedAsCategoryLauncherAfterRoleGranted_handsOffToHomeTaskAndFinishes() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val container = ThresholdAppContainer.from(context)
+        container.pendingOnboardingRoleRequest = false
+        container.defaultLauncherOverrideForTesting = false
+        runBlocking {
+            container.settingsRepository.setHasCompletedOnboarding(false)
+            container.settingsRepository.setHasSeenFirstRunHint(false)
+        }
+
+        try {
+            val launcherIntent = Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            Robolectric.buildActivity(MainActivity::class.java, launcherIntent).use { controller ->
+                controller.setup()
+                val activity = controller.get()
+                assertThat(activity.isLaunchedAsStandardAppTask()).isTrue()
+                assertThat(activity.isFinishing).isFalse()
+
+                // Simulate ROLE_HOME granted and returning via onActivityResult to the CATEGORY_LAUNCHER task
+                container.defaultLauncherOverrideForTesting = true
+                activity.handleDefaultLauncherRoleResult()
+
+                // The CATEGORY_LAUNCHER task finishes and removes itself to hand off to the CATEGORY_HOME task
+                assertThat(activity.isFinishing).isTrue()
             }
         } finally {
             container.pendingOnboardingRoleRequest = false
