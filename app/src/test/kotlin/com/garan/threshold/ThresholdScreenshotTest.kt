@@ -14,6 +14,7 @@ import com.garan.threshold.core.search.SearchItem
 import com.garan.threshold.core.search.SearchResult
 import com.garan.threshold.ui.friction.TypedIntentionSurface
 import com.garan.threshold.ui.home.ThresholdHomeCanvas
+import com.garan.threshold.ui.onboarding.OnboardingScreen
 import com.garan.threshold.ui.search.ThresholdSearchSurface
 import com.garan.threshold.ui.theme.ThresholdTheme
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -485,5 +486,52 @@ class ThresholdScreenshotTest {
             }
         }
         verifyAndArchiveSnapshot("configure_apps_custom_profile.png")
+    }
+
+    @Test
+    fun snapshotOnboardingPage1Threshold() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                OnboardingScreen(
+                    isDefaultLauncher = false,
+                    onRequestDefaultLauncher = {},
+                    onCompleteOnboarding = {},
+                    initialPage = 0,
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("onboarding_page1_threshold.png")
+    }
+
+    @Test
+    fun snapshotOnboardingPage3Friction() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                OnboardingScreen(
+                    isDefaultLauncher = false,
+                    onRequestDefaultLauncher = {},
+                    onCompleteOnboarding = {},
+                    initialPage = 2,
+                    demoOverridePhrase = "I am opening Social Feed intentionally",
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("onboarding_page3_friction.png")
+    }
+
+    @Test
+    fun snapshotOnboardingPage6Activation() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                OnboardingScreen(
+                    isDefaultLauncher = false,
+                    onRequestDefaultLauncher = {},
+                    onCompleteOnboarding = {},
+                    showRoleRequiredWarning = true,
+                    initialPage = 5,
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("onboarding_page6_activation.png")
     }
 }

@@ -149,6 +149,7 @@ class AndroidSettingsRepository(
     override suspend fun setHasSeenFirstRunHint(hasSeen: Boolean) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
+                if (prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] == hasSeen) return@edit
                 prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] = hasSeen
             }
         }
@@ -157,6 +158,7 @@ class AndroidSettingsRepository(
     override suspend fun setHasCompletedOnboarding(completed: Boolean) {
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
+                if (prefs[Keys.HAS_COMPLETED_ONBOARDING] == completed) return@edit
                 prefs[Keys.HAS_COMPLETED_ONBOARDING] = completed
             }
         }

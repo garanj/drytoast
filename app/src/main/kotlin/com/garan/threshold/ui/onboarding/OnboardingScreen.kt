@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -96,8 +97,13 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier,
     showRoleRequiredWarning: Boolean = false,
     hapticEngine: HapticEngine = NoOpHapticEngine,
+    initialPage: Int = 0,
+    demoOverridePhrase: String? = null,
 ) {
-    val pagerState = rememberPagerState(pageCount = { ONBOARDING_PAGE_COUNT })
+    val pagerState = rememberPagerState(
+        initialPage = initialPage.coerceIn(0, ONBOARDING_PAGE_COUNT - 1),
+        pageCount = { ONBOARDING_PAGE_COUNT },
+    )
     val coroutineScope = rememberCoroutineScope()
     var isCheckpointDragActive by remember { mutableStateOf(false) }
 
@@ -126,158 +132,177 @@ fun OnboardingScreen(
             .semantics { testTagsAsResourceId = true }
             .testTag(OnboardingTestTags.ROOT),
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
+        topBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .navigationBarsPadding(),
+                    .statusBarsPadding(),
             ) {
+                OnboardingHeaderBar(
+                    currentPage = pagerState.currentPage,
+                    totalPages = ONBOARDING_PAGE_COUNT,
+                )
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 1.dp,
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (pagerState.currentPage > 0) {
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(
-                                        page = pagerState.currentPage - 1,
-                                        animationSpec = ThresholdMotion.opticalTween(
-                                            ThresholdMotion.SHUTTER_OPEN_DURATION_MS,
-                                        ),
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(2.dp),
-                            modifier = Modifier.testTag(OnboardingTestTags.BACK_BUTTON),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.onboarding_back),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-
-                    if (pagerState.currentPage < ONBOARDING_PAGE_COUNT - 1) {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(
-                                        page = pagerState.currentPage + 1,
-                                        animationSpec = ThresholdMotion.opticalTween(
-                                            ThresholdMotion.SHUTTER_OPEN_DURATION_MS,
-                                        ),
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(2.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
-                            modifier = Modifier.testTag(OnboardingTestTags.NEXT_BUTTON),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.onboarding_next),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    } else {
-                        if (isDefaultLauncher) {
-                            Button(
-                                onClick = {
-                                    hapticEngine.targetSnap()
-                                    onCompleteOnboarding()
-                                },
-                                shape = RoundedCornerShape(2.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                                modifier = Modifier.testTag(OnboardingTestTags.FINISH_BUTTON),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.onboarding_enter_threshold),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    hapticEngine.rotaryDetent()
-                                    onRequestDefaultLauncher()
-                                },
-                                shape = RoundedCornerShape(2.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                                modifier = Modifier.testTag(OnboardingTestTags.SET_DEFAULT_LAUNCHER_BUTTON),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.onboarding_set_default_launcher),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                        }
-                    }
-                }
             }
         },
+        bottomBar = {
+            OnboardingBottomBar(
+                currentPage = pagerState.currentPage,
+                totalPages = ONBOARDING_PAGE_COUNT,
+                isDefaultLauncher = isDefaultLauncher,
+                onPreviousPage = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            page = (pagerState.currentPage - 1).coerceAtLeast(0),
+                            animationSpec = ThresholdMotion.opticalTween(
+                                ThresholdMotion.SHUTTER_OPEN_DURATION_MS,
+                            ),
+                        )
+                    }
+                },
+                onNextPage = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            page = (pagerState.currentPage + 1).coerceAtMost(ONBOARDING_PAGE_COUNT - 1),
+                            animationSpec = ThresholdMotion.opticalTween(
+                                ThresholdMotion.SHUTTER_OPEN_DURATION_MS,
+                            ),
+                        )
+                    }
+                },
+                onRequestDefaultLauncher = {
+                    hapticEngine.rotaryDetent()
+                    onRequestDefaultLauncher()
+                },
+                onCompleteOnboarding = {
+                    hapticEngine.targetSnap()
+                    onCompleteOnboarding()
+                },
+            )
+        },
     ) { innerPadding ->
-        Column(
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = !isCheckpointDragActive,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .consumeWindowInsets(innerPadding),
-        ) {
-            OnboardingHeaderBar(
-                currentPage = pagerState.currentPage,
-                totalPages = ONBOARDING_PAGE_COUNT,
-            )
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 1.dp,
-            )
-
-            HorizontalPager(
-                state = pagerState,
-                userScrollEnabled = !isCheckpointDragActive,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag(OnboardingTestTags.PAGER),
-            ) { page ->
-                when (page) {
-                    0 -> InstrumentPhilosophyPage()
-                    1 -> DeliberateLaunchPage()
-                    2 -> IntentionalFrictionPage(
-                        hapticEngine = hapticEngine,
-                        isDragActive = isCheckpointDragActive,
-                        onDragActiveChanged = { isCheckpointDragActive = it },
-                    )
-                    3 -> ContextualProfilesPage()
-                    4 -> TamperResistancePage()
-                    5 -> SetDefaultLauncherPage(
-                        isDefaultLauncher = isDefaultLauncher,
-                        showRoleRequiredWarning = showRoleRequiredWarning,
-                    )
-                }
+                .consumeWindowInsets(innerPadding)
+                .testTag(OnboardingTestTags.PAGER),
+        ) { page ->
+            when (page) {
+                0 -> InstrumentPhilosophyPage()
+                1 -> DeliberateLaunchPage()
+                2 -> IntentionalFrictionPage(
+                    hapticEngine = hapticEngine,
+                    isDragActive = isCheckpointDragActive,
+                    onDragActiveChanged = { isCheckpointDragActive = it },
+                    demoOverridePhrase = demoOverridePhrase,
+                )
+                3 -> ContextualProfilesPage()
+                4 -> TamperResistancePage()
+                5 -> SetDefaultLauncherPage(
+                    isDefaultLauncher = isDefaultLauncher,
+                    showRoleRequiredWarning = showRoleRequiredWarning,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun OnboardingBottomBar(
+    currentPage: Int,
+    totalPages: Int,
+    isDefaultLauncher: Boolean,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
+    onRequestDefaultLauncher: () -> Unit,
+    onCompleteOnboarding: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding(),
+    ) {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            thickness = 1.dp,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (currentPage > 0) {
+                OutlinedButton(
+                    onClick = onPreviousPage,
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier.testTag(OnboardingTestTags.BACK_BUTTON),
+                ) {
+                    Text(
+                        text = stringResource(R.string.onboarding_back),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+            } else {
+                Spacer(modifier = Modifier.width(1.dp))
+            }
+
+            if (currentPage < totalPages - 1) {
+                OnboardingPrimaryButton(
+                    text = stringResource(R.string.onboarding_next),
+                    testTag = OnboardingTestTags.NEXT_BUTTON,
+                    onClick = onNextPage,
+                )
+            } else if (isDefaultLauncher) {
+                OnboardingPrimaryButton(
+                    text = stringResource(R.string.onboarding_enter_threshold),
+                    testTag = OnboardingTestTags.FINISH_BUTTON,
+                    onClick = onCompleteOnboarding,
+                )
+            } else {
+                OnboardingPrimaryButton(
+                    text = stringResource(R.string.onboarding_set_default_launcher),
+                    testTag = OnboardingTestTags.SET_DEFAULT_LAUNCHER_BUTTON,
+                    onClick = onRequestDefaultLauncher,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingPrimaryButton(
+    text: String,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(2.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        modifier = modifier.testTag(testTag),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -374,6 +399,7 @@ private fun IntentionalFrictionPage(
     hapticEngine: HapticEngine,
     isDragActive: Boolean = false,
     onDragActiveChanged: (Boolean) -> Unit = {},
+    demoOverridePhrase: String? = null,
 ) {
     var selectedToggleState by rememberSaveable { mutableStateOf(BaseToggleState.GUARD) }
     var selectedFrictionChoice by rememberSaveable { mutableStateOf(FrictionChoice.TYPED_INTENTION) }
@@ -417,37 +443,35 @@ private fun IntentionalFrictionPage(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.onboarding_p3_demo_app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (selectedToggleState == BaseToggleState.BLOCK) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_p3_demo_caption),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                ThresholdMultiStateToggle(
-                    options = BaseToggleState.entries,
-                    selected = selectedToggleState,
-                    onSelect = { selectedToggleState = it },
-                    label = { it.label },
-                    modifier = Modifier
-                        .width(176.dp)
-                        .testTag(OnboardingTestTags.INTERACTIVE_TOGGLE),
-                    hapticEngine = hapticEngine,
-                    isResistanceState = { it == BaseToggleState.BLOCK },
+                Text(
+                    text = stringResource(R.string.onboarding_p3_demo_app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (selectedToggleState == BaseToggleState.BLOCK) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_p3_demo_caption),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            ThresholdMultiStateToggle(
+                options = BaseToggleState.entries,
+                selected = selectedToggleState,
+                onSelect = { selectedToggleState = it },
+                label = { stringResource(it.labelRes) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.INTERACTIVE_TOGGLE),
+                hapticEngine = hapticEngine,
+                isResistanceState = { it == BaseToggleState.BLOCK },
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider(
@@ -558,6 +582,7 @@ private fun IntentionalFrictionPage(
                             onConfirmOpen = { demoResetNonce++ },
                             onDismiss = { demoResetNonce++ },
                             hapticEngine = hapticEngine,
+                            overridePhrase = demoOverridePhrase,
                             embedded = true,
                         )
                     }

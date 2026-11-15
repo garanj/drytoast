@@ -1,5 +1,6 @@
 package com.garan.threshold.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.garan.threshold.R
 import com.garan.threshold.core.port.HapticEngine
 import com.garan.threshold.core.port.NoOpHapticEngine
 import com.garan.threshold.ui.motion.ThresholdMotion
@@ -46,10 +49,10 @@ import com.garan.threshold.ui.theme.SubtleGray
  * Standard 3-state toggle positions for the Base / Default Profile.
  * Balanced 5-letter verbs: ALLOW, GUARD, BLOCK.
  */
-enum class BaseToggleState(val label: String) {
-    ALLOW("ALLOW"),
-    GUARD("GUARD"),
-    BLOCK("BLOCK"),
+enum class BaseToggleState(val label: String, @StringRes val labelRes: Int) {
+    ALLOW("ALLOW", R.string.toggle_allow),
+    GUARD("GUARD", R.string.toggle_guard),
+    BLOCK("BLOCK", R.string.toggle_block),
 }
 
 /**
@@ -77,7 +80,7 @@ fun <T> ThresholdMultiStateToggle(
     options: List<T>,
     selected: T?,
     onSelect: (T) -> Unit,
-    label: (T) -> String,
+    label: @Composable (T) -> String,
     modifier: Modifier = Modifier,
     height: Dp = 32.dp,
     enabled: Boolean = true,
@@ -233,7 +236,7 @@ fun ThresholdProfileOverrideToggle(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "DEFAULT",
+                text = stringResource(R.string.toggle_default),
                 color = if (isDefault) AmoledBlack else SubtleGray,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -256,7 +259,7 @@ fun ThresholdProfileOverrideToggle(
             onSelect = { newState ->
                 onOverrideChange(newState)
             },
-            label = { it.label },
+            label = { stringResource(it.labelRes) },
             modifier = Modifier.weight(1f),
             height = height,
             enabled = !isDefault,

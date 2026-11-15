@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -104,6 +105,11 @@ fun DragSortSurface(
 
     val currentHapticEngine by rememberUpdatedState(hapticEngine)
     val currentOnDragActiveChanged by rememberUpdatedState(onDragActiveChanged)
+    DisposableEffect(Unit) {
+        onDispose {
+            currentOnDragActiveChanged(false)
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val targetPainters = rememberGlyphPainters()
     val draggablePainters = rememberGlyphPainters()

@@ -36,6 +36,7 @@ data class SettingsUiState(
     val hasPendingRebootChanges: Boolean = false,
     val isRequireRebootActiveOnLive: Boolean = false,
     val isSettingsLocked: Boolean = false,
+    val showRoleRequiredWarning: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -156,10 +157,27 @@ class SettingsViewModel(
         }
     }
 
+    fun setShowRoleRequiredWarning(show: Boolean) {
+        if (_uiState.value.showRoleRequiredWarning == show) return
+        _uiState.update { current ->
+            current.copy(showRoleRequiredWarning = show)
+        }
+    }
+
     fun completeOnboarding() {
+        val currentState = _uiState.value
+        if (currentState.isSettingsLoaded &&
+            currentState.general.hasCompletedOnboarding &&
+            onboardingCompletedOverride == null
+        ) {
+            return
+        }
         onboardingCompletedOverride = true
         _uiState.update { current ->
-            current.copy(general = current.general.copy(hasCompletedOnboarding = true))
+            current.copy(
+                general = current.general.copy(hasCompletedOnboarding = true),
+                showRoleRequiredWarning = false,
+            )
         }
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.setHasCompletedOnboarding(true)
@@ -167,6 +185,13 @@ class SettingsViewModel(
     }
 
     fun resetOnboarding() {
+        val currentState = _uiState.value
+        if (currentState.isSettingsLoaded &&
+            !currentState.general.hasCompletedOnboarding &&
+            onboardingCompletedOverride == null
+        ) {
+            return
+        }
         onboardingCompletedOverride = false
         _uiState.update { current ->
             current.copy(general = current.general.copy(hasCompletedOnboarding = false))

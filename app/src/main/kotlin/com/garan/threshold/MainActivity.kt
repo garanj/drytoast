@@ -14,16 +14,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -114,7 +113,6 @@ class MainActivity : ComponentActivity() {
         private set
 
     private val homeIntentResetCounter = mutableIntStateOf(0)
-    private val showRoleRequiredWarning = mutableStateOf(false)
 
     private val defaultLauncherRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -129,9 +127,9 @@ class MainActivity : ComponentActivity() {
         val granted = appContainer.launcherRoleController.refresh()
         if (granted) {
             appContainer.pendingOnboardingRoleRequest = false
-            showRoleRequiredWarning.value = false
             appContainer.hapticEngine.targetSnap()
             if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(false)
                 settingsViewModel.completeOnboarding()
             } else {
                 lifecycleScope.launch {
@@ -140,9 +138,9 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             appContainer.pendingOnboardingRoleRequest = false
-            showRoleRequiredWarning.value = true
             appContainer.hapticEngine.resistanceDetent()
             if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(true)
                 settingsViewModel.resetOnboarding()
             } else {
                 lifecycleScope.launch {
@@ -185,7 +183,9 @@ class MainActivity : ComponentActivity() {
         appContainer.nfcReaderSource.enableForegroundReader(this)
         val isDefault = appContainer.launcherRoleController.refresh()
         if (isDefault) {
-            showRoleRequiredWarning.value = false
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.setShowRoleRequiredWarning(false)
+            }
             if (appContainer.pendingOnboardingRoleRequest) {
                 appContainer.pendingOnboardingRoleRequest = false
                 appContainer.hapticEngine.targetSnap()
@@ -200,7 +200,9 @@ class MainActivity : ComponentActivity() {
         } else {
             if (appContainer.pendingOnboardingRoleRequest) {
                 appContainer.pendingOnboardingRoleRequest = false
-                showRoleRequiredWarning.value = true
+                if (::settingsViewModel.isInitialized) {
+                    settingsViewModel.setShowRoleRequiredWarning(true)
+                }
                 appContainer.hapticEngine.resistanceDetent()
             }
             if (::settingsViewModel.isInitialized) {
@@ -437,11 +439,11 @@ class MainActivity : ComponentActivity() {
                 }
                 val backStack = rememberNavBackStack(initialRoute)
                 val resetTrigger by homeIntentResetCounter
-                val roleWarning by showRoleRequiredWarning
-                val settingsUiState by settingsViewModel.uiState.collectAsState()
-                val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow.collectAsState()
-                val currentLocation by locationSource.currentLocation.collectAsState()
-                val locationTelemetry by locationSource.telemetry.collectAsState()
+                val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+                val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow
+                    .collectAsStateWithLifecycle()
+                val currentLocation by locationSource.currentLocation.collectAsStateWithLifecycle()
+                val locationTelemetry by locationSource.telemetry.collectAsStateWithLifecycle()
                 val requiresOnboarding =
                     (!settingsUiState.general.hasCompletedOnboarding && !container.pendingOnboardingRoleRequest) ||
                         !isDefaultLauncher
@@ -465,7 +467,7 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(resetTrigger) {
                     if (resetTrigger > 0) {
-                        showRoleRequiredWarning.value = false
+                        settingsViewModel.setShowRoleRequiredWarning(false)
                         while (backStack.size > 1) {
                             backStack.removeLastOrNull()
                         }
@@ -524,7 +526,7 @@ class MainActivity : ComponentActivity() {
                                 isDefaultLauncher = isDefaultLauncher,
                                 onRequestDefaultLauncher = ::requestDefaultLauncherRole,
                                 onCompleteOnboarding = settingsViewModel::completeOnboarding,
-                                showRoleRequiredWarning = roleWarning,
+                                showRoleRequiredWarning = settingsUiState.showRoleRequiredWarning,
                                 hapticEngine = hapticEngine,
                             )
                         }

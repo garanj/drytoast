@@ -501,7 +501,7 @@ private fun UnifiedAppRow(
                         options = BaseToggleState.entries,
                         selected = currentToggleState,
                         onSelect = onSelectToggle,
-                        label = { it.label },
+                        label = { stringResource(it.labelRes) },
                         modifier = Modifier.width(168.dp),
                         hapticEngine = hapticEngine,
                         isResistanceState = { it == BaseToggleState.BLOCK },

@@ -341,6 +341,32 @@ class OnboardingScreenTest {
         composeRule.onNodeWithText("Press and hold to configure").assertIsDisplayed()
     }
 
+    @Test
+    fun dragSortSurface_resetsDragActiveToFalseWhenDisposed() {
+        var showDragSort by mutableStateOf(true)
+        var isDragActive = true
+
+        composeRule.setContent {
+            ThresholdTheme {
+                if (showDragSort) {
+                    com.garan.threshold.ui.friction.DragSortSurface(
+                        onConfirmOpen = {},
+                        onDismiss = {},
+                        pairCount = 3,
+                        embedded = true,
+                        onDragActiveChanged = { isDragActive = it },
+                    )
+                }
+            }
+        }
+
+        composeRule.waitForIdle()
+        showDragSort = false
+        composeRule.waitForIdle()
+
+        assertThat(isDragActive).isFalse()
+    }
+
     private class RecordingHapticEngine : HapticEngine {
         var rotaryDetentCount = 0
             private set

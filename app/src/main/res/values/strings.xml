@@ -132,6 +132,10 @@
     <string name="tier_guarded">Guarded</string>
     <string name="tier_standard">Standard</string>
     <string name="tier_allow">Allow</string>
+    <string name="toggle_allow">ALLOW</string>
+    <string name="toggle_guard">GUARD</string>
+    <string name="toggle_block">BLOCK</string>
+    <string name="toggle_default">DEFAULT</string>
     <string name="filter_all">All</string>
     <string name="setting_override_friction">Override friction</string>
     <string name="label_empty">empty</string>
