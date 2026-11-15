@@ -51,10 +51,10 @@ class OnboardingScreenTest {
             }
         }
 
-        // Page 01 / 06: THE INSTRUMENT
+        // Page 01 / 06: THRESHOLD
         composeRule.onNodeWithTag(OnboardingTestTags.STEP_INDICATOR)
             .assertTextContains("01 / 06")
-        composeRule.onNodeWithText("THE INSTRUMENT").assertIsDisplayed()
+        composeRule.onNodeWithText("THRESHOLD").assertIsDisplayed()
         composeRule.onNodeWithText("Quiet by default.").assertIsDisplayed()
 
         // Page 02 / 06: DELIBERATE LAUNCH
@@ -161,7 +161,6 @@ class OnboardingScreenTest {
         var showWarning by mutableStateOf(false)
         var requestedDefaultCount = 0
         var completedCount = 0
-        var wallpaperAppliedCount = 0
 
         composeRule.setContent {
             ThresholdTheme {
@@ -173,7 +172,6 @@ class OnboardingScreenTest {
                     },
                     onCompleteOnboarding = { completedCount++ },
                     showRoleRequiredWarning = showWarning,
-                    onApplyPureBlackWallpaper = { wallpaperAppliedCount++ },
                 )
             }
         }
@@ -193,13 +191,6 @@ class OnboardingScreenTest {
         assertThat(requestedDefaultCount).isEqualTo(1)
         assertThat(completedCount).isEqualTo(0)
         composeRule.onNodeWithTag(OnboardingTestTags.ROLE_REQUIRED_WARNING).assertIsDisplayed()
-
-        // Optional pure black wallpaper button works on Page 06
-        composeRule.onNodeWithTag(OnboardingTestTags.SET_BLACK_WALLPAPER_BUTTON)
-            .performScrollTo()
-            .performClick()
-        composeRule.waitForIdle()
-        assertThat(wallpaperAppliedCount).isEqualTo(1)
 
         // Grant default launcher role -> CTA transitions to "Enter Threshold"
         isDefault = true

@@ -2,7 +2,6 @@ package com.garan.threshold.ui.onboarding
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,7 +73,6 @@ object OnboardingTestTags {
     const val NEXT_BUTTON = "onboarding_next_button"
     const val SET_DEFAULT_LAUNCHER_BUTTON = "onboarding_set_default_launcher_button"
     const val FINISH_BUTTON = "onboarding_finish_button"
-    const val SET_BLACK_WALLPAPER_BUTTON = "onboarding_set_black_wallpaper_button"
     const val DEFAULT_LAUNCHER_STATUS = "onboarding_default_launcher_status"
     const val ROLE_REQUIRED_WARNING = "onboarding_role_required_warning"
     const val INTERACTIVE_TOGGLE = "onboarding_interactive_toggle"
@@ -93,7 +91,6 @@ fun OnboardingScreen(
     onCompleteOnboarding: () -> Unit,
     modifier: Modifier = Modifier,
     showRoleRequiredWarning: Boolean = false,
-    onApplyPureBlackWallpaper: () -> Unit = {},
     hapticEngine: HapticEngine = NoOpHapticEngine,
 ) {
     val pagerState = rememberPagerState(pageCount = { ONBOARDING_PAGE_COUNT })
@@ -267,7 +264,6 @@ fun OnboardingScreen(
                     5 -> SetDefaultLauncherPage(
                         isDefaultLauncher = isDefaultLauncher,
                         showRoleRequiredWarning = showRoleRequiredWarning,
-                        onApplyPureBlackWallpaper = onApplyPureBlackWallpaper,
                     )
                 }
             }
@@ -320,11 +316,11 @@ private fun OnboardingHeaderBar(currentPage: Int, totalPages: Int, modifier: Mod
 private fun InstrumentPhilosophyPage() {
     OnboardingPageContainer(
         eyebrow = "01 // PHILOSOPHY",
-        title = "THE INSTRUMENT",
+        title = "THRESHOLD",
         subtitle = "Quiet by default.",
-        body = "Threshold replaces app grids, notification badges, and algorithmic feeds " +
-            "with a pure AMOLED black typographic canvas—treating your smartphone like " +
-            "a precision mechanical tool rather than an attention trap.",
+        body = "Threshold removes app grids, notification badges and feeds, providing just a plain, " +
+            "undistracting, minimal surface. It turns your phone into a precision tool, " +
+            "rather than an attention trap.",
     ) {
         OnboardingCalloutItem(
             label = "ZERO VISUAL NOISE",
@@ -333,7 +329,7 @@ private fun InstrumentPhilosophyPage() {
         OnboardingCalloutItem(
             label = "INTENT GATEKEEPER",
             description = "Restricted apps are filtered cleanly at the launch surface " +
-                "without invasive background screen-scraping.",
+                "without invasive background services.",
         )
         OnboardingCalloutItem(
             label = "OFFLINE & PRIVATE",
@@ -353,16 +349,16 @@ private fun DeliberateLaunchPage() {
     ) {
         OnboardingCalloutItem(
             label = "INSTANT FUZZY SEARCH",
-            description = "Type a few letters of any allowed app and press Go to launch with zero delay.",
+            description = "Type a few letters of any allowed app to launch with zero delay.",
         )
         OnboardingCalloutItem(
             label = "UP TO 7 QUICK ACTIONS",
-            description = "Pin your most-used tools (01–07) directly below search for immediate one-tap access.",
+            description = "Pin your most-used tools directly below search for immediate one-tap access.",
         )
         OnboardingCalloutItem(
             label = "COLON COMMANDS",
             description = "Type :settings to open configuration or :wallpaper to apply " +
-                "a solid AMOLED black wallpaper.",
+                "a solid black wallpaper.",
         )
     }
 }
@@ -401,7 +397,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
     OnboardingPageContainer(
         eyebrow = "03 // GATEKEEPING",
         title = "INTENTIONAL FRICTION",
-        subtitle = "Three states for every app. Tap to test the detent.",
+        subtitle = "Three states for every app.",
         body = "Assign every app to Allow, Guard, or Block. Tap the mechanical toggle below " +
             "to feel the micro-haptic detent for each tier:",
     ) {
@@ -555,7 +551,7 @@ private fun ContextualProfilesPage() {
             "Profiles evaluate in priority order using AND / OR combinations of reusable triggers:",
     ) {
         OnboardingCalloutItem(
-            label = "CIRCADIAN SCHEDULES",
+            label = "SCHEDULES",
             description = "Activate profiles automatically during recurring daily or overnight time windows.",
             icon = ThresholdIcons.Schedule,
         )
@@ -601,11 +597,7 @@ private fun TamperResistancePage() {
 }
 
 @Composable
-private fun SetDefaultLauncherPage(
-    isDefaultLauncher: Boolean,
-    showRoleRequiredWarning: Boolean,
-    onApplyPureBlackWallpaper: () -> Unit,
-) {
+private fun SetDefaultLauncherPage(isDefaultLauncher: Boolean, showRoleRequiredWarning: Boolean) {
     OnboardingPageContainer(
         eyebrow = "06 // ACTIVATION",
         title = "SET DEFAULT LAUNCHER",
@@ -659,43 +651,6 @@ private fun SetDefaultLauncherPage(
                 modifier = Modifier.testTag(OnboardingTestTags.ROLE_REQUIRED_WARNING),
             )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
-            thickness = 1.dp,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.action_set_black_wallpaper),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-            },
-            supportingContent = {
-                Text(
-                    text = stringResource(R.string.action_set_black_wallpaper_summary),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            },
-            trailingContent = {
-                Icon(
-                    imageVector = ThresholdIcons.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(OnboardingTestTags.SET_BLACK_WALLPAPER_BUTTON)
-                .clickable(onClick = onApplyPureBlackWallpaper),
-        )
     }
 }
 

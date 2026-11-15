@@ -525,7 +525,6 @@ class MainActivity : ComponentActivity() {
                                 onRequestDefaultLauncher = ::requestDefaultLauncherRole,
                                 onCompleteOnboarding = settingsViewModel::completeOnboarding,
                                 showRoleRequiredWarning = roleWarning,
-                                onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 hapticEngine = hapticEngine,
                             )
                         }
