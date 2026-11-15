@@ -125,38 +125,19 @@ class MainActivity : ComponentActivity() {
     internal fun isLaunchedAsStandardAppTask(): Boolean = intent?.hasCategory(Intent.CATEGORY_LAUNCHER) == true &&
         intent?.hasCategory(Intent.CATEGORY_HOME) != true
 
-    private fun handoffToHomeLauncherTaskIfNeeded(launchHomeIntent: Boolean) {
-        if (!isLaunchedAsStandardAppTask()) return
-        if (!appContainer.launcherRoleController.isDefaultLauncher()) return
-        if (launchHomeIntent) {
-            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                setPackage(packageName)
-            }
-            runCatching { startActivity(homeIntent) }
-        }
-        finishAndRemoveTask()
-    }
-
-    private fun completeOnboardingAndHandoffIfNeeded() {
-        if (::settingsViewModel.isInitialized) {
-            settingsViewModel.completeOnboarding()
-        } else {
-            lifecycleScope.launch {
-                appContainer.settingsRepository.setHasCompletedOnboarding(true)
-            }
-        }
-        handoffToHomeLauncherTaskIfNeeded(launchHomeIntent = true)
-    }
-
     internal fun handleDefaultLauncherRoleResult() {
         val granted = appContainer.launcherRoleController.refresh()
         if (granted) {
             appContainer.pendingOnboardingRoleRequest = false
             showRoleRequiredWarning.value = false
             appContainer.hapticEngine.targetSnap()
-            completeOnboardingAndHandoffIfNeeded()
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.completeOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                }
+            }
         } else {
             appContainer.pendingOnboardingRoleRequest = false
             showRoleRequiredWarning.value = true
@@ -208,11 +189,13 @@ class MainActivity : ComponentActivity() {
             if (appContainer.pendingOnboardingRoleRequest) {
                 appContainer.pendingOnboardingRoleRequest = false
                 appContainer.hapticEngine.targetSnap()
-                completeOnboardingAndHandoffIfNeeded()
-            } else if (::settingsViewModel.isInitialized &&
-                settingsViewModel.uiState.value.general.hasCompletedOnboarding
-            ) {
-                handoffToHomeLauncherTaskIfNeeded(launchHomeIntent = true)
+                if (::settingsViewModel.isInitialized) {
+                    settingsViewModel.completeOnboarding()
+                } else {
+                    lifecycleScope.launch {
+                        appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                    }
+                }
             }
         } else {
             if (appContainer.pendingOnboardingRoleRequest) {
@@ -474,15 +457,9 @@ class MainActivity : ComponentActivity() {
                                 backStack.removeLastOrNull()
                             }
                         }
-                    } else {
-                        if (isLaunchedAsStandardAppTask()) {
-                            handoffToHomeLauncherTaskIfNeeded(launchHomeIntent = true)
-                            return@LaunchedEffect
-                        }
-                        if (backStack.firstOrNull() == ThresholdRoute.Onboarding) {
-                            backStack.clear()
-                            backStack.add(ThresholdRoute.Home)
-                        }
+                    } else if (backStack.firstOrNull() == ThresholdRoute.Onboarding) {
+                        backStack.clear()
+                        backStack.add(ThresholdRoute.Home)
                     }
                 }
 
@@ -546,7 +523,7 @@ class MainActivity : ComponentActivity() {
                             OnboardingScreen(
                                 isDefaultLauncher = isDefaultLauncher,
                                 onRequestDefaultLauncher = ::requestDefaultLauncherRole,
-                                onCompleteOnboarding = ::completeOnboardingAndHandoffIfNeeded,
+                                onCompleteOnboarding = settingsViewModel::completeOnboarding,
                                 showRoleRequiredWarning = roleWarning,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 hapticEngine = hapticEngine,
