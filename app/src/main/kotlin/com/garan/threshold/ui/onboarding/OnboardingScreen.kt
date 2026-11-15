@@ -95,16 +95,9 @@ fun OnboardingScreen(
     showRoleRequiredWarning: Boolean = false,
     onApplyPureBlackWallpaper: () -> Unit = {},
     hapticEngine: HapticEngine = NoOpHapticEngine,
-    resetKey: Int = 0,
 ) {
     val pagerState = rememberPagerState(pageCount = { ONBOARDING_PAGE_COUNT })
     val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(resetKey) {
-        if (resetKey > 0 && pagerState.currentPage != 0) {
-            pagerState.scrollToPage(0)
-        }
-    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }

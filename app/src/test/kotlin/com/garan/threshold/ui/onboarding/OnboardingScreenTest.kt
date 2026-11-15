@@ -254,6 +254,60 @@ class OnboardingScreenTest {
                 assertThat(completed).isTrue()
             }
         } finally {
+            container.pendingOnboardingRoleRequest = false
+            container.defaultLauncherOverrideForTesting = true
+            runBlocking {
+                container.settingsRepository.setHasCompletedOnboarding(true)
+            }
+        }
+    }
+
+    @Test
+    fun mainActivity_whenPermissionControllerStartsNewHomeTaskUponRoleGrant_entersHomeDirectly() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val container = ThresholdAppContainer.from(context)
+        container.pendingOnboardingRoleRequest = false
+        container.defaultLauncherOverrideForTesting = false
+        runBlocking {
+            container.settingsRepository.setHasCompletedOnboarding(false)
+            container.settingsRepository.setHasSeenFirstRunHint(false)
+        }
+
+        try {
+            val launcherIntent = Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            Robolectric.buildActivity(MainActivity::class.java, launcherIntent).use { bootstrapController ->
+                bootstrapController.setup()
+                val bootstrapActivity = bootstrapController.get()
+
+                // 1. User taps "Set default launcher" on Page 06 / 06 in the CATEGORY_LAUNCHER task
+                bootstrapActivity.requestDefaultLauncherRole()
+                assertThat(container.pendingOnboardingRoleRequest).isTrue()
+
+                // 2. Android PermissionController grants ROLE_HOME and starts a new CATEGORY_HOME task
+                // BEFORE delivering onActivityResult to the bootstrap CATEGORY_LAUNCHER task
+                container.defaultLauncherOverrideForTesting = true
+                val homeIntent = Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    addCategory(Intent.CATEGORY_HOME)
+                }
+                Robolectric.buildActivity(MainActivity::class.java, homeIntent).use { homeController ->
+                    homeController.setup()
+                    val homeActivity = homeController.get()
+
+                    // The new CATEGORY_HOME activity immediately recognizes onboarding is complete
+                    assertThat(homeActivity.settingsViewModel.uiState.value.general.hasCompletedOnboarding).isTrue()
+                    assertThat(container.pendingOnboardingRoleRequest).isFalse()
+
+                    // And the bootstrap CATEGORY_LAUNCHER task finishes itself when stopped
+                    bootstrapController.pause().stop()
+                    assertThat(bootstrapActivity.isFinishing).isTrue()
+                }
+            }
+        } finally {
+            container.pendingOnboardingRoleRequest = false
             container.defaultLauncherOverrideForTesting = true
             runBlocking {
                 container.settingsRepository.setHasCompletedOnboarding(true)

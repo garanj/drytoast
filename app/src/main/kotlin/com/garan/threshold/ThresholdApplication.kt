@@ -51,6 +51,9 @@ class ThresholdAppContainer(context: Context) {
     var nowEpochMillisOverrideForTesting: Long? = null
 
     @Volatile
+    var pendingOnboardingRoleRequest: Boolean = false
+
+    @Volatile
     var defaultLauncherOverrideForTesting: Boolean? = null
         set(value) {
             field = value

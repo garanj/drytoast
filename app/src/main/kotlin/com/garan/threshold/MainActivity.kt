@@ -125,18 +125,35 @@ class MainActivity : ComponentActivity() {
     internal fun handleDefaultLauncherRoleResult() {
         val granted = appContainer.launcherRoleController.refresh()
         if (granted) {
+            appContainer.pendingOnboardingRoleRequest = false
             showRoleRequiredWarning.value = false
             appContainer.hapticEngine.targetSnap()
             if (::settingsViewModel.isInitialized) {
                 settingsViewModel.completeOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                }
             }
         } else {
+            appContainer.pendingOnboardingRoleRequest = false
             showRoleRequiredWarning.value = true
             appContainer.hapticEngine.resistanceDetent()
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.resetOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(false)
+                }
+            }
         }
     }
 
-    private fun requestDefaultLauncherRole() {
+    internal fun requestDefaultLauncherRole() {
+        appContainer.pendingOnboardingRoleRequest = true
+        if (::settingsViewModel.isInitialized) {
+            settingsViewModel.completeOnboarding()
+        }
         val intent = appContainer.launcherRoleController.createRequestRoleIntent()
         val launched = runCatching { defaultLauncherRoleLauncher.launch(intent) }.isSuccess
         if (!launched) {
@@ -164,9 +181,31 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         appContainer.nfcReaderSource.enableForegroundReader(this)
         val isDefault = appContainer.launcherRoleController.refresh()
-        if (!isDefault) {
-            lifecycleScope.launch {
-                appContainer.settingsRepository.setHasCompletedOnboarding(false)
+        if (isDefault) {
+            showRoleRequiredWarning.value = false
+            if (appContainer.pendingOnboardingRoleRequest) {
+                appContainer.pendingOnboardingRoleRequest = false
+                appContainer.hapticEngine.targetSnap()
+                if (::settingsViewModel.isInitialized) {
+                    settingsViewModel.completeOnboarding()
+                } else {
+                    lifecycleScope.launch {
+                        appContainer.settingsRepository.setHasCompletedOnboarding(true)
+                    }
+                }
+            }
+        } else {
+            if (appContainer.pendingOnboardingRoleRequest) {
+                appContainer.pendingOnboardingRoleRequest = false
+                showRoleRequiredWarning.value = true
+                appContainer.hapticEngine.resistanceDetent()
+            }
+            if (::settingsViewModel.isInitialized) {
+                settingsViewModel.resetOnboarding()
+            } else {
+                lifecycleScope.launch {
+                    appContainer.settingsRepository.setHasCompletedOnboarding(false)
+                }
             }
         }
     }
@@ -174,6 +213,16 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         appContainer.nfcReaderSource.disableForegroundReader(this)
         super.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (appContainer.launcherRoleController.isDefaultLauncher() &&
+            intent?.hasCategory(Intent.CATEGORY_LAUNCHER) == true &&
+            intent?.hasCategory(Intent.CATEGORY_HOME) != true
+        ) {
+            finish()
+        }
     }
 
     @androidx.annotation.VisibleForTesting
@@ -367,6 +416,12 @@ class MainActivity : ComponentActivity() {
             },
         )[SettingsViewModel::class.java]
 
+        if (container.launcherRoleController.isDefaultLauncher() && container.pendingOnboardingRoleRequest) {
+            container.pendingOnboardingRoleRequest = false
+            hapticEngine.targetSnap()
+            settingsViewModel.completeOnboarding()
+        }
+
         // IMPORTANT MEMORY INVARIANT (< 25 MB Typographic Mode / < 35 MB CI PSS Ceiling):
         // Never call searchViewModel.ensureIndexLoaded() eagerly in onCreate().
         // Resolving LauncherActivityInfo.getLabel() across all installed apps causes Android's
@@ -387,7 +442,9 @@ class MainActivity : ComponentActivity() {
                 val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow.collectAsState()
                 val currentLocation by locationSource.currentLocation.collectAsState()
                 val locationTelemetry by locationSource.telemetry.collectAsState()
-                val requiresOnboarding = !settingsUiState.general.hasCompletedOnboarding || !isDefaultLauncher
+                val requiresOnboarding =
+                    (!settingsUiState.general.hasCompletedOnboarding && !container.pendingOnboardingRoleRequest) ||
+                        !isDefaultLauncher
 
                 LaunchedEffect(settingsUiState.isSettingsLoaded, requiresOnboarding) {
                     if (!settingsUiState.isSettingsLoaded) return@LaunchedEffect
@@ -470,7 +527,6 @@ class MainActivity : ComponentActivity() {
                                 showRoleRequiredWarning = roleWarning,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 hapticEngine = hapticEngine,
-                                resetKey = resetTrigger,
                             )
                         }
 

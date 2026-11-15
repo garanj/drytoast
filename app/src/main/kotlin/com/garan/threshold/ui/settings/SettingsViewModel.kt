@@ -53,13 +53,23 @@ class SettingsViewModel(
     @Volatile
     private var loadJob: Job? = null
 
+    @Volatile
+    private var onboardingCompletedOverride: Boolean? = null
+
     init {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.observeSettings().collect { settings ->
                 val editable = settings.editableSnapshot
+                val overrideVal = onboardingCompletedOverride
+                if (overrideVal != null && editable.general.hasCompletedOnboarding == overrideVal) {
+                    onboardingCompletedOverride = null
+                }
+                val resolvedGeneral = onboardingCompletedOverride?.let {
+                    editable.general.copy(hasCompletedOnboarding = it)
+                } ?: editable.general
                 _uiState.update { current ->
                     current.copy(
-                        general = editable.general,
+                        general = resolvedGeneral,
                         baseProfile = editable.baseProfile,
                         customProfiles = editable.customProfiles.toImmutableList(),
                         savedTriggers = editable.savedTriggers.toImmutableList(),
@@ -147,8 +157,22 @@ class SettingsViewModel(
     }
 
     fun completeOnboarding() {
+        onboardingCompletedOverride = true
+        _uiState.update { current ->
+            current.copy(general = current.general.copy(hasCompletedOnboarding = true))
+        }
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.setHasCompletedOnboarding(true)
+        }
+    }
+
+    fun resetOnboarding() {
+        onboardingCompletedOverride = false
+        _uiState.update { current ->
+            current.copy(general = current.general.copy(hasCompletedOnboarding = false))
+        }
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setHasCompletedOnboarding(false)
         }
     }
 
