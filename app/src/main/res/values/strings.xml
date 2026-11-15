@@ -12,6 +12,7 @@
     <string name="hint_long_press_to_configure">Press and hold to configure</string>
 
     <!-- Onboarding Wizard -->
+    <string name="onboarding_step_indicator_format">%1$02d / %2$02d</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_set_default_launcher">Set Threshold as Default Launcher</string>
@@ -19,6 +20,80 @@
     <string name="onboarding_default_launcher_required_warning">Default home launcher role is required to complete setup.</string>
     <string name="onboarding_default_launcher_active">DEFAULT HOME LAUNCHER ACTIVE</string>
     <string name="onboarding_default_launcher_pending">STATUS: NOT SET AS DEFAULT LAUNCHER</string>
+
+    <!-- Onboarding Page 01: Threshold -->
+    <string name="onboarding_p1_eyebrow">01 // PHILOSOPHY</string>
+    <string name="onboarding_p1_title">THRESHOLD</string>
+    <string name="onboarding_p1_subtitle">Quiet by default.</string>
+    <string name="onboarding_p1_body">Threshold removes app grids, notification badges and feeds, providing just a plain, undistracting, minimal surface. It turns your phone into a precision tool, rather than an attention trap.</string>
+    <string name="onboarding_p1_item1_label">ZERO VISUAL NOISE</string>
+    <string name="onboarding_p1_item1_desc">No colourful app icons, unread counters, or infinite home screen pages.</string>
+    <string name="onboarding_p1_item2_label">INTENT GATEKEEPER</string>
+    <string name="onboarding_p1_item2_desc">Restricted apps are filtered cleanly at the launch surface without invasive background services.</string>
+    <string name="onboarding_p1_item3_label">OFFLINE &amp; PRIVATE</string>
+    <string name="onboarding_p1_item3_desc">Zero internet permissions and zero telemetry. Every rule resides locally on your device.</string>
+
+    <!-- Onboarding Page 02: Deliberate Launch -->
+    <string name="onboarding_p2_eyebrow">02 // NAVIGATION</string>
+    <string name="onboarding_p2_title">DELIBERATE LAUNCH</string>
+    <string name="onboarding_p2_subtitle">Type what you intend to open.</string>
+    <string name="onboarding_p2_body">Tap the search prompt on the home canvas to filter installed apps instantly, or pin up to 7 essential daily utilities beneath search.</string>
+    <string name="onboarding_p2_item1_label">INSTANT FUZZY SEARCH</string>
+    <string name="onboarding_p2_item1_desc">Type a few letters of any allowed app to launch with zero delay.</string>
+    <string name="onboarding_p2_item2_label">UP TO 7 QUICK ACTIONS</string>
+    <string name="onboarding_p2_item2_desc">Pin your most-used tools directly below search for immediate one-tap access.</string>
+    <string name="onboarding_p2_item3_label">COLON COMMANDS</string>
+    <string name="onboarding_p2_item3_desc">Type :settings to open configuration or :wallpaper to apply a solid black wallpaper.</string>
+
+    <!-- Onboarding Page 03: Intentional Friction -->
+    <string name="onboarding_p3_eyebrow">03 // GATEKEEPING</string>
+    <string name="onboarding_p3_title">INTENTIONAL FRICTION</string>
+    <string name="onboarding_p3_subtitle">Three states for every app.</string>
+    <string name="onboarding_p3_body">Assign every app to Allow, Guard, or Block. Tap the mechanical toggle below to feel the micro-haptic detent for each tier:</string>
+    <string name="onboarding_p3_demo_app_name">Social Feed</string>
+    <string name="onboarding_p3_demo_caption">INTERACTIVE DEMO</string>
+    <string name="onboarding_p3_status_allow">ALLOW: Launches immediately from search and quick actions with zero delay.</string>
+    <string name="onboarding_p3_status_guard">GUARD: Pauses launch behind a deliberate cognitive checkpoint before opening.</string>
+    <string name="onboarding_p3_status_block">BLOCK: Hidden from search results and disabled in quick actions.</string>
+    <string name="onboarding_p3_checkpoints_header">COGNITIVE CHECKPOINTS</string>
+    <string name="onboarding_p3_preview_typed_title">TYPED INTENTION</string>
+    <string name="onboarding_p3_preview_typed_desc">Transcribe a randomized mindfulness phrase character-for-character (e.g. \"I am opening Social Feed intentionally\") to unlock launch.</string>
+    <string name="onboarding_p3_preview_drag_title">DRAG-TO-MATCH</string>
+    <string name="onboarding_p3_preview_drag_desc">Drag geometric glyph pairs into their matching target slots with tactile snap detents.</string>
+    <string name="onboarding_p3_preview_caret_title">CARET TRACING</string>
+    <string name="onboarding_p3_preview_caret_desc">Trace the Threshold caret steadily across its perimeter—releasing early resets the countdown.</string>
+    <string name="onboarding_p3_preview_random_title">RANDOM</string>
+    <string name="onboarding_p3_preview_random_desc">Dynamically selects a different cognitive checkpoint on every launch attempt.</string>
+
+    <!-- Onboarding Page 04: Contextual Profiles -->
+    <string name="onboarding_p4_eyebrow">04 // AUTOMATION</string>
+    <string name="onboarding_p4_title">CONTEXTUAL PROFILES</string>
+    <string name="onboarding_p4_subtitle">Rules that adapt to time, space, and hardware.</string>
+    <string name="onboarding_p4_body">Layer custom profiles such as Deep Work or Bedtime above your base configuration. Profiles evaluate in priority order using AND / OR combinations of reusable triggers:</string>
+    <string name="onboarding_p4_item1_label">SCHEDULES</string>
+    <string name="onboarding_p4_item1_desc">Activate profiles automatically during recurring daily or overnight time windows.</string>
+    <string name="onboarding_p4_item2_label">GEOFENCE ZONES</string>
+    <string name="onboarding_p4_item2_desc">Switch rules automatically when you are inside or outside a saved location such as Home or Office.</string>
+    <string name="onboarding_p4_item3_label">PHYSICAL NFC TAGS</string>
+    <string name="onboarding_p4_item3_desc">Tap a physical NFC tag to latch a profile on/off or start a timed session with daily tap limits.</string>
+
+    <!-- Onboarding Page 05: Tamper Resistance -->
+    <string name="onboarding_p5_eyebrow">05 // COMMITMENT</string>
+    <string name="onboarding_p5_title">TAMPER RESISTANCE</string>
+    <string name="onboarding_p5_subtitle">Press and hold to configure.</string>
+    <string name="onboarding_p5_body">Threshold keeps settings out of sight during daily use and provides optional self-binding commitment locks when you want to prevent impulse edits:</string>
+    <string name="onboarding_p5_item1_label">3-SECOND PRESS &amp; HOLD</string>
+    <string name="onboarding_p5_item1_desc">Press and hold on the home canvas for 3 seconds (or type :settings in search) to open Settings.</string>
+    <string name="onboarding_p5_item2_label">REBOOT-STAGED CHANGES</string>
+    <string name="onboarding_p5_item2_desc">When enabled in Settings, any future edits to rules or profiles are staged and only take effect after a full device restart.</string>
+    <string name="onboarding_p5_item3_label">ADB SETTINGS LOCK</string>
+    <string name="onboarding_p5_item3_desc">Power users can lock and unlock all configuration changes completely via ADB broadcast.</string>
+
+    <!-- Onboarding Page 06: Set Default Launcher -->
+    <string name="onboarding_p6_eyebrow">06 // ACTIVATION</string>
+    <string name="onboarding_p6_title">SET DEFAULT LAUNCHER</string>
+    <string name="onboarding_p6_subtitle">Required to complete setup.</string>
+    <string name="onboarding_p6_body">To serve as your home screen and intent gatekeeper, Threshold must hold the system Default Home App role. If Threshold is not set as your default launcher, this wizard will run again next time you open the app.</string>
 
     <!-- Settings & App Configuration -->
     <string name="settings_title">Settings</string>

@@ -273,7 +273,7 @@ fun OnboardingScreen(
 
 @Composable
 private fun OnboardingHeaderBar(currentPage: Int, totalPages: Int, modifier: Modifier = Modifier) {
-    val stepText = String.format("%02d / %02d", currentPage + 1, totalPages)
+    val stepText = stringResource(R.string.onboarding_step_indicator_format, currentPage + 1, totalPages)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -315,25 +315,22 @@ private fun OnboardingHeaderBar(currentPage: Int, totalPages: Int, modifier: Mod
 @Composable
 private fun InstrumentPhilosophyPage() {
     OnboardingPageContainer(
-        eyebrow = "01 // PHILOSOPHY",
-        title = "THRESHOLD",
-        subtitle = "Quiet by default.",
-        body = "Threshold removes app grids, notification badges and feeds, providing just a plain, " +
-            "undistracting, minimal surface. It turns your phone into a precision tool, " +
-            "rather than an attention trap.",
+        eyebrow = stringResource(R.string.onboarding_p1_eyebrow),
+        title = stringResource(R.string.onboarding_p1_title),
+        subtitle = stringResource(R.string.onboarding_p1_subtitle),
+        body = stringResource(R.string.onboarding_p1_body),
     ) {
         OnboardingCalloutItem(
-            label = "ZERO VISUAL NOISE",
-            description = "No colourful app icons, unread counters, or infinite home screen pages.",
+            label = stringResource(R.string.onboarding_p1_item1_label),
+            description = stringResource(R.string.onboarding_p1_item1_desc),
         )
         OnboardingCalloutItem(
-            label = "INTENT GATEKEEPER",
-            description = "Restricted apps are filtered cleanly at the launch surface " +
-                "without invasive background services.",
+            label = stringResource(R.string.onboarding_p1_item2_label),
+            description = stringResource(R.string.onboarding_p1_item2_desc),
         )
         OnboardingCalloutItem(
-            label = "OFFLINE & PRIVATE",
-            description = "Zero internet permissions and zero telemetry. Every rule resides locally on your device.",
+            label = stringResource(R.string.onboarding_p1_item3_label),
+            description = stringResource(R.string.onboarding_p1_item3_desc),
         )
     }
 }
@@ -341,24 +338,22 @@ private fun InstrumentPhilosophyPage() {
 @Composable
 private fun DeliberateLaunchPage() {
     OnboardingPageContainer(
-        eyebrow = "02 // NAVIGATION",
-        title = "DELIBERATE LAUNCH",
-        subtitle = "Type what you intend to open.",
-        body = "Tap the search prompt on the home canvas to filter installed apps instantly, " +
-            "or pin up to 7 essential daily utilities beneath search.",
+        eyebrow = stringResource(R.string.onboarding_p2_eyebrow),
+        title = stringResource(R.string.onboarding_p2_title),
+        subtitle = stringResource(R.string.onboarding_p2_subtitle),
+        body = stringResource(R.string.onboarding_p2_body),
     ) {
         OnboardingCalloutItem(
-            label = "INSTANT FUZZY SEARCH",
-            description = "Type a few letters of any allowed app to launch with zero delay.",
+            label = stringResource(R.string.onboarding_p2_item1_label),
+            description = stringResource(R.string.onboarding_p2_item1_desc),
         )
         OnboardingCalloutItem(
-            label = "UP TO 7 QUICK ACTIONS",
-            description = "Pin your most-used tools directly below search for immediate one-tap access.",
+            label = stringResource(R.string.onboarding_p2_item2_label),
+            description = stringResource(R.string.onboarding_p2_item2_desc),
         )
         OnboardingCalloutItem(
-            label = "COLON COMMANDS",
-            description = "Type :settings to open configuration or :wallpaper to apply " +
-                "a solid black wallpaper.",
+            label = stringResource(R.string.onboarding_p2_item3_label),
+            description = stringResource(R.string.onboarding_p2_item3_desc),
         )
     }
 }
@@ -370,36 +365,30 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
     var selectedFrictionChoice by rememberSaveable { mutableStateOf(FrictionChoice.TYPED_INTENTION) }
 
     val toggleStatusDescription = when (selectedToggleState) {
-        BaseToggleState.ALLOW -> "ALLOW: Launches immediately from search and quick actions with zero delay."
-        BaseToggleState.GUARD -> "GUARD: Pauses launch behind a deliberate cognitive checkpoint before opening."
-        BaseToggleState.BLOCK -> "BLOCK: Hidden from search results and disabled in quick actions."
+        BaseToggleState.ALLOW -> stringResource(R.string.onboarding_p3_status_allow)
+        BaseToggleState.GUARD -> stringResource(R.string.onboarding_p3_status_guard)
+        BaseToggleState.BLOCK -> stringResource(R.string.onboarding_p3_status_block)
     }
 
     val frictionPreviewTitle = when (selectedFrictionChoice) {
-        FrictionChoice.TYPED_INTENTION -> "TYPED INTENTION"
-        FrictionChoice.DRAG_SORT -> "DRAG-TO-MATCH"
-        FrictionChoice.CARET_TRACING -> "CARET TRACING"
-        FrictionChoice.RANDOM -> "RANDOM"
+        FrictionChoice.TYPED_INTENTION -> stringResource(R.string.onboarding_p3_preview_typed_title)
+        FrictionChoice.DRAG_SORT -> stringResource(R.string.onboarding_p3_preview_drag_title)
+        FrictionChoice.CARET_TRACING -> stringResource(R.string.onboarding_p3_preview_caret_title)
+        FrictionChoice.RANDOM -> stringResource(R.string.onboarding_p3_preview_random_title)
     }
 
     val frictionPreviewDescription = when (selectedFrictionChoice) {
-        FrictionChoice.TYPED_INTENTION ->
-            "Transcribe a randomized mindfulness phrase character-for-character " +
-                "(e.g. \"I am opening Social Feed intentionally\") to unlock launch."
-        FrictionChoice.DRAG_SORT ->
-            "Drag geometric glyph pairs into their matching target slots with tactile snap detents."
-        FrictionChoice.CARET_TRACING ->
-            "Trace the Threshold caret steadily across its perimeter—releasing early resets the countdown."
-        FrictionChoice.RANDOM ->
-            "Dynamically selects a different cognitive checkpoint on every launch attempt."
+        FrictionChoice.TYPED_INTENTION -> stringResource(R.string.onboarding_p3_preview_typed_desc)
+        FrictionChoice.DRAG_SORT -> stringResource(R.string.onboarding_p3_preview_drag_desc)
+        FrictionChoice.CARET_TRACING -> stringResource(R.string.onboarding_p3_preview_caret_desc)
+        FrictionChoice.RANDOM -> stringResource(R.string.onboarding_p3_preview_random_desc)
     }
 
     OnboardingPageContainer(
-        eyebrow = "03 // GATEKEEPING",
-        title = "INTENTIONAL FRICTION",
-        subtitle = "Three states for every app.",
-        body = "Assign every app to Allow, Guard, or Block. Tap the mechanical toggle below " +
-            "to feel the micro-haptic detent for each tier:",
+        eyebrow = stringResource(R.string.onboarding_p3_eyebrow),
+        title = stringResource(R.string.onboarding_p3_title),
+        subtitle = stringResource(R.string.onboarding_p3_subtitle),
+        body = stringResource(R.string.onboarding_p3_body),
     ) {
         Column(
             modifier = Modifier
@@ -414,7 +403,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Social Feed",
+                        text = stringResource(R.string.onboarding_p3_demo_app_name),
                         style = MaterialTheme.typography.titleMedium,
                         color = if (selectedToggleState == BaseToggleState.BLOCK) {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -423,7 +412,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
                         },
                     )
                     Text(
-                        text = "INTERACTIVE DEMO",
+                        text = stringResource(R.string.onboarding_p3_demo_caption),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -462,7 +451,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "COGNITIVE CHECKPOINTS",
+            text = stringResource(R.string.onboarding_p3_checkpoints_header),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -471,9 +460,9 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
 
         val previewChoices = remember {
             listOf(
-                FrictionChoice.TYPED_INTENTION to "Typed Intention",
-                FrictionChoice.DRAG_SORT to "Drag-to-Match",
-                FrictionChoice.CARET_TRACING to "Caret Tracing",
+                FrictionChoice.TYPED_INTENTION to R.string.friction_typed_intention,
+                FrictionChoice.DRAG_SORT to R.string.friction_drag_sort,
+                FrictionChoice.CARET_TRACING to R.string.friction_caret_tracing,
             )
         }
 
@@ -481,7 +470,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            previewChoices.forEach { (choice, label) ->
+            previewChoices.forEach { (choice, labelRes) ->
                 val isSelected = selectedFrictionChoice == choice
                 FilterChip(
                     selected = isSelected,
@@ -493,7 +482,7 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
                     },
                     label = {
                         Text(
-                            text = label,
+                            text = stringResource(labelRes),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         )
@@ -544,27 +533,24 @@ private fun IntentionalFrictionPage(hapticEngine: HapticEngine) {
 @Composable
 private fun ContextualProfilesPage() {
     OnboardingPageContainer(
-        eyebrow = "04 // AUTOMATION",
-        title = "CONTEXTUAL PROFILES",
-        subtitle = "Rules that adapt to time, space, and hardware.",
-        body = "Layer custom profiles such as Deep Work or Bedtime above your base configuration. " +
-            "Profiles evaluate in priority order using AND / OR combinations of reusable triggers:",
+        eyebrow = stringResource(R.string.onboarding_p4_eyebrow),
+        title = stringResource(R.string.onboarding_p4_title),
+        subtitle = stringResource(R.string.onboarding_p4_subtitle),
+        body = stringResource(R.string.onboarding_p4_body),
     ) {
         OnboardingCalloutItem(
-            label = "SCHEDULES",
-            description = "Activate profiles automatically during recurring daily or overnight time windows.",
+            label = stringResource(R.string.onboarding_p4_item1_label),
+            description = stringResource(R.string.onboarding_p4_item1_desc),
             icon = ThresholdIcons.Schedule,
         )
         OnboardingCalloutItem(
-            label = "GEOFENCE ZONES",
-            description = "Switch rules automatically when you are inside or outside " +
-                "a saved location such as Home or Office.",
+            label = stringResource(R.string.onboarding_p4_item2_label),
+            description = stringResource(R.string.onboarding_p4_item2_desc),
             icon = ThresholdIcons.LocationOn,
         )
         OnboardingCalloutItem(
-            label = "PHYSICAL NFC TAGS",
-            description = "Tap a physical NFC tag to latch a profile on/off or start " +
-                "a timed session with daily tap limits.",
+            label = stringResource(R.string.onboarding_p4_item3_label),
+            description = stringResource(R.string.onboarding_p4_item3_desc),
             icon = ThresholdIcons.Nfc,
         )
     }
@@ -573,25 +559,22 @@ private fun ContextualProfilesPage() {
 @Composable
 private fun TamperResistancePage() {
     OnboardingPageContainer(
-        eyebrow = "05 // COMMITMENT",
-        title = "TAMPER RESISTANCE",
-        subtitle = "Press and hold to configure.",
-        body = "Threshold keeps settings out of sight during daily use and provides optional " +
-            "self-binding commitment locks when you want to prevent impulse edits:",
+        eyebrow = stringResource(R.string.onboarding_p5_eyebrow),
+        title = stringResource(R.string.onboarding_p5_title),
+        subtitle = stringResource(R.string.onboarding_p5_subtitle),
+        body = stringResource(R.string.onboarding_p5_body),
     ) {
         OnboardingCalloutItem(
-            label = "3-SECOND PRESS & HOLD",
-            description = "Press and hold on the home canvas for 3 seconds " +
-                "(or type :settings in search) to open Settings.",
+            label = stringResource(R.string.onboarding_p5_item1_label),
+            description = stringResource(R.string.onboarding_p5_item1_desc),
         )
         OnboardingCalloutItem(
-            label = "REBOOT-STAGED CHANGES",
-            description = "When enabled in Settings, any future edits to rules or profiles " +
-                "are staged and only take effect after a full device restart.",
+            label = stringResource(R.string.onboarding_p5_item2_label),
+            description = stringResource(R.string.onboarding_p5_item2_desc),
         )
         OnboardingCalloutItem(
-            label = "ADB SETTINGS LOCK",
-            description = "Power users can lock and unlock all configuration changes completely via ADB broadcast.",
+            label = stringResource(R.string.onboarding_p5_item3_label),
+            description = stringResource(R.string.onboarding_p5_item3_desc),
         )
     }
 }
@@ -599,12 +582,10 @@ private fun TamperResistancePage() {
 @Composable
 private fun SetDefaultLauncherPage(isDefaultLauncher: Boolean, showRoleRequiredWarning: Boolean) {
     OnboardingPageContainer(
-        eyebrow = "06 // ACTIVATION",
-        title = "SET DEFAULT LAUNCHER",
-        subtitle = "Required to complete setup.",
-        body = "To serve as your home screen and intent gatekeeper, Threshold must hold " +
-            "the system Default Home App role. If Threshold is not set as your default launcher, " +
-            "this wizard will run again next time you open the app.",
+        eyebrow = stringResource(R.string.onboarding_p6_eyebrow),
+        title = stringResource(R.string.onboarding_p6_title),
+        subtitle = stringResource(R.string.onboarding_p6_subtitle),
+        body = stringResource(R.string.onboarding_p6_body),
     ) {
         ListItem(
             leadingContent = if (isDefaultLauncher) {
