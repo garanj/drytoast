@@ -79,11 +79,12 @@
   - Dynamic profile disable invariant when all app rules are removed due to uninstallation.
   - Zero-allocation cached effective ruleset computation.
 - [x] **Task 3.4: Custom Profile Management UI (`:app`)**
-  - Profile list management (create, edit, delete, enable/disable, reorder).
+  - Profile list management (create, edit, delete, enable/disable, reorder) and reusable `SavedTrigger` library with AND/OR rule evaluation (#63, #86, #91).
   - Reusing the unified multi-state toggle app configuration screen for custom profile overrides.
-  - Live active profile indicator below the clock.
-- [ ] **Task 3.5: Launcher Management & Restore Launcher Action (`:app`)**
-  - Button in Threshold Settings to switch / restore previous default launcher (via `RoleManager` / `ACTION_MANAGE_DEFAULT_APPS_SETTINGS` / `ACTION_HOME_SETTINGS`).
+  - Live active profile indicator below the clock (#82).
+  - Tamper resistance: Reboot-staged settings changes (#94) and ADB settings lock (#96).
+- [x] **Task 3.5: Launcher Management & Restore Launcher Action (`:app`)** *(Dropped by design decision)*
+  - *(Dropped to prevent an un-stageable OS `ACTION_HOME_SETTINGS` escape hatch inside Threshold Settings that would bypass "Require reboot for settings changes". Users can switch default home apps via Android System Settings).*
 - [x] **Task 3.6: Onboarding Flow & First-Run Educational Wizard (`:app`)**
   - First-launch detection from Play Store / external launcher (checking if `RoleManager.isRoleHeld(RoleManager.ROLE_HOME)` is false).
   - Swipeable multi-step introduction educating the user on Threshold's philosophy, intent gatekeeping, and tactile mechanics.
@@ -95,24 +96,22 @@
 ---
 
 ## Phase 4: Spatial Context & Geofencing (Milestone 4)
-- [ ] **Task 4.1: Low-Power Geofencing API Integration (`:data`)**
-  - Hardware-backed geofences (Home, Office, Gym) without continuous GPS polling.
-- [ ] **Task 4.2: Temporal Schedule Transitions (`:data`)**
-  - AlarmManager exact alarms for precise circadian schedule boundaries.
-- [ ] **Task 4.3: Geofence State Reconciliation & Safety**
-  - Handle location permission states, airplane mode, and reboot rescheduling via `BootReceiver`.
+- [x] **Task 4.1: Low-Power Geofencing & Location Integration (`:data` / `:app`)**
+  - `AndroidLocationSource` with passive/network/GPS fix caching, telemetry, and inside/outside geofence evaluation (#63, #84).
+- [x] **Task 4.2: Temporal Schedule Transitions (`:data` / `:app`)**
+  - `AndroidScheduleAlarmScheduler` and `ScheduleAlarmReceiver` using `AlarmManager` exact alarms for schedule boundaries and NFC timed-latch expiries (#63, #86).
+- [x] **Task 4.3: Geofence & Schedule State Reconciliation & Safety**
+  - Handle location/alarm capability warnings (`AndroidProfileCapabilityChecker`) and boot promotion/rescheduling (`ScheduleAlarmReceiver` `ACTION_BOOT_COMPLETED`) (#63, #94).
 
 ---
 
 ## Phase 5: Physical NFC Ecosystem (Milestone 5)
-- [ ] **Task 5.1: Foreground NFC Reader Adapter (`:data`)**
-  - `NfcAdapter.enableReaderMode` bound strictly to `onResume`/`onPause` with `FLAG_READER_NFC_A` and `FLAG_READER_SKIP_NDEF_CHECK`.
-- [ ] **Task 5.2: Physical Tokens & Passes (`:core` / `:data`)**
-  - The Downtime Token (30m countdown pass; quiet expiration with haptic click).
-  - The Bedside Sleep Dock (activates Dumbphone Mode and pitch-black wallpaper).
-  - The Departure Gate & Analog Companion profiles.
-- [ ] **Task 5.3: Pair-to-Unlock Handshake (`:core` / `:app`)**
-  - Anti-impulse challenge requiring tapping Tag A then Tag B across the house within 90 seconds.
+- [x] **Task 5.1: Foreground NFC Reader Adapter (`:data` / `:app`)**
+  - `AndroidNfcReaderSource` (`NfcAdapter.enableReaderMode` bound strictly to `onResume`/`onPause` with `FLAG_READER_NFC_A | FLAG_READER_NFC_B | FLAG_READER_NFC_F | FLAG_READER_NFC_V | FLAG_READER_SKIP_NDEF_CHECK` and 250ms hardware debounce) (#72, #80).
+- [x] **Task 5.2: Physical NFC Triggers, Latches & Timed Passes (`:core` / `:data` / `:app`)**
+  - Reusable `NfcTrigger` supporting `TOGGLE` latch on/off (with optional require-same-tag-to-unlock) and `TIMED` countdown pass with configurable `maxDailyUses` (#72, #80, #86, #89).
+- [x] **Task 5.3: Multi-Tag & Composable Trigger Rules (`:core` / `:app`)**
+  - Composable `TriggerRule` AND/OR evaluation across multiple NFC, Schedule, and Geofence triggers (#86).
 
 ---
 
@@ -146,8 +145,7 @@
 ---
 
 ## Phase 8: Miscellaneous & Enhancements (Milestone 8)
-- [ ] **Task 8.1: Launcher Action Registry & Dispatcher (`:`, `,` prefix)**
+- [x] **Task 8.1: Launcher Action Registry & Dispatcher (`:`, `,` prefix)**
   - *(Moved from Phase 2 Task 2.4; dual-flank panels discarded).*
-  - Action Registry in `:app`/`:data`: Register core utility actions (`:settings`, `:wallpaper`, `:dnd`, `:note`).
-  - Wire `ThresholdHomeScreen` action execution: Handle `SearchItem.Action` in `onItemClick` with appropriate Android system intents.
-  - Action quick-launch on IME Go action.
+  - Core utility actions (`:settings`, `:wallpaper`) registered as `ActionCandidate` shortcuts in `MainActivity` and `SearchEngine` (#50, #98).
+  - Wired `ThresholdHomeScreen` action execution (`SearchItem.Action` in `onItemClick` and IME `Go` quick-launch).
