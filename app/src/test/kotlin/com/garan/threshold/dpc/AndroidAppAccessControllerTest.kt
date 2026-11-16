@@ -1,6 +1,7 @@
 package com.garan.threshold.dpc
 
 import android.Manifest
+import android.app.Activity
 import android.app.admin.DeviceAdminReceiver
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -29,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
@@ -73,6 +75,38 @@ class AndroidAppAccessControllerTest {
         assertThat(receiverInfo.permission).isEqualTo(Manifest.permission.BIND_DEVICE_ADMIN)
         assertThat(receiverInfo.metaData?.getInt(DeviceAdminReceiver.DEVICE_ADMIN_META_DATA, 0))
             .isNotEqualTo(0)
+
+        val provisioningComponent = ComponentName(context, ThresholdProvisioningActivity::class.java)
+        val activityInfo = pm.getActivityInfo(provisioningComponent, 0)
+        assertThat(activityInfo.exported).isTrue()
+        assertThat(activityInfo.permission).isEqualTo(Manifest.permission.BIND_DEVICE_ADMIN)
+    }
+
+    @Test
+    fun thresholdProvisioningActivity_handlesGetProvisioningModeAndAdminPolicyCompliance() {
+        val getModeIntent = Intent(DevicePolicyManager.ACTION_GET_PROVISIONING_MODE)
+        Robolectric.buildActivity(ThresholdProvisioningActivity::class.java, getModeIntent).use { controller ->
+            controller.setup()
+            val activity = controller.get()
+            val shadowActivity = Shadows.shadowOf(activity)
+            assertThat(shadowActivity.resultCode).isEqualTo(Activity.RESULT_OK)
+            assertThat(
+                shadowActivity.resultIntent.getIntExtra(
+                    DevicePolicyManager.EXTRA_PROVISIONING_MODE,
+                    -1,
+                ),
+            ).isEqualTo(DevicePolicyManager.PROVISIONING_MODE_FULLY_MANAGED_DEVICE)
+            assertThat(activity.isFinishing).isTrue()
+        }
+
+        val complianceIntent = Intent(DevicePolicyManager.ACTION_ADMIN_POLICY_COMPLIANCE)
+        Robolectric.buildActivity(ThresholdProvisioningActivity::class.java, complianceIntent).use { controller ->
+            controller.setup()
+            val activity = controller.get()
+            val shadowActivity = Shadows.shadowOf(activity)
+            assertThat(shadowActivity.resultCode).isEqualTo(Activity.RESULT_OK)
+            assertThat(activity.isFinishing).isTrue()
+        }
     }
 
     @Test
