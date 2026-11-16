@@ -258,4 +258,38 @@ class ThresholdSettingsScreenTest {
         composeRule.onNodeWithText("Chrome").assertIsDisplayed()
         composeRule.onNodeWithText("com.android.chrome").assertDoesNotExist()
     }
+
+    @Test
+    fun hardenedModeRow_displaysStatusSummaryAndNavigatesOnClick() {
+        var navigatedToHardenedMode = false
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(
+                        isHardenedModeActive = true,
+                        isLoading = false,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onNavigateToHardenedMode = { navigatedToHardenedMode = true },
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.NAV_HARDENED_MODE))
+        composeRule.onNodeWithText("Active · Kernel-level enforcement")
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsTestTags.NAV_HARDENED_MODE)
+            .performClick()
+
+        assertThat(navigatedToHardenedMode).isTrue()
+    }
 }

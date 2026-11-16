@@ -541,4 +541,17 @@ class ThresholdScreenshotTest {
         }
         verifyAndArchiveSnapshot("onboarding_page6_activation.png")
     }
+
+    @Test
+    fun snapshotHardenedModeScreen() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                com.garan.threshold.ui.settings.HardenedModeScreen(
+                    isHardenedModeActive = false,
+                    onBack = {},
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("hardened_mode_screen.png")
+    }
 }

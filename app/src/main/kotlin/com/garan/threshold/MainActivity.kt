@@ -48,6 +48,7 @@ import com.garan.threshold.ui.onboarding.OnboardingScreen
 import com.garan.threshold.ui.search.SearchViewModel
 import com.garan.threshold.ui.settings.ConfigureAppsScreen
 import com.garan.threshold.ui.settings.FeedbackEmailIntentFactory
+import com.garan.threshold.ui.settings.HardenedModeScreen
 import com.garan.threshold.ui.settings.ProfilesScreen
 import com.garan.threshold.ui.settings.SettingsViewModel
 import com.garan.threshold.ui.settings.ThresholdSettingsScreen
@@ -66,6 +67,9 @@ sealed interface ThresholdRoute : NavKey {
 
     @Serializable
     data object Settings : ThresholdRoute
+
+    @Serializable
+    data object HardenedMode : ThresholdRoute
 
     @Serializable
     data object Profiles : ThresholdRoute
@@ -182,6 +186,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         appContainer.nfcReaderSource.enableForegroundReader(this)
+        appContainer.appAccessController.isDeviceOwner()
+        if (::settingsViewModel.isInitialized) {
+            settingsViewModel.refreshHardenedModeStatus()
+        }
         val isDefault = appContainer.launcherRoleController.refresh()
         if (isDefault) {
             if (::settingsViewModel.isInitialized) {
@@ -295,6 +303,11 @@ class MainActivity : ComponentActivity() {
     @androidx.annotation.VisibleForTesting
     fun setDefaultLauncherForTesting(isDefault: Boolean?) {
         appContainer.defaultLauncherOverrideForTesting = isDefault
+    }
+
+    @androidx.annotation.VisibleForTesting
+    fun setDeviceOwnerForTesting(isDeviceOwner: Boolean?) {
+        appContainer.deviceOwnerOverrideForTesting = isDeviceOwner
     }
 
     @androidx.annotation.VisibleForTesting
@@ -416,6 +429,7 @@ class MainActivity : ComponentActivity() {
                     capabilityChecker = container.capabilityChecker,
                     locationSource = container.locationSource,
                     nfcReaderSource = container.nfcReaderSource,
+                    appAccessController = container.appAccessController,
                     nowEpochMillisProvider = container.activeNowEpochMillisProvider,
                 ) as T
             },
@@ -429,6 +443,7 @@ class MainActivity : ComponentActivity() {
                     packageIndexSource = container.packageIndexSource,
                     settingsRepository = container.settingsRepository,
                     dialerPackageResolver = container.dialerPackageResolver,
+                    appAccessController = container.appAccessController,
                 ) as T
             },
         )[SettingsViewModel::class.java]
@@ -610,6 +625,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToProfiles = {
                                     backStack.add(ThresholdRoute.Profiles)
                                 },
+                                onNavigateToHardenedMode = {
+                                    backStack.add(ThresholdRoute.HardenedMode)
+                                },
                                 onUpdateShowUnlocks = settingsViewModel::updateShowUnlocks,
                                 onUpdateShowRest = settingsViewModel::updateShowRest,
                                 onUpdateShowDialerIcon = settingsViewModel::updateShowDialerIcon,
@@ -621,6 +639,18 @@ class MainActivity : ComponentActivity() {
                                 onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 onSendFeedback = ::launchFeedbackEmail,
+                            )
+                        }
+
+                        entry<ThresholdRoute.HardenedMode> {
+                            LaunchedEffect(Unit) {
+                                settingsViewModel.refreshHardenedModeStatus()
+                            }
+                            HardenedModeScreen(
+                                isHardenedModeActive = settingsUiState.isHardenedModeActive,
+                                onBack = {
+                                    if (backStack.size > 1) backStack.removeLastOrNull()
+                                },
                             )
                         }
 

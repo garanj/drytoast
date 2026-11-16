@@ -1098,6 +1098,174 @@ class SearchViewModelTest {
         assertThat(fakeRepo.getSettings().nfcLatches).isEmpty()
     }
 
+    @Test
+    fun hardenedMode_cascadingEngineReconcilesBlockedPackagesAcrossBaseScheduleAndNfcOverrides() =
+        runTest(testDispatcher) {
+            val workHours = com.garan.threshold.core.model.SavedTrigger(
+                id = "t-work",
+                name = "Work Hours",
+                trigger = com.garan.threshold.core.model.ProfileTrigger.Schedule(
+                    com.garan.threshold.core.model.ScheduleTrigger(
+                        days = setOf(com.garan.threshold.core.model.DayOfWeek.MONDAY),
+                        startTime = com.garan.threshold.core.model.TimeOfDay(9, 0),
+                        endTime = com.garan.threshold.core.model.TimeOfDay(17, 0),
+                    ),
+                ),
+            )
+            val breakNfc = com.garan.threshold.core.model.SavedTrigger(
+                id = "t-break-nfc",
+                name = "Break Tag",
+                trigger = com.garan.threshold.core.model.ProfileTrigger.Nfc(
+                    com.garan.threshold.core.model.NfcTrigger(
+                        tags = listOf(
+                            com.garan.threshold.core.model.NfcTagEntry(
+                                uid = "04:BB:CC:DD",
+                                label = "Break",
+                            ),
+                        ),
+                        mode = com.garan.threshold.core.model.NfcTriggerMode.TIMED_SESSION,
+                        durationMinutes = 15,
+                    ),
+                ),
+            )
+
+            // Priority 0 (highest): Break NFC Profile allows socialComponent
+            val breakProfile = com.garan.threshold.core.model.CustomProfile(
+                id = "break",
+                name = "Break",
+                enabled = true,
+                priority = 0,
+                trigger = null,
+                activationRules = listOf(com.garan.threshold.core.model.TriggerRule(listOf("t-break-nfc"))),
+                appAssignments = mapOf(
+                    socialComponent to com.garan.threshold.core.model.AppAssignment.Standard,
+                ),
+            )
+            // Priority 1: Work Profile blocks socialComponent and calculatorComponent
+            val workProfile = com.garan.threshold.core.model.CustomProfile(
+                id = "work",
+                name = "Work",
+                enabled = true,
+                priority = 1,
+                trigger = null,
+                activationRules = listOf(com.garan.threshold.core.model.TriggerRule(listOf("t-work"))),
+                appAssignments = mapOf(
+                    socialComponent to com.garan.threshold.core.model.AppAssignment.Blocked,
+                    calculatorComponent to com.garan.threshold.core.model.AppAssignment.Blocked,
+                ),
+            )
+
+            // Base Profile: socialComponent is Guarded (NOT suspended!), blockedComponent is Blocked (suspended!)
+            val fakeRepo = com.garan.threshold.ui.settings.FakeSettingsRepository(
+                com.garan.threshold.core.model.ThresholdSettings(
+                    baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
+                        appAssignments = mapOf(
+                            socialComponent to com.garan.threshold.core.model.AppAssignment.Guarded(),
+                            blockedComponent to com.garan.threshold.core.model.AppAssignment.Blocked,
+                            dialerComponent to com.garan.threshold.core.model.AppAssignment.Blocked,
+                        ),
+                    ),
+                    customProfiles = listOf(breakProfile, workProfile),
+                    savedTriggers = listOf(workHours, breakNfc),
+                ),
+            )
+
+            var currentDayTime = com.garan.threshold.core.port.LocalDayTime(
+                com.garan.threshold.core.model.DayOfWeek.MONDAY,
+                com.garan.threshold.core.model.TimeOfDay(8, 0),
+            )
+            var currentMillis = 1_000_000L
+            val nfcScansFlow = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+            val fakeNfcReader = object : com.garan.threshold.core.port.NfcReaderSource {
+                override val tagScans = nfcScansFlow
+            }
+            val fakeAccessController = FakeAppAccessController(deviceOwner = true)
+
+            val vm = SearchViewModel(
+                packageIndexSource = fakePackageIndexSource,
+                defaultDialerPackage = dialerComponent.packageName,
+                settingsRepository = fakeRepo,
+                clockSource = { currentDayTime },
+                nfcReaderSource = fakeNfcReader,
+                appAccessController = fakeAccessController,
+                nowEpochMillisProvider = { currentMillis },
+                ioDispatcher = testDispatcher,
+            )
+            advanceUntilIdle()
+
+            // 1. At 08:00 (only Base Profile active):
+            //    - blockedComponent ("com.example.games") is Blocked -> suspended
+            //    - socialComponent ("com.example.social") is Guarded -> NOT suspended (preserves notifications)
+            //    - dialerComponent ("com.android.dialer") is default dialer -> NEVER suspended
+            assertThat(fakeAccessController.currentlySuspendedPackages)
+                .containsExactly(blockedComponent.packageName)
+
+            // 2. At 09:30 (Work Profile activates):
+            //    - socialComponent and calculatorComponent become Blocked -> suspended alongside blockedComponent
+            currentDayTime = com.garan.threshold.core.port.LocalDayTime(
+                com.garan.threshold.core.model.DayOfWeek.MONDAY,
+                com.garan.threshold.core.model.TimeOfDay(9, 30),
+            )
+            vm.refreshScheduleEvaluation()
+            advanceUntilIdle()
+            assertThat(fakeAccessController.currentlySuspendedPackages).containsExactly(
+                blockedComponent.packageName,
+                socialComponent.packageName,
+                calculatorComponent.packageName,
+            )
+
+            // 3. Tap Break NFC tag at 09:35 -> Break profile (priority 0) overrides socialComponent to Standard ->
+            //    socialComponent is immediately unsuspended while calculatorComponent and blockedComponent stay suspended
+            nfcScansFlow.tryEmit("04:BB:CC:DD")
+            advanceUntilIdle()
+            assertThat(fakeAccessController.currentlySuspendedPackages).containsExactly(
+                blockedComponent.packageName,
+                calculatorComponent.packageName,
+            )
+
+            // 4. Break NFC timed session (15m) expires at 09:51 -> socialComponent is re-suspended under Work Profile
+            currentMillis += 16 * 60_000L
+            vm.refreshScheduleEvaluation()
+            advanceUntilIdle()
+            assertThat(fakeAccessController.currentlySuspendedPackages).containsExactly(
+                blockedComponent.packageName,
+                socialComponent.packageName,
+                calculatorComponent.packageName,
+            )
+
+            // 5. Work Profile ends at 17:05 -> socialComponent (back to Guarded) and calculatorComponent (Standard)
+            //    are unsuspended; only blockedComponent remains suspended
+            currentDayTime = com.garan.threshold.core.port.LocalDayTime(
+                com.garan.threshold.core.model.DayOfWeek.MONDAY,
+                com.garan.threshold.core.model.TimeOfDay(17, 5),
+            )
+            vm.refreshScheduleEvaluation()
+            advanceUntilIdle()
+            assertThat(fakeAccessController.currentlySuspendedPackages)
+                .containsExactly(blockedComponent.packageName)
+        }
+
+    private class FakeAppAccessController(deviceOwner: Boolean) :
+        com.garan.threshold.core.port.AppAccessController {
+        override val isDeviceOwnerFlow = kotlinx.coroutines.flow.MutableStateFlow(deviceOwner)
+        var currentlySuspendedPackages: Set<String> = emptySet()
+            private set
+
+        override fun isDeviceOwner(): Boolean = isDeviceOwnerFlow.value
+
+        override suspend fun reconcileBlockedPackages(
+            blockedComponents: Set<ComponentKey>,
+            defaultDialerPackage: String,
+        ): Set<String> {
+            if (!isDeviceOwner()) return emptySet()
+            currentlySuspendedPackages = blockedComponents
+                .map { it.packageName }
+                .filter { it != defaultDialerPackage }
+                .toSet()
+            return currentlySuspendedPackages
+        }
+    }
+
     private class TestHapticEngine : HapticEngine {
         var rotaryDetentCount = 0
             private set

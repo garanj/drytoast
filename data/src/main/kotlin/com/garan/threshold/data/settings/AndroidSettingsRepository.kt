@@ -87,6 +87,7 @@ class AndroidSettingsRepository(
         val STAGED_SHADOW = stringPreferencesKey("staged_shadow_settings")
         val STAGED_AT_BOOT_COUNT = intPreferencesKey("staged_at_boot_count")
         val SETTINGS_LOCKED = booleanPreferencesKey("settings_locked")
+        val DPC_SUSPENDED_PACKAGES = stringPreferencesKey("dpc_suspended_packages")
     }
 
     private val cacheLock = Any()
@@ -255,6 +256,19 @@ class AndroidSettingsRepository(
         withContext(ioDispatcher) {
             dataStore.edit { prefs ->
                 prefs[Keys.SETTINGS_LOCKED] = locked
+            }
+        }
+    }
+
+    override suspend fun updateDpcSuspendedPackages(packages: Set<String>) {
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                val serialized = packages.filter { it.isNotBlank() }.sorted().joinToString(";")
+                if (serialized.isEmpty()) {
+                    prefs.remove(Keys.DPC_SUSPENDED_PACKAGES)
+                } else {
+                    prefs[Keys.DPC_SUSPENDED_PACKAGES] = serialized
+                }
             }
         }
     }
@@ -494,6 +508,12 @@ class AndroidSettingsRepository(
         val hasSeenHint = prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] ?: false
         val hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
+        val dpcSuspendedPackagesRaw = prefs[Keys.DPC_SUSPENDED_PACKAGES].orEmpty()
+        val dpcSuspendedPackages = if (dpcSuspendedPackagesRaw.isBlank()) {
+            emptySet()
+        } else {
+            dpcSuspendedPackagesRaw.split(";").filter { it.isNotBlank() }.toSet()
+        }
 
         val frictionName = prefs[Keys.DEFAULT_FRICTION]
         val defaultFriction = frictionName?.let {
@@ -611,6 +631,7 @@ class AndroidSettingsRepository(
             nfcLatches = nfcLatches,
             nfcDailyUsage = nfcDailyUsage,
             isSettingsLocked = isSettingsLocked,
+            dpcSuspendedPackages = dpcSuspendedPackages,
         )
     }
 

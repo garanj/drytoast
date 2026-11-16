@@ -116,15 +116,15 @@
 ---
 
 ## Phase 6: Device Owner & DPC Mode (Milestone 6)
-- [ ] **Task 6.1: DPC Receiver & Dynamic Tier Detection (`:app`)**
-  - `ThresholdDeviceAdminReceiver` implementation.
-  - Runtime inspection via `DevicePolicyManager.isDeviceOwnerApp`.
-- [ ] **Task 6.2: Kernel-Level Package Suspension & Lock Task**
-  - `setPackagesSuspended` via `AppAccessController` port.
-  - Native `setLockTaskPackages` multi-app AllowListing (stripping Overview/Recents from System UI).
-- [ ] **Task 6.3: Anti-Tamper & Distraction Lockdown**
-  - `setUninstallBlocked` and `setUserControlDisabledPackages` during active focus sessions.
-  - `setStatusBarDisabled` notification shade lockdown.
+- [x] **Task 6.1: DPC Receiver & Dynamic Tier Detection (`:app`)**
+  - `ThresholdDeviceAdminReceiver` implementation (`@xml/device_admin_receiver`) and reactive `isDeviceOwnerFlow` via `DevicePolicyManager.isDeviceOwnerApp` (#110).
+- [x] **Task 6.2: Kernel-Level Package Suspension (`:core` / `:data` / `:app`)**
+  - Diff-reconciled `setPackagesSuspended` via `AppAccessController` port for `Blocked` apps (preserving notifications on `Guarded` apps and permanently exempting the default dialer and system packages) (#110).
+  - *(Note: Kiosk `setLockTaskPackages` dropped by design decision; persistent default Home launcher enforced via `addPersistentPreferredActivity`).*
+- [x] **Task 6.3: Anti-Tamper Self-Protection & Hardened Mode Education UI (`:app`)**
+  - `setUninstallBlocked`, `setUserControlDisabledPackages` (disabling Force Stop & Clear Storage), and `addPersistentPreferredActivity` when Device Owner is active, plus computer-only `DISABLE_HARDENED_MODE` ADB deactivation (#110).
+  - Dedicated `HardenedModeScreen` (`ThresholdRoute.HardenedMode`) in Settings with live status, Standard vs. Hardened breakdown, Companion Commitment Layers, and copyable ADB commands (#110).
+  - *(Note: `setStatusBarDisabled` notification shade lockdown dropped by design decision).*
 - [ ] **Task 6.4: WebUSB Provisioning & Dignified Unenrollment**
   - WebUSB setup instructions and companion client web app (@yume-chan/adb).
   - In-app dignified unenrollment with optional delayed cool-down timer.

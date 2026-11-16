@@ -66,6 +66,23 @@
             <intent-filter>
                 <action android:name="com.garan.threshold.action.LOCK_SETTINGS" />
                 <action android:name="com.garan.threshold.action.UNLOCK_SETTINGS" />
+                <action android:name="com.garan.threshold.action.DISABLE_HARDENED_MODE" />
+                <action android:name="com.garan.threshold.action.SYNC_HARDENED_MODE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".dpc.ThresholdDeviceAdminReceiver"
+            android:description="@string/dpc_admin_description"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_receiver" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
             </intent-filter>
         </receiver>
 

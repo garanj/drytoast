@@ -1,0 +1,273 @@
+package com.garan.threshold.dpc
+
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import com.garan.threshold.MainActivity
+import com.garan.threshold.core.model.ComponentKey
+import com.garan.threshold.core.port.AppAccessController
+import com.garan.threshold.core.port.SettingsRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+/**
+ * Low-level bridge abstracting Android [DevicePolicyManager] calls for Hardened Mode.
+ * Allows deterministic unit testing of partial-failure arrays and security exceptions while
+ * delegating directly to [DevicePolicyManager] in production and Robolectric tests.
+ */
+interface DpcPolicyBridge {
+    fun isDeviceOwnerApp(packageName: String): Boolean
+    fun setPackagesSuspended(admin: ComponentName, packageNames: Array<String>, suspended: Boolean): Array<String>
+    fun setUninstallBlocked(admin: ComponentName, packageName: String, uninstallBlocked: Boolean)
+    fun setUserControlDisabledPackages(admin: ComponentName, packages: List<String>)
+    fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName)
+    fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String)
+    fun clearDeviceOwnerApp(packageName: String)
+}
+
+internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyBridge {
+    private val dpm: DevicePolicyManager?
+        get() = (context.applicationContext ?: context)
+            .getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+
+    override fun isDeviceOwnerApp(packageName: String): Boolean =
+        runCatching { dpm?.isDeviceOwnerApp(packageName) == true }.getOrDefault(false)
+
+    override fun setPackagesSuspended(
+        admin: ComponentName,
+        packageNames: Array<String>,
+        suspended: Boolean,
+    ): Array<String> = runCatching {
+        dpm?.setPackagesSuspended(admin, packageNames, suspended) ?: packageNames
+    }.getOrDefault(packageNames)
+
+    override fun setUninstallBlocked(admin: ComponentName, packageName: String, uninstallBlocked: Boolean) {
+        runCatching { dpm?.setUninstallBlocked(admin, packageName, uninstallBlocked) }
+    }
+
+    override fun setUserControlDisabledPackages(admin: ComponentName, packages: List<String>) {
+        runCatching { dpm?.setUserControlDisabledPackages(admin, packages) }
+    }
+
+    override fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName) {
+        runCatching { dpm?.addPersistentPreferredActivity(admin, filter, activity) }
+    }
+
+    override fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String) {
+        runCatching { dpm?.clearPackagePersistentPreferredActivities(admin, packageName) }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun clearDeviceOwnerApp(packageName: String) {
+        runCatching { dpm?.clearDeviceOwnerApp(packageName) }
+    }
+}
+
+/**
+ * Android Device Policy Controller (DPC) implementation of [AppAccessController].
+ *
+ * When Threshold holds Device Owner privileges ("Hardened Mode"):
+ * 1. Enforces anti-tamper self-protection (`setUninstallBlocked`, `setUserControlDisabledPackages`,
+ *    and persistent default `CATEGORY_HOME` launcher activity).
+ * 2. Diff-reconciles `Blocked` packages via `setPackagesSuspended`, while strictly preserving
+ *    Prime Invariant #2 (Universal Dialer Safety Invariant) and leaving `Guarded` apps unsuspended
+ *    so their notifications arrive normally.
+ * 3. Persists the set of suspended packages in [SettingsRepository] so unblocked apps or ended
+ *    profiles are reliably unsuspended even across process restarts or device reboots.
+ */
+class AndroidAppAccessController(
+    context: Context,
+    private val settingsRepository: SettingsRepository,
+    private val bridge: DpcPolicyBridge = AndroidDpcPolicyBridge(context.applicationContext ?: context),
+    private val adminComponent: ComponentName = ThresholdDeviceAdminReceiver.getComponentName(context),
+    private val homeActivityComponent: ComponentName = ComponentName(
+        context.applicationContext ?: context,
+        MainActivity::class.java,
+    ),
+    private val selfPackageName: String = (context.applicationContext ?: context).packageName,
+    private val deviceOwnerOverrideProvider: () -> Boolean? = { null },
+) : AppAccessController {
+
+    private val mutex = Mutex()
+
+    @Volatile
+    private var lastSuspendedPackages: Set<String> = emptySet()
+
+    @Volatile
+    private var isSelfProtectionApplied: Boolean = false
+
+    private val _isDeviceOwnerFlow = MutableStateFlow(computeIsDeviceOwner())
+    override val isDeviceOwnerFlow: StateFlow<Boolean> = _isDeviceOwnerFlow.asStateFlow()
+
+    private fun computeIsDeviceOwner(): Boolean =
+        deviceOwnerOverrideProvider() ?: bridge.isDeviceOwnerApp(selfPackageName)
+
+    override fun isDeviceOwner(): Boolean {
+        val active = computeIsDeviceOwner()
+        if (!active) {
+            isSelfProtectionApplied = false
+        }
+        _isDeviceOwnerFlow.value = active
+        return active
+    }
+
+    override suspend fun enforceHardenedSelfProtection(): Boolean = mutex.withLock {
+        if (!isDeviceOwner()) {
+            isSelfProtectionApplied = false
+            return false
+        }
+        applySelfProtectionLocked()
+        true
+    }
+
+    private fun applySelfProtectionLocked() {
+        bridge.setUninstallBlocked(adminComponent, selfPackageName, true)
+        bridge.setUserControlDisabledPackages(adminComponent, listOf(selfPackageName))
+        val homeFilter = IntentFilter(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            addCategory(Intent.CATEGORY_DEFAULT)
+        }
+        bridge.addPersistentPreferredActivity(adminComponent, homeFilter, homeActivityComponent)
+        isSelfProtectionApplied = true
+    }
+
+    override suspend fun reconcileBlockedPackages(
+        blockedComponents: Set<ComponentKey>,
+        defaultDialerPackage: String,
+    ): Set<String> = mutex.withLock {
+        if (!isDeviceOwner()) {
+            isSelfProtectionApplied = false
+            return emptySet()
+        }
+
+        if (!isSelfProtectionApplied) {
+            applySelfProtectionLocked()
+        }
+
+        val settings = settingsRepository.getSettings()
+        val previouslySuspended = lastSuspendedPackages + settings.dpcSuspendedPackages
+
+        // Prime Invariant #2 (Universal Dialer Safety Invariant) + Self-Protection:
+        // Never suspend the default dialer, Threshold itself, or core system packages.
+        val targetPackages = blockedComponents
+            .map { it.packageName }
+            .filter { pkg ->
+                isSuspendablePackage(pkg, defaultDialerPackage)
+            }
+            .toSet()
+
+        val toSuspend = targetPackages - previouslySuspended
+        val toUnsuspend = previouslySuspended - targetPackages
+
+        val newlySuspended = if (toSuspend.isNotEmpty()) {
+            val failed = bridge.setPackagesSuspended(
+                adminComponent,
+                toSuspend.sorted().toTypedArray(),
+                true,
+            ).toSet()
+            toSuspend - failed
+        } else {
+            emptySet()
+        }
+
+        val failedToUnsuspend = if (toUnsuspend.isNotEmpty()) {
+            bridge.setPackagesSuspended(
+                adminComponent,
+                toUnsuspend.sorted().toTypedArray(),
+                false,
+            ).toSet()
+        } else {
+            emptySet()
+        }
+
+        val updatedSuspended = (previouslySuspended - toUnsuspend) +
+            newlySuspended +
+            toUnsuspend.intersect(failedToUnsuspend)
+
+        lastSuspendedPackages = updatedSuspended
+        if (updatedSuspended != settings.dpcSuspendedPackages) {
+            settingsRepository.updateDpcSuspendedPackages(updatedSuspended)
+        }
+        updatedSuspended
+    }
+
+    override suspend fun setPackagesSuspended(components: Set<ComponentKey>, suspended: Boolean): Boolean =
+        mutex.withLock {
+            if (!isDeviceOwner()) return false
+            val packages = components
+                .map { it.packageName }
+                .filter { pkg -> isSuspendablePackage(pkg, defaultDialerPackage = "") }
+                .distinct()
+                .sorted()
+                .toTypedArray()
+            if (packages.isEmpty()) return true
+            val failed = bridge.setPackagesSuspended(adminComponent, packages, suspended)
+            val succeeded = packages.toSet() - failed.toSet()
+            val currentPersisted = settingsRepository.getSettings().dpcSuspendedPackages
+            val updated = if (suspended) {
+                (lastSuspendedPackages + currentPersisted) + succeeded
+            } else {
+                (lastSuspendedPackages + currentPersisted) - succeeded
+            }
+            lastSuspendedPackages = updated
+            if (updated != currentPersisted) {
+                settingsRepository.updateDpcSuspendedPackages(updated)
+            }
+            failed.isEmpty()
+        }
+
+    override suspend fun deactivateHardenedMode(): Boolean = mutex.withLock {
+        val settings = settingsRepository.getSettings()
+        val configuredPackages = buildSet {
+            addAll(settings.baseProfile.appAssignments.keys.map { it.packageName })
+            addAll(settings.baseProfile.quickActions.map { it.component.packageName })
+            for (profile in settings.customProfiles) {
+                addAll(profile.appAssignments.keys.map { it.packageName })
+            }
+        }
+        val packagesToUnsuspend = (lastSuspendedPackages + settings.dpcSuspendedPackages + configuredPackages)
+            .filter { pkg -> isSuspendablePackage(pkg, defaultDialerPackage = "") }
+            .sorted()
+            .toTypedArray()
+
+        val wasDeviceOwner = isDeviceOwner()
+        if (wasDeviceOwner) {
+            if (packagesToUnsuspend.isNotEmpty()) {
+                bridge.setPackagesSuspended(adminComponent, packagesToUnsuspend, false)
+            }
+            bridge.clearPackagePersistentPreferredActivities(adminComponent, selfPackageName)
+            bridge.setUserControlDisabledPackages(adminComponent, emptyList())
+            bridge.setUninstallBlocked(adminComponent, selfPackageName, false)
+            bridge.clearDeviceOwnerApp(selfPackageName)
+        }
+
+        lastSuspendedPackages = emptySet()
+        isSelfProtectionApplied = false
+        if (settings.dpcSuspendedPackages.isNotEmpty()) {
+            settingsRepository.updateDpcSuspendedPackages(emptySet())
+        }
+        isDeviceOwner()
+        wasDeviceOwner
+    }
+
+    private fun isSuspendablePackage(packageName: String, defaultDialerPackage: String): Boolean =
+        packageName.isNotBlank() &&
+            packageName != selfPackageName &&
+            packageName != defaultDialerPackage &&
+            packageName !in PROTECTED_SYSTEM_PACKAGES
+
+    companion object {
+        val PROTECTED_SYSTEM_PACKAGES = setOf(
+            "android",
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.phone",
+            "com.android.server.telecom",
+        )
+    }
+}
