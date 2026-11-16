@@ -1,13 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#106](https://github.com/garanj/threshold/issues/106) — `feat(home): add dialer keypad icon on launcher with settings toggle`
-- **Branch**: `feat/106-dialer-keypad-icon`
+- **Active Issue**: [#108](https://github.com/garanj/threshold/issues/108) — `feat(settings): persist quick action display labels with component keys to eliminate startup flicker`
+- **Branch**: `feat/108-persist-quick-action-labels`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:core`: Add `showDialerIcon: Boolean = true` to `GeneralSettings` and `hasSameConfigurationAs`
-- [x] `:data`: Persist `show_dialer_icon` in `AndroidSettingsRepository` (live and staged shadow snapshots)
-- [x] `:app`: Add `ThresholdIcons.Dialpad` vector icon and `AppLauncher.launchDialer()`
-- [x] `:app`: Render the centered keypad icon near the bottom of `ThresholdHomeCanvas` / `ThresholdHomeScreen` when `showDialerIcon` is enabled
-- [x] `:app`: Add `"Show dialer icon on launcher"` toggle in `ThresholdSettingsScreen` and `SettingsViewModel`
+- [x] `:core`: Store `InstalledApp` (`(component, label)`) in `BaseProfileSettings.quickActions`
+- [x] `:data`: Serialize and deserialize quick action `(component, label)` pairs in `AndroidSettingsRepository`
+- [x] `:app`: Update `SearchViewModel`, `SettingsViewModel`, and `ThresholdSettingsScreen` to use persisted quick action labels directly
+- [x] Uninstall and redeploy cleanly to the connected device
 - [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

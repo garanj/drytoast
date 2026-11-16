@@ -108,7 +108,9 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
     override suspend fun removeApps(keys: Set<ComponentKey>) {
         _settings.update { current ->
             val pkgNames = keys.map { it.packageName }.toSet()
-            val newQuick = current.baseProfile.quickActions.filter { it !in keys && it.packageName !in pkgNames }
+            val newQuick = current.baseProfile.quickActions.filter {
+                it.component !in keys && it.component.packageName !in pkgNames
+            }
             val newAssignments = current.baseProfile.appAssignments.filter { (comp, _) ->
                 comp !in keys && comp.packageName !in pkgNames
             }
@@ -135,7 +137,7 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
                 val prunedShadow = existingShadow.copy(
                     baseProfile = existingShadow.baseProfile.copy(
                         quickActions = existingShadow.baseProfile.quickActions.filter {
-                            it !in keys && it.packageName !in pkgNames
+                            it.component !in keys && it.component.packageName !in pkgNames
                         },
                         appAssignments = existingShadow.baseProfile.appAssignments.filter { (comp, _) ->
                             comp !in keys && comp.packageName !in pkgNames

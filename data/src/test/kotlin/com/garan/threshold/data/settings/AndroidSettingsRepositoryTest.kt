@@ -6,6 +6,7 @@ import com.garan.threshold.core.model.BaseProfileSettings
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.FrictionChoice
 import com.garan.threshold.core.model.GeneralSettings
+import com.garan.threshold.core.model.InstalledApp
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -37,6 +38,9 @@ class AndroidSettingsRepositoryTest {
     private val chromeKey = ComponentKey("com.android.chrome", "com.google.android.apps.chrome.Main")
     private val clockKey = ComponentKey("com.google.android.deskclock", "DeskClock")
     private val socialKey = ComponentKey("com.instagram.android", "MainActivity")
+    private val chromeApp = InstalledApp(chromeKey, "Chrome")
+    private val clockApp = InstalledApp(clockKey, "Clock")
+    private val socialApp = InstalledApp(socialKey, "Instagram")
 
     @Before
     fun setUp() {
@@ -88,7 +92,7 @@ class AndroidSettingsRepositoryTest {
     fun updateBaseProfile_persistsAssignmentsQuickActionsAndFriction() = runTest(testDispatcher) {
         val updatedBase = BaseProfileSettings(
             defaultFriction = FrictionChoice.DRAG_SORT,
-            quickActions = listOf(chromeKey, clockKey),
+            quickActions = listOf(chromeApp, clockApp),
             appAssignments = mapOf(
                 chromeKey to AppAssignment.Guarded(FrictionChoice.CARET_TRACING),
                 clockKey to AppAssignment.Standard,
@@ -100,7 +104,7 @@ class AndroidSettingsRepositoryTest {
 
         val latest = repository.getSettings()
         assertThat(latest.baseProfile.defaultFriction).isEqualTo(FrictionChoice.DRAG_SORT)
-        assertThat(latest.baseProfile.quickActions).containsExactly(chromeKey, clockKey).inOrder()
+        assertThat(latest.baseProfile.quickActions).containsExactly(chromeApp, clockApp).inOrder()
         assertThat(latest.baseProfile.appAssignments[chromeKey])
             .isEqualTo(AppAssignment.Guarded(FrictionChoice.CARET_TRACING))
         assertThat(latest.baseProfile.appAssignments[clockKey]).isEqualTo(AppAssignment.Standard)
@@ -118,7 +122,7 @@ class AndroidSettingsRepositoryTest {
     @Test
     fun removeApps_removesFromBothQuickActionsAndAssignments() = runTest(testDispatcher) {
         val updatedBase = BaseProfileSettings(
-            quickActions = listOf(chromeKey, socialKey),
+            quickActions = listOf(chromeApp, socialApp),
             appAssignments = mapOf(
                 chromeKey to AppAssignment.Guarded(null),
                 socialKey to AppAssignment.Blocked,
@@ -130,7 +134,7 @@ class AndroidSettingsRepositoryTest {
         repository.removeApps(setOf(socialKey))
 
         val result = repository.getSettings()
-        assertThat(result.baseProfile.quickActions).containsExactly(chromeKey)
+        assertThat(result.baseProfile.quickActions).containsExactly(chromeApp)
         assertThat(result.baseProfile.appAssignments).doesNotContainKey(socialKey)
         assertThat(result.baseProfile.appAssignments).containsKey(chromeKey)
     }
@@ -584,7 +588,7 @@ class AndroidSettingsRepositoryTest {
         repository.saveCustomProfile(profile)
         repository.updateBaseProfile(
             BaseProfileSettings(
-                quickActions = listOf(socialKey),
+                quickActions = listOf(socialApp),
                 appAssignments = mapOf(socialKey to AppAssignment.Blocked),
             ),
         )

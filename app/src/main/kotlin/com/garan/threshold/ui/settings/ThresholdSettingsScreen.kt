@@ -52,6 +52,7 @@ import com.garan.threshold.core.model.AppAssignment
 import com.garan.threshold.core.model.BaseProfileSettings
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.FrictionChoice
+import com.garan.threshold.core.model.InstalledApp
 import com.garan.threshold.ui.search.SearchKeyboardOptions
 
 object SettingsTestTags {
@@ -83,7 +84,7 @@ fun ThresholdSettingsScreen(
     onUpdateShowRest: (Boolean) -> Unit,
     onUpdateRequireFullTyping: (Boolean) -> Unit,
     onUpdateDefaultFriction: (FrictionChoice) -> Unit,
-    onAddQuickAction: (ComponentKey) -> Unit,
+    onAddQuickAction: (InstalledApp) -> Unit,
     onRemoveQuickAction: (ComponentKey) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProfiles: () -> Unit = {},
@@ -195,10 +196,9 @@ fun ThresholdSettingsScreen(
                     )
                 }
             } else {
-                uiState.baseProfile.quickActions.forEachIndexed { index, comp ->
+                uiState.baseProfile.quickActions.forEachIndexed { index, quickApp ->
+                    val comp = quickApp.component
                     item(key = "quick_action_${comp.id}") {
-                        val appLabel = uiState.availableApps.find { it.component == comp }?.label
-                            ?: comp.packageName
                         val slotFormatted = String.format("%02d", index + 1)
 
                         ListItem(
@@ -211,7 +211,7 @@ fun ThresholdSettingsScreen(
                             },
                             headlineContent = {
                                 Text(
-                                    text = appLabel,
+                                    text = quickApp.label,
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
                             },
@@ -491,8 +491,9 @@ fun ThresholdSettingsScreen(
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         var searchQuery by remember { mutableStateOf("") }
         val availableToAdd = remember(uiState.availableApps, uiState.baseProfile.quickActions, searchQuery) {
+            val pinnedComponents = uiState.baseProfile.quickActions.mapTo(hashSetOf()) { it.component }
             uiState.availableApps
-                .filter { it.component !in uiState.baseProfile.quickActions }
+                .filter { it.component !in pinnedComponents }
                 .filter { searchQuery.isBlank() || it.label.contains(searchQuery, ignoreCase = true) }
                 .sortedBy { it.label.lowercase() }
         }
@@ -536,7 +537,7 @@ fun ThresholdSettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onAddQuickAction(app.component)
+                                    onAddQuickAction(app)
                                     showAddQuickActionSheet = false
                                 },
                         )

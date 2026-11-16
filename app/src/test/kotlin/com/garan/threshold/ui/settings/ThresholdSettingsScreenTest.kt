@@ -6,10 +6,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
+import com.garan.threshold.core.model.BaseProfileSettings
+import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.GeneralSettings
+import com.garan.threshold.core.model.InstalledApp
 import com.garan.threshold.ui.theme.ThresholdTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -224,5 +228,34 @@ class ThresholdSettingsScreenTest {
             Add your feedback here.
             """.trimIndent(),
         )
+    }
+
+    @Test
+    fun quickActions_renderPersistedLabelImmediatelyWithoutAvailableAppsLoaded() {
+        val chromeKey = ComponentKey("com.android.chrome", "Main")
+        val chromeApp = InstalledApp(chromeKey, "Chrome")
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(
+                        baseProfile = BaseProfileSettings(quickActions = listOf(chromeApp)),
+                        availableApps = kotlinx.collections.immutable.persistentListOf(),
+                        isLoading = true,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Chrome").assertIsDisplayed()
+        composeRule.onNodeWithText("com.android.chrome").assertDoesNotExist()
     }
 }

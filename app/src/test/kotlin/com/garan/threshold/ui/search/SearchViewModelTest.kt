@@ -344,7 +344,10 @@ class SearchViewModelTest {
                     requireFullTypingOfGuardedApps = true,
                 ),
                 baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
-                    quickActions = listOf(cameraComponent, socialComponent),
+                    quickActions = listOf(
+                        InstalledApp(cameraComponent, "Camera"),
+                        InstalledApp(socialComponent, "Social Feed"),
+                    ),
                     appAssignments = mapOf(socialComponent to com.garan.threshold.core.model.AppAssignment.Blocked),
                 ),
             ),
@@ -364,8 +367,10 @@ class SearchViewModelTest {
         assertThat(state.generalSettings.requireFullTypingOfGuardedApps).isTrue()
         assertThat(state.quickActions).hasSize(2)
         assertThat(state.quickActions[0].component).isEqualTo(cameraComponent)
+        assertThat(state.quickActions[0].label).isEqualTo("Camera")
         assertThat(state.quickActions[0].accessState).isEqualTo(AppAccessState.Direct)
         assertThat(state.quickActions[1].component).isEqualTo(socialComponent)
+        assertThat(state.quickActions[1].label).isEqualTo("Social Feed")
         assertThat(state.quickActions[1].accessState).isEqualTo(AppAccessState.Blocked)
     }
 
@@ -545,7 +550,7 @@ class SearchViewModelTest {
             val fakeRepo = com.garan.threshold.ui.settings.FakeSettingsRepository(
                 com.garan.threshold.core.model.ThresholdSettings(
                     baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
-                        quickActions = listOf(socialComponent),
+                        quickActions = listOf(InstalledApp(socialComponent, "Social Feed")),
                         appAssignments = mapOf(
                             socialComponent to com.garan.threshold.core.model.AppAssignment.Standard,
                         ),
@@ -675,7 +680,7 @@ class SearchViewModelTest {
         val fakeRepo = com.garan.threshold.ui.settings.FakeSettingsRepository(
             com.garan.threshold.core.model.ThresholdSettings(
                 baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
-                    quickActions = listOf(socialComponent),
+                    quickActions = listOf(InstalledApp(socialComponent, "Social Feed")),
                     appAssignments = mapOf(
                         socialComponent to com.garan.threshold.core.model.AppAssignment.Standard,
                     ),
@@ -797,7 +802,7 @@ class SearchViewModelTest {
         val fakeRepo = com.garan.threshold.ui.settings.FakeSettingsRepository(
             com.garan.threshold.core.model.ThresholdSettings(
                 baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
-                    quickActions = listOf(socialComponent),
+                    quickActions = listOf(InstalledApp(socialComponent, "Social Feed")),
                     appAssignments = mapOf(
                         socialComponent to com.garan.threshold.core.model.AppAssignment.Standard,
                     ),
@@ -910,7 +915,7 @@ class SearchViewModelTest {
             val fakeRepo = com.garan.threshold.ui.settings.FakeSettingsRepository(
                 com.garan.threshold.core.model.ThresholdSettings(
                     baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
-                        quickActions = listOf(socialComponent),
+                        quickActions = listOf(InstalledApp(socialComponent, "Social Feed")),
                         appAssignments = mapOf(
                             socialComponent to com.garan.threshold.core.model.AppAssignment.Standard,
                         ),

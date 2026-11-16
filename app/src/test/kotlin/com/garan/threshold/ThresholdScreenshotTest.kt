@@ -333,7 +333,10 @@ class ThresholdScreenshotTest {
             ),
             baseProfile = com.garan.threshold.core.model.BaseProfileSettings(
                 defaultFriction = com.garan.threshold.core.model.FrictionChoice.TYPED_INTENTION,
-                quickActions = listOf(chromeKey, clockKey),
+                quickActions = listOf(
+                    com.garan.threshold.core.model.InstalledApp(chromeKey, "Chrome"),
+                    com.garan.threshold.core.model.InstalledApp(clockKey, "Clock"),
+                ),
                 appAssignments = mapOf(
                     chromeKey to com.garan.threshold.core.model.AppAssignment.Guarded(),
                     socialKey to com.garan.threshold.core.model.AppAssignment.Blocked,
