@@ -1,15 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#110](https://github.com/garanj/threshold/issues/110) — `feat(dpc): implement Phase 6 Hardened Mode (Device Owner DPC, package suspension, anti-tamper & education UI)`
-- **Branch**: `feat/110-hardened-mode-dpc`
+- **Active Issue**: [#112](https://github.com/garanj/threshold/issues/112) — `feat(release): implement Phase 7 hardening, baseline profiles, RTL visual audit & R8 release configuration`
+- **Branch**: `feat/112-phase7-hardening`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:core`: Expand `AppAccessController` port (`isDeviceOwnerFlow`, `reconcileBlockedPackages`, `enforceHardenedSelfProtection`, `deactivateHardenedMode`) and `SettingsRepository` (`dpcSuspendedPackages` persistence for restart recovery)
-- [x] `:data`: Persist `dpc_suspended_packages` in `AndroidSettingsRepository`
-- [x] `:app`: Add `ThresholdDeviceAdminReceiver` and `res/xml/device_admin_receiver.xml`, registered in `AndroidManifest.xml`
-- [x] `:app`: Implement `AndroidAppAccessController` enforcing `setPackagesSuspended` (with Universal Dialer & self-package protection), `setUninstallBlocked`, `setUserControlDisabledPackages`, and `addPersistentPreferredActivity`, plus `DISABLE_HARDENED_MODE` cleanup
-- [x] `:app`: Wire `AppAccessController` reconciliation into `SearchViewModel`, `ScheduleAlarmReceiver`, `ThresholdDeviceAdminReceiver`, and `SettingsLockReceiver`
-- [x] `:app`: Add `"Hardened mode"` row in `ThresholdSettingsScreen`, `ThresholdRoute.HardenedMode`, and `HardenedModeScreen` with live status, Standard vs. Hardened breakdown, Companion Locks, and copyable ADB commands
-- [x] Write extensive unit, integration, and Roborazzi screenshot tests
-- [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`
+- [x] `:benchmark`: Expand `BaselineProfileGenerator` and add `StartupAndFrameTimingBenchmark` (`MacrobenchmarkRule`)
+- [x] `:app`: Add `app/src/main/baseline-prof.txt` AOT baseline profile rules
+- [x] `:app`: Enable `autoMirror = true` on directional icons (`ArrowBack`, `ChevronRight`, `OpenInNew`) and record RTL Roborazzi golden screenshots
+- [x] `:app`: Configure `app/proguard-rules.pro`, `isShrinkResources = true`, and environment-driven release signing in `app/build.gradle.kts`
+- [x] Verify `./gradlew spotlessApply spotlessCheck test assembleRelease` and open PR assigned to `garanj`

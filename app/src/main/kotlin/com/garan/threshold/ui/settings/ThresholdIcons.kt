@@ -15,6 +15,7 @@ object ThresholdIcons {
             defaultHeight = 24.dp,
             viewportWidth = 24f,
             viewportHeight = 24f,
+            autoMirror = true,
         ).apply {
             path(fill = SolidColor(Color.White)) {
                 moveTo(20f, 11f)
@@ -286,6 +287,7 @@ object ThresholdIcons {
             defaultHeight = 24.dp,
             viewportWidth = 24f,
             viewportHeight = 24f,
+            autoMirror = true,
         ).apply {
             path(fill = SolidColor(Color.White)) {
                 moveTo(10f, 6f)
@@ -457,6 +459,7 @@ object ThresholdIcons {
             defaultHeight = 24.dp,
             viewportWidth = 24f,
             viewportHeight = 24f,
+            autoMirror = true,
         ).apply {
             path(fill = SolidColor(Color.White)) {
                 moveTo(19f, 19f)
