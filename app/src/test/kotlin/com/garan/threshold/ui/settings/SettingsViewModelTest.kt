@@ -29,6 +29,8 @@ class SettingsViewModelTest {
     private val chromeComponent = ComponentKey("com.android.chrome", "Main")
     private val clockComponent = ComponentKey("com.android.deskclock", "DeskClock")
     private val socialComponent = ComponentKey("com.instagram.android", "MainActivity")
+    private val chromeApp = InstalledApp(chromeComponent, "Chrome")
+    private val clockApp = InstalledApp(clockComponent, "Clock")
 
     private val fakePackageIndexSource = object : PackageIndexSource {
         override suspend fun getInstalledApps(): List<InstalledApp> = listOf(
@@ -110,18 +112,18 @@ class SettingsViewModelTest {
     fun quickActions_addAndRemove_enforcesMax7Slots() = runTest(testDispatcher) {
         advanceUntilIdle()
 
-        viewModel.addQuickAction(chromeComponent)
-        viewModel.addQuickAction(clockComponent)
+        viewModel.addQuickAction(chromeApp)
+        viewModel.addQuickAction(clockApp)
         advanceUntilIdle()
 
         assertThat(
             viewModel.uiState.value.baseProfile.quickActions,
-        ).containsExactly(chromeComponent, clockComponent).inOrder()
+        ).containsExactly(chromeApp, clockApp).inOrder()
 
         viewModel.removeQuickAction(chromeComponent)
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.baseProfile.quickActions).containsExactly(clockComponent)
+        assertThat(viewModel.uiState.value.baseProfile.quickActions).containsExactly(clockApp)
     }
 
     @Test
@@ -252,7 +254,7 @@ class SettingsViewModelTest {
             // Perform multi-step edits: toggle showUnlocks AND add a quick action AND stage disabling requireReboot
             viewModel.updateShowUnlocks(false)
             advanceUntilIdle()
-            viewModel.addQuickAction(chromeComponent)
+            viewModel.addQuickAction(chromeApp)
             advanceUntilIdle()
             viewModel.updateRequireRebootForSettingsChange(false)
             advanceUntilIdle()
@@ -262,7 +264,7 @@ class SettingsViewModelTest {
             assertThat(stagedUi.isRequireRebootActiveOnLive).isTrue()
             assertThat(stagedUi.general.showUnlocks).isFalse()
             assertThat(stagedUi.general.requireRebootForSettingsChange).isFalse()
-            assertThat(stagedUi.baseProfile.quickActions).containsExactly(chromeComponent)
+            assertThat(stagedUi.baseProfile.quickActions).containsExactly(chromeApp)
 
             // Active live settings in repository remain untouched until reboot
             val liveSettings = fakeRepository.getSettings()

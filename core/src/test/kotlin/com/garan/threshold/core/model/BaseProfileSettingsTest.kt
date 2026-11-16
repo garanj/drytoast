@@ -13,16 +13,17 @@ class BaseProfileSettingsTest {
 
     @Test
     fun `quick actions exceeding max slots throws IllegalArgumentException`() {
-        val keys = (1..8).map { ComponentKey("pkg.$it", "act.$it") }
+        val apps = (1..8).map { InstalledApp(ComponentKey("pkg.$it", "act.$it"), "App $it") }
         assertThrows(IllegalArgumentException::class.java) {
-            BaseProfileSettings(quickActions = keys)
+            BaseProfileSettings(quickActions = apps)
         }
     }
 
     @Test
     fun `duplicate quick actions throws IllegalArgumentException`() {
+        val browserApp = InstalledApp(browserComponent, "Chrome")
         assertThrows(IllegalArgumentException::class.java) {
-            BaseProfileSettings(quickActions = listOf(browserComponent, browserComponent))
+            BaseProfileSettings(quickActions = listOf(browserApp, browserApp))
         }
     }
 

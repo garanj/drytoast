@@ -439,7 +439,7 @@ class SearchViewModel(
             currentDay = now.dayOfWeek,
             currentTime = now.timeOfDay,
             defaultDialerPackage = resolvedDialerPackage,
-            additionalComponents = settings.baseProfile.quickActions,
+            additionalComponents = settings.baseProfile.quickActions.map { it.component },
             currentLocation = currentLocation,
             previouslyActiveProfileIds = previouslyActiveProfileIds,
             savedTriggers = settings.savedTriggers,
@@ -462,11 +462,9 @@ class SearchViewModel(
             )
         }
 
-        val quickKeys = settings.baseProfile.quickActions
-        val quickItems = quickKeys.mapIndexedNotNull { index, comp ->
-            val label = candidates.find { it.component == comp }?.label
-                ?: packageIndexSource.getApp(comp)?.label
-                ?: comp.packageName
+        val quickApps = settings.baseProfile.quickActions
+        val quickItems = quickApps.mapIndexed { index, quickApp ->
+            val comp = quickApp.component
             val access = workingSet.effectiveProfile.appRules[comp]
                 ?: cascadingEngine.resolveAppAccess(
                     component = comp,
@@ -486,7 +484,7 @@ class SearchViewModel(
             QuickActionUiItem(
                 slotNumber = index + 1,
                 component = comp,
-                label = label,
+                label = quickApp.label,
                 accessState = access,
             )
         }.toImmutableList()

@@ -215,14 +215,14 @@ class SettingsViewModel(
         }
     }
 
-    fun addQuickAction(component: ComponentKey) {
+    fun addQuickAction(app: InstalledApp) {
         viewModelScope.launch(ioDispatcher) {
             val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             if (current.quickActions.size < BaseProfileSettings.MAX_QUICK_ACTIONS &&
-                component !in current.quickActions
+                current.quickActions.none { it.component == app.component }
             ) {
                 settingsRepository.updateBaseProfile(
-                    current.copy(quickActions = current.quickActions + component),
+                    current.copy(quickActions = current.quickActions + app),
                 )
             }
         }
@@ -232,12 +232,12 @@ class SettingsViewModel(
         viewModelScope.launch(ioDispatcher) {
             val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             settingsRepository.updateBaseProfile(
-                current.copy(quickActions = current.quickActions - component),
+                current.copy(quickActions = current.quickActions.filterNot { it.component == component }),
             )
         }
     }
 
-    fun reorderQuickActions(reordered: List<ComponentKey>) {
+    fun reorderQuickActions(reordered: List<InstalledApp>) {
         viewModelScope.launch(ioDispatcher) {
             val current = settingsRepository.getSettings().editableSnapshot.baseProfile
             if (reordered.size <= BaseProfileSettings.MAX_QUICK_ACTIONS) {

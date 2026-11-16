@@ -20,6 +20,7 @@ import com.garan.threshold.core.model.FrictionChoice
 import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.core.model.GeoTrigger
 import com.garan.threshold.core.model.GeoTriggerMode
+import com.garan.threshold.core.model.InstalledApp
 import com.garan.threshold.core.model.NfcDailyUsage
 import com.garan.threshold.core.model.NfcLatchState
 import com.garan.threshold.core.model.NfcTagEntry
@@ -90,7 +91,7 @@ class AndroidSettingsRepository(
 
     private val cacheLock = Any()
     private var cachedQuickActionsRaw: String? = null
-    private var cachedQuickActions: List<ComponentKey> = emptyList()
+    private var cachedQuickActions: List<InstalledApp> = emptyList()
     private var cachedAppAssignmentsRaw: String? = null
     private var cachedAppAssignments: Map<ComponentKey, AppAssignment> = emptyMap()
     private var cachedSavedTriggersRaw: String? = null
@@ -327,7 +328,7 @@ class AndroidSettingsRepository(
         prefs[Keys.REQUIRE_FULL_TYPING] = updated.general.requireFullTypingOfGuardedApps
         prefs[Keys.REQUIRE_REBOOT] = updated.general.requireRebootForSettingsChange
         prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
-        prefs[Keys.QUICK_ACTIONS] = updated.baseProfile.quickActions.joinToString(";") { it.flattenToString() }
+        prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(updated.baseProfile.quickActions)
         prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
         prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(updated.customProfiles)
         prefs[Keys.SAVED_TRIGGERS] = serializeSavedTriggers(updated.savedTriggers)
@@ -374,7 +375,7 @@ class AndroidSettingsRepository(
                 val removedPkgNames = keys.map { it.packageName }.toSet()
 
                 val prunedQuickActions = currentSettings.baseProfile.quickActions.filter {
-                    it !in keys && it.packageName !in removedPkgNames
+                    it.component !in keys && it.component.packageName !in removedPkgNames
                 }
                 val prunedAssignments = currentSettings.baseProfile.appAssignments.filter { (comp, _) ->
                     comp !in keys && comp.packageName !in removedPkgNames
@@ -391,14 +392,14 @@ class AndroidSettingsRepository(
                     )
                 }
 
-                prefs[Keys.QUICK_ACTIONS] = prunedQuickActions.joinToString(";") { it.flattenToString() }
+                prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(prunedQuickActions)
                 prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(prunedAssignments)
                 prefs[Keys.CUSTOM_PROFILES] = serializeCustomProfiles(prunedProfiles)
 
                 val existingShadow = currentSettings.stagedShadow
                 if (existingShadow != null) {
                     val prunedShadowQuickActions = existingShadow.baseProfile.quickActions.filter {
-                        it !in keys && it.packageName !in removedPkgNames
+                        it.component !in keys && it.component.packageName !in removedPkgNames
                     }
                     val prunedShadowAssignments = existingShadow.baseProfile.appAssignments.filter { (comp, _) ->
                         comp !in keys && comp.packageName !in removedPkgNames
@@ -506,7 +507,7 @@ class AndroidSettingsRepository(
         val nfcLatchesRaw = prefs[Keys.NFC_LATCHES].orEmpty()
         val nfcDailyUsageRaw = prefs[Keys.NFC_DAILY_USAGE].orEmpty()
 
-        val quickActions: List<ComponentKey>
+        val quickActions: List<InstalledApp>
         val appAssignments: Map<ComponentKey, AppAssignment>
         val migratedTriggers: List<SavedTrigger>
         val migratedProfiles: List<CustomProfile>
@@ -517,13 +518,7 @@ class AndroidSettingsRepository(
             quickActions = if (quickActionsRaw == cachedQuickActionsRaw) {
                 cachedQuickActions
             } else {
-                val parsed = if (quickActionsRaw.isBlank()) {
-                    emptyList()
-                } else {
-                    quickActionsRaw.split(";")
-                        .filter { it.isNotBlank() }
-                        .mapNotNull { runCatching { ComponentKey.fromFlatString(it) }.getOrNull() }
-                }
+                val parsed = deserializeQuickActions(quickActionsRaw)
                 cachedQuickActionsRaw = quickActionsRaw
                 cachedQuickActions = parsed
                 parsed
@@ -629,7 +624,7 @@ class AndroidSettingsRepository(
         obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
         obj.put(
             "quickActions",
-            snapshot.baseProfile.quickActions.joinToString(";") { it.flattenToString() },
+            serializeQuickActions(snapshot.baseProfile.quickActions),
         )
         obj.put("appAssignments", serializeAppAssignments(snapshot.baseProfile.appAssignments))
         obj.put("customProfiles", serializeCustomProfiles(snapshot.customProfiles))
@@ -655,14 +650,7 @@ class AndroidSettingsRepository(
                     obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
                 )
             }.getOrDefault(FrictionChoice.TYPED_INTENTION)
-            val quickActionsRaw = obj.optString("quickActions", "")
-            val quickActions = if (quickActionsRaw.isBlank()) {
-                emptyList()
-            } else {
-                quickActionsRaw.split(";")
-                    .filter { it.isNotBlank() }
-                    .mapNotNull { runCatching { ComponentKey.fromFlatString(it) }.getOrNull() }
-            }
+            val quickActions = deserializeQuickActions(obj.optString("quickActions", ""))
             val appAssignments = deserializeAppAssignments(obj.optString("appAssignments", ""))
             val customProfiles = deserializeCustomProfiles(obj.optString("customProfiles", ""))
             val savedTriggers = deserializeSavedTriggers(obj.optString("savedTriggers", ""))
@@ -685,6 +673,35 @@ class AndroidSettingsRepository(
                 savedTriggers = savedTriggers,
             )
         }.getOrNull()
+    }
+
+    private fun serializeQuickActions(quickActions: List<InstalledApp>): String {
+        if (quickActions.isEmpty()) return ""
+        val jsonArray = JSONArray()
+        for (app in quickActions) {
+            val obj = JSONObject()
+            obj.put("component", app.component.flattenToString())
+            obj.put("label", app.label)
+            jsonArray.put(obj)
+        }
+        return jsonArray.toString()
+    }
+
+    private fun deserializeQuickActions(raw: String): List<InstalledApp> {
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            val jsonArray = JSONArray(raw)
+            val list = mutableListOf<InstalledApp>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.optJSONObject(i) ?: continue
+                val compStr = obj.optString("component", "")
+                val label = obj.optString("label", "")
+                if (compStr.isBlank() || label.isBlank()) continue
+                val component = runCatching { ComponentKey.fromFlatString(compStr) }.getOrNull() ?: continue
+                list.add(InstalledApp(component = component, label = label))
+            }
+            list
+        }.getOrDefault(emptyList())
     }
 
     private fun serializeAppAssignments(assignments: Map<ComponentKey, AppAssignment>): String =

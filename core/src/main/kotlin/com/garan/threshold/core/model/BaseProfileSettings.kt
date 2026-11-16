@@ -7,18 +7,18 @@ import kotlin.random.Random
  *
  * @property defaultFriction The default friction policy applied to guarded apps without an explicit override.
  * @property appAssignments Explicit per-app assignments (`Blocked`, `Guarded`, or `Standard`).
- * @property quickActions Pinned app component keys displayed on the home surface (up to 7 items).
+ * @property quickActions Pinned applications (component key and display label) displayed on the home surface (up to 7 items).
  */
 data class BaseProfileSettings(
     val defaultFriction: FrictionChoice = FrictionChoice.TYPED_INTENTION,
     val appAssignments: Map<ComponentKey, AppAssignment> = emptyMap(),
-    val quickActions: List<ComponentKey> = emptyList(),
+    val quickActions: List<InstalledApp> = emptyList(),
 ) {
     init {
         require(quickActions.size <= MAX_QUICK_ACTIONS) {
             "Quick actions cannot exceed $MAX_QUICK_ACTIONS slots, had ${quickActions.size}"
         }
-        require(quickActions.distinct().size == quickActions.size) {
+        require(quickActions.map { it.component }.distinct().size == quickActions.size) {
             "Quick actions cannot contain duplicates: $quickActions"
         }
     }
