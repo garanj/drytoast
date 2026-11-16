@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 
@@ -16,8 +18,14 @@ object ImeUtils {
 
     fun dismissIme(activity: Activity) {
         val window = activity.window ?: return
-        WindowCompat.getInsetsController(window, window.decorView)
-            .hide(WindowInsetsCompat.Type.ime())
+        val decorView = window.decorView
+        val imm = activity.getSystemService(InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(decorView.windowToken, 0)
+        val insets = ViewCompat.getRootWindowInsets(decorView)
+        if (insets?.isVisible(WindowInsetsCompat.Type.ime()) == true) {
+            WindowCompat.getInsetsController(window, decorView)
+                .hide(WindowInsetsCompat.Type.ime())
+        }
     }
 
     fun Context.findActivity(): Activity? {

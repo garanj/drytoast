@@ -45,6 +45,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     savedTriggers = settings.savedTriggers,
                     nfcLatches = settings.nfcLatches,
                 )
+                container.reconcileDpcFromSettings()
             } finally {
                 pendingResult?.finish()
             }

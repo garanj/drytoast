@@ -2,6 +2,9 @@ package com.garan.threshold.core.port
 
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.FrictionPolicy
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Result returned when attempting to launch an application component through Threshold's gatekeeper.
@@ -18,29 +21,66 @@ sealed interface LaunchResult {
 }
 
 /**
- * Outbound port for mediating application launches, intentional friction gates, and
- * optional Device Policy Controller (DPC) kernel-level package suspension.
+ * Outbound port for mediating optional Device Policy Controller (DPC) / Hardened Mode
+ * kernel-level package suspension (`setPackagesSuspended`) and anti-tamper self-protection.
  */
 interface AppAccessController {
 
     /**
-     * Determines whether the specified [component] is permitted to launch under the active profile.
+     * Reactive stream of whether Threshold currently holds active Device Owner (Hardened Mode) privileges.
      */
-    suspend fun canLaunch(component: ComponentKey): Boolean
+    val isDeviceOwnerFlow: StateFlow<Boolean>
 
     /**
-     * Requests launching the specified [component], initiating friction checkpoints if guarded.
+     * Determines whether Threshold is currently running with active Device Owner / DPC privileges,
+     * refreshing [isDeviceOwnerFlow].
      */
-    suspend fun requestLaunch(component: ComponentKey): LaunchResult
+    fun isDeviceOwner(): Boolean
 
     /**
-     * Determines whether Threshold is running with active Device Owner / DPC privileges.
+     * Enforces Hardened Mode self-protection policies (`setUninstallBlocked`,
+     * `setUserControlDisabledPackages`, and persistent default Home launcher activity)
+     * when running as Device Owner. Returns `true` if applied.
      */
-    suspend fun isDeviceOwner(): Boolean
+    suspend fun enforceHardenedSelfProtection(): Boolean = false
 
     /**
-     * Optional DPC-level package suspension (`setPackagesSuspended`).
-     * Returns true if successfully applied; false if unsupported or not in DPC mode.
+     * Reconciles OS-level package suspension (`setPackagesSuspended`) against the current set
+     * of [blockedComponents] resolved by the cascading profile engine.
+     *
+     * Invariants:
+     * 1. No-op when [isDeviceOwner] is `false`.
+     * 2. Never suspends [defaultDialerPackage] (Universal Dialer Safety Invariant) or Threshold itself.
+     * 3. Suspends newly blocked packages and unsuspends any previously suspended packages that are
+     *    no longer blocked.
+     *
+     * @return The set of package names currently suspended by Threshold after reconciliation.
      */
-    suspend fun setPackagesSuspended(components: Set<ComponentKey>, suspended: Boolean): Boolean
+    suspend fun reconcileBlockedPackages(
+        blockedComponents: Set<ComponentKey>,
+        defaultDialerPackage: String,
+    ): Set<String> = emptySet()
+
+    /**
+     * Direct DPC-level package suspension (`setPackagesSuspended`).
+     * Returns `true` if successfully applied; `false` if unsupported or not in DPC mode.
+     */
+    suspend fun setPackagesSuspended(components: Set<ComponentKey>, suspended: Boolean): Boolean = false
+
+    /**
+     * Cleanly deactivates Hardened Mode (triggered via ADB broadcast from a computer):
+     * 1. Unsuspends all packages previously suspended by Threshold.
+     * 2. Clears persistent preferred Home activity, user-control restrictions, and uninstall block.
+     * 3. Relinquishes Device Owner privileges (`clearDeviceOwnerApp`).
+     */
+    suspend fun deactivateHardenedMode(): Boolean = false
+}
+
+/**
+ * Default no-op implementation of [AppAccessController] when DPC is not configured.
+ */
+object NoOpAppAccessController : AppAccessController {
+    private val _isDeviceOwnerFlow = MutableStateFlow(false)
+    override val isDeviceOwnerFlow: StateFlow<Boolean> = _isDeviceOwnerFlow.asStateFlow()
+    override fun isDeviceOwner(): Boolean = false
 }

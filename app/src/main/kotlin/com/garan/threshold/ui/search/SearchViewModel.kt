@@ -16,11 +16,13 @@ import com.garan.threshold.core.model.Profile
 import com.garan.threshold.core.model.ProfileCapabilityIssue
 import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.model.ThresholdSettings
+import com.garan.threshold.core.port.AppAccessController
 import com.garan.threshold.core.port.ClockSource
 import com.garan.threshold.core.port.HapticEngine
 import com.garan.threshold.core.port.LaunchResult
 import com.garan.threshold.core.port.LocationSource
 import com.garan.threshold.core.port.NfcReaderSource
+import com.garan.threshold.core.port.NoOpAppAccessController
 import com.garan.threshold.core.port.NoOpHapticEngine
 import com.garan.threshold.core.port.NoOpNfcReaderSource
 import com.garan.threshold.core.port.NoOpScheduleAlarmScheduler
@@ -98,6 +100,7 @@ class SearchViewModel(
     private val capabilityChecker: ProfileCapabilityChecker = ProfileCapabilityChecker { true },
     private val locationSource: LocationSource? = null,
     private val nfcReaderSource: NfcReaderSource = NoOpNfcReaderSource,
+    private val appAccessController: AppAccessController = NoOpAppAccessController,
     private val nowEpochMillisProvider: () -> Long = { System.currentTimeMillis() },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val random: Random = Random.Default,
@@ -461,6 +464,10 @@ class SearchViewModel(
                 nfcLatches = currentNfcLatches,
             )
         }
+        appAccessController.reconcileBlockedPackages(
+            blockedComponents = workingSet.blockedComponents,
+            defaultDialerPackage = resolvedDialerPackage,
+        )
 
         val quickApps = settings.baseProfile.quickActions
         val quickItems = quickApps.mapIndexed { index, quickApp ->

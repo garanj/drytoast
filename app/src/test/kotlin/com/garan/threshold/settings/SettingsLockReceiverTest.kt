@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
@@ -21,6 +22,8 @@ import com.garan.threshold.ThresholdAppContainer
 import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.ui.home.HOME_CANVAS_TEST_TAG
 import com.garan.threshold.ui.settings.FakeSettingsRepository
+import com.garan.threshold.ui.settings.HardenedModeDeepLink
+import com.garan.threshold.ui.settings.HardenedModeTestTags
 import com.garan.threshold.ui.settings.SettingsTestTags
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +54,7 @@ class SettingsLockReceiverTest {
         ShadowToast.reset()
         val container = ThresholdAppContainer.from(context)
         container.defaultLauncherOverrideForTesting = true
+        container.deviceOwnerOverrideForTesting = null
         runBlocking {
             container.settingsRepository.setHasCompletedOnboarding(true)
             container.settingsRepository.setSettingsLocked(false)
@@ -147,7 +151,31 @@ class SettingsLockReceiverTest {
 
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Settings are locked")
 
-        // 5. Unlock via ADB UNLOCK_SETTINGS broadcast through SettingsLockReceiver ->
+        // 5. Delivering the QR-code disable deep link while settings are locked IS allowed ->
+        //    opens DisableHardenedModeScreen without being kicked out by the settings lock guard
+        ShadowToast.reset()
+        container.deviceOwnerOverrideForTesting = true
+        val deepLinkIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(HardenedModeDeepLink.FULL_DISABLE_URI),
+        )
+        composeRule.runOnUiThread {
+            composeRule.activity.onNewIntent(deepLinkIntent)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(HardenedModeTestTags.DISABLE_SCREEN_ROOT)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.CONFIRM_DISABLE_BUTTON)
+            .assertIsDisplayed()
+        assertThat(ShadowToast.getTextOfLatestToast()).isNull()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CANCEL_DISABLE_BUTTON)
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(HOME_CANVAS_TEST_TAG)
+            .assertIsDisplayed()
+
+        // 6. Unlock via ADB UNLOCK_SETTINGS broadcast through SettingsLockReceiver ->
         //    long-pressing home canvas opens Settings again
         SettingsLockReceiver().onReceive(context, Intent(SettingsLockReceiver.ACTION_UNLOCK_SETTINGS))
         composeRule.waitUntil(timeoutMillis = 5_000L) {

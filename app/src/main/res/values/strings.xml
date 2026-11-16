@@ -105,6 +105,51 @@
     <string name="setting_require_full_typing">Require full typing of guarded apps</string>
     <string name="setting_require_reboot">Require reboot for settings changes</string>
     <string name="setting_require_reboot_summary">Changes to settings, apps, profiles, and triggers take effect after device restart</string>
+    <string name="setting_hardened_mode">Hardened mode</string>
+    <string name="setting_hardened_mode_active_summary">Active · Kernel-level enforcement</string>
+    <string name="setting_hardened_mode_inactive_summary">Not enabled · Standard intent gatekeeper</string>
+    <string name="dpc_admin_description">Enables Threshold Hardened Mode for OS-level package suspension and tamper resistance.</string>
+    <string name="hardened_mode_title">Hardened Mode</string>
+    <string name="hardened_mode_status_active_label">STATUS: HARDENED MODE ACTIVE</string>
+    <string name="hardened_mode_status_inactive_label">STATUS: STANDARD MODE (NOT ENABLED)</string>
+    <string name="hardened_mode_status_active_body">Threshold holds Device Owner privileges. Blocked apps are suspended at the OS level and launcher self-protection is active.</string>
+    <string name="hardened_mode_status_inactive_body">Threshold is running as a standard intent gatekeeper. Blocked apps are hidden from Threshold\'s launcher surfaces, but can still be opened via the Android Recents switcher, notifications, or external deep links.</string>
+    <string name="hardened_mode_section_capabilities">What Hardened Mode Enforces</string>
+    <string name="hardened_mode_cap_suspend_title">OS-Level Package Suspension</string>
+    <string name="hardened_mode_cap_suspend_body">Suspends Blocked apps in the Android OS (setPackagesSuspended). If a Blocked app is running when a profile activates, Android closes it immediately, silences its notifications, and blocks re-entry from Recents or links. Guarded apps remain unsuspended so their notifications arrive normally.</string>
+    <string name="hardened_mode_cap_home_title">Persistent Default Launcher</string>
+    <string name="hardened_mode_cap_home_body">Locks Threshold as the persistent system Home app so the stock launcher cannot be re-selected in Android System Settings to bypass your rules.</string>
+    <string name="hardened_mode_cap_tamper_title">Uninstall &amp; Force-Stop Protection</string>
+    <string name="hardened_mode_cap_tamper_body">Disables Uninstall, Force Stop, and Clear Storage for Threshold in Android System Settings while Hardened Mode is active.</string>
+    <string name="hardened_mode_section_companion">Companion Commitment Layers</string>
+    <string name="hardened_mode_companion_intro">Hardened Mode closes Android OS escape hatches. Pair it with Threshold\'s Settings locks so rules cannot be weakened from inside Threshold:</string>
+    <string name="hardened_mode_companion_reboot_title">Require Reboot for Settings Changes</string>
+    <string name="hardened_mode_companion_reboot_body">Stages any edits to app rules, profiles, or triggers in Settings until you restart your phone.</string>
+    <string name="hardened_mode_companion_adb_title">ADB Settings Lock</string>
+    <string name="hardened_mode_companion_adb_body">Completely locks Threshold Settings from being opened on the phone until unlocked from a computer.</string>
+    <string name="hardened_mode_section_setup">Setup &amp; Removal</string>
+    <string name="hardened_mode_setup_intro">Hardened Mode cannot be toggled from inside Threshold\'s normal menus. You can enable or disable it either by scanning the QR codes on the Threshold website or via USB debugging (ADB) from a computer.</string>
+    <string name="hardened_mode_setup_prereq_title">Recommended Only for New or Freshly Reset Devices</string>
+    <string name="hardened_mode_setup_prereq_body">We strongly recommend enabling Hardened Mode only on a brand-new or freshly reset phone before signing into your accounts.\n\nWe do NOT recommend enabling Hardened Mode on a phone where your accounts are already set up: Android blocks Device Owner activation whenever Google accounts, Work Profiles, or Private Spaces are present, and removing an existing Google account can wipe Google Wallet contactless cards or sign you out of apps. On an existing phone, use Require Reboot for Settings Changes and the ADB Settings Lock below instead.</string>
+    <string name="hardened_mode_qr_setup_title">Option A: QR Code Setup &amp; Removal (No Computer Required)</string>
+    <string name="hardened_mode_qr_setup_body">• To Enable on a Freshly Reset Phone: On Android\'s very first Welcome screen after a factory reset, tap the screen 6 times in the same spot to open Android\'s QR scanner, then scan the Hardened Mode Setup QR code on the Threshold website.\n• To Disable Hardened Mode: Scan the Hardened Mode Deactivation QR code on the Threshold website with your phone\'s Camera app to open the hidden deactivation screen.</string>
+    <string name="hardened_mode_adb_setup_title">Option B: Computer ADB Commands</string>
+    <string name="hardened_mode_cmd_enable_label">1. Enable Hardened Mode</string>
+    <string name="hardened_mode_cmd_enable" translatable="false">adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver</string>
+    <string name="hardened_mode_cmd_disable_label">2. Disable Hardened Mode (Unsuspends Apps &amp; Releases Device Owner)</string>
+    <string name="hardened_mode_cmd_disable" translatable="false">adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n com.garan.threshold/.settings.SettingsLockReceiver</string>
+    <string name="hardened_mode_cmd_lock_settings_label">3. Lock Threshold Settings via ADB</string>
+    <string name="hardened_mode_cmd_lock_settings" translatable="false">adb shell am broadcast -a com.garan.threshold.action.LOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver</string>
+    <string name="hardened_mode_cmd_unlock_settings_label">4. Unlock Threshold Settings via ADB</string>
+    <string name="hardened_mode_cmd_unlock_settings" translatable="false">adb shell am broadcast -a com.garan.threshold.action.UNLOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver</string>
+    <string name="action_copy_command">Copy command</string>
+    <string name="toast_command_copied">Command copied to clipboard</string>
+    <string name="disable_hardened_mode_title">Disable Hardened Mode</string>
+    <string name="disable_hardened_mode_headline">Release Device Owner Protection?</string>
+    <string name="disable_hardened_mode_body">Disabling Hardened Mode will immediately:\n\n• Unsuspend all Blocked apps in the Android OS\n• Unlock Default Home App selection, Force Stop, Clear Storage, and Uninstall for Threshold\n• Permanently release Device Owner privileges (re-enabling Hardened Mode later requires a freshly reset device)</string>
+    <string name="disable_hardened_mode_inactive_body">Hardened Mode (Device Owner) is not currently active on this device.</string>
+    <string name="action_disable_hardened_mode">Disable Hardened Mode</string>
+    <string name="toast_hardened_mode_disabled">Hardened Mode disabled</string>
     <string name="dialog_require_reboot_title">Require reboot for settings changes?</string>
     <string name="dialog_require_reboot_message">Once enabled, any future changes to settings, app rules, profiles, or triggers—including turning this setting off—will only take effect after you restart your device.</string>
     <string name="action_enable">Enable</string>

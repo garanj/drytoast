@@ -10,6 +10,8 @@ import com.garan.threshold.core.model.FrictionChoice
 import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.core.model.InstalledApp
 import com.garan.threshold.core.model.SavedTrigger
+import com.garan.threshold.core.port.AppAccessController
+import com.garan.threshold.core.port.NoOpAppAccessController
 import com.garan.threshold.core.port.PackageIndexSource
 import com.garan.threshold.core.port.SettingsRepository
 import kotlinx.collections.immutable.ImmutableList
@@ -37,12 +39,14 @@ data class SettingsUiState(
     val isRequireRebootActiveOnLive: Boolean = false,
     val isSettingsLocked: Boolean = false,
     val showRoleRequiredWarning: Boolean = false,
+    val isHardenedModeActive: Boolean = false,
 )
 
 class SettingsViewModel(
     private val packageIndexSource: PackageIndexSource,
     private val settingsRepository: SettingsRepository,
     private val dialerPackageResolver: () -> String,
+    private val appAccessController: AppAccessController = NoOpAppAccessController,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
@@ -82,6 +86,17 @@ class SettingsViewModel(
                 }
             }
         }
+        viewModelScope.launch(ioDispatcher) {
+            appAccessController.isDeviceOwnerFlow.collect { active ->
+                _uiState.update { current ->
+                    current.copy(isHardenedModeActive = active)
+                }
+            }
+        }
+    }
+
+    fun refreshHardenedModeStatus() {
+        appAccessController.isDeviceOwner()
     }
 
     /**

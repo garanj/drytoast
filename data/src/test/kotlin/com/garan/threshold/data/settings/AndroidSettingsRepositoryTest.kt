@@ -795,4 +795,16 @@ class AndroidSettingsRepositoryTest {
         assertThat(staged.general.hasCompletedOnboarding).isTrue()
         assertThat(staged.editableSnapshot.general.hasCompletedOnboarding).isTrue()
     }
+
+    @Test
+    fun updateDpcSuspendedPackages_persistsAndClearsSuspendedPackages() = runTest(testDispatcher) {
+        assertThat(repository.getSettings().dpcSuspendedPackages).isEmpty()
+
+        repository.updateDpcSuspendedPackages(setOf("com.instagram.android", "com.zhiliaoapp.musically"))
+        assertThat(repository.getSettings().dpcSuspendedPackages)
+            .containsExactly("com.instagram.android", "com.zhiliaoapp.musically")
+
+        repository.updateDpcSuspendedPackages(emptySet())
+        assertThat(repository.getSettings().dpcSuspendedPackages).isEmpty()
+    }
 }

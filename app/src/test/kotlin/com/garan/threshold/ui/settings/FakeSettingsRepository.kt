@@ -231,6 +231,10 @@ class FakeSettingsRepository(initialSettings: ThresholdSettings = ThresholdSetti
         _settings.update { it.copy(isSettingsLocked = locked) }
     }
 
+    override suspend fun updateDpcSuspendedPackages(packages: Set<String>) {
+        _settings.update { it.copy(dpcSuspendedPackages = packages) }
+    }
+
     override suspend fun promotePendingSettingsOnBoot(): Boolean {
         var promoted = false
         _settings.update { current ->

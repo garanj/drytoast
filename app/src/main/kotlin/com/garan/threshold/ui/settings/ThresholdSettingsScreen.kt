@@ -64,6 +64,7 @@ object SettingsTestTags {
     const val DISCARD_PENDING_CHANGES_BUTTON = "settings_discard_pending_changes"
     const val TOGGLE_SHOW_DIALER_ICON = "settings_toggle_show_dialer_icon"
     const val TOGGLE_REQUIRE_REBOOT = "settings_toggle_require_reboot"
+    const val NAV_HARDENED_MODE = "settings_nav_hardened_mode"
     const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
     const val CONFIRM_REQUIRE_REBOOT_BUTTON = "settings_confirm_require_reboot_button"
     const val CANCEL_REQUIRE_REBOOT_BUTTON = "settings_cancel_require_reboot_button"
@@ -88,6 +89,7 @@ fun ThresholdSettingsScreen(
     onRemoveQuickAction: (ComponentKey) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProfiles: () -> Unit = {},
+    onNavigateToHardenedMode: () -> Unit = {},
     onUpdateShowDialerIcon: (Boolean) -> Unit = {},
     onUpdateRequireReboot: (Boolean) -> Unit = {},
     onDiscardPendingChanges: () -> Unit = {},
@@ -390,6 +392,39 @@ fun ThresholdSettingsScreen(
                         }
                     },
                     modifier = Modifier.testTag(SettingsTestTags.TOGGLE_REQUIRE_REBOOT),
+                )
+            }
+
+            item(key = "nav_hardened_mode") {
+                val summary = if (uiState.isHardenedModeActive) {
+                    stringResource(R.string.setting_hardened_mode_active_summary)
+                } else {
+                    stringResource(R.string.setting_hardened_mode_inactive_summary)
+                }
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_hardened_mode),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.NAV_HARDENED_MODE)
+                        .clickable(onClick = onNavigateToHardenedMode),
                 )
             }
 

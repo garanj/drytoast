@@ -2,6 +2,7 @@ package com.garan.threshold
 
 import android.app.Application
 import android.content.Context
+import com.garan.threshold.core.cascading.CascadingResolutionEngine
 import com.garan.threshold.core.port.ClockSource
 import com.garan.threshold.core.port.SystemClockSource
 import com.garan.threshold.data.antimetrics.AndroidAntiMetricsRepository
@@ -10,6 +11,7 @@ import com.garan.threshold.data.location.AndroidLocationSource
 import com.garan.threshold.data.packageindex.AndroidPackageIndexSource
 import com.garan.threshold.data.settings.AndroidSettingsRepository
 import com.garan.threshold.data.wallpaper.AndroidWallpaperController
+import com.garan.threshold.dpc.AndroidAppAccessController
 import com.garan.threshold.nfc.AndroidNfcReaderSource
 import com.garan.threshold.schedule.AndroidProfileCapabilityChecker
 import com.garan.threshold.schedule.AndroidScheduleAlarmScheduler
@@ -60,12 +62,29 @@ class ThresholdAppContainer(context: Context) {
             launcherRoleController.refresh()
         }
 
+    @Volatile
+    var deviceOwnerOverrideForTesting: Boolean? = null
+        set(value) {
+            field = value
+            appAccessController.isDeviceOwner()
+        }
+
     val launcherRoleController by lazy {
         AndroidLauncherRoleController(
             context = appContext,
             overrideProvider = { defaultLauncherOverrideForTesting },
         )
     }
+
+    val appAccessController by lazy {
+        AndroidAppAccessController(
+            context = appContext,
+            settingsRepository = settingsRepository,
+            deviceOwnerOverrideProvider = { deviceOwnerOverrideForTesting },
+        )
+    }
+
+    private val dpcCascadingEngine = CascadingResolutionEngine()
 
     val activeClockSource: ClockSource = ClockSource {
         clockOverrideForTesting?.now() ?: SystemClockSource.now()
@@ -97,6 +116,38 @@ class ThresholdAppContainer(context: Context) {
 
     val dialerPackageResolver: () -> String = {
         DialerPackageResolver.resolveDefaultDialerPackage(appContext)
+    }
+
+    /**
+     * Evaluates the current effective working set from persisted [settingsRepository] state and
+     * reconciles OS-level package suspension via [appAccessController] when Hardened Mode is active.
+     * Safe to call from background receivers ([com.garan.threshold.schedule.ScheduleAlarmReceiver],
+     * [com.garan.threshold.dpc.ThresholdDeviceAdminReceiver], [com.garan.threshold.settings.SettingsLockReceiver])
+     * even when [MainActivity] is not running.
+     */
+    suspend fun reconcileDpcFromSettings() {
+        if (!appAccessController.isDeviceOwner()) return
+        val settings = settingsRepository.getSettings()
+        val now = activeClockSource.now()
+        val nowMillis = activeNowEpochMillisProvider()
+        val currentLocation = locationSource.currentLocation.value
+        val dialerPkg = dialerPackageResolver()
+        val workingSet = dpcCascadingEngine.resolveWorkingSet(
+            baseProfile = settings.baseProfile,
+            customProfiles = settings.customProfiles,
+            currentDay = now.dayOfWeek,
+            currentTime = now.timeOfDay,
+            defaultDialerPackage = dialerPkg,
+            additionalComponents = settings.baseProfile.quickActions.map { it.component },
+            currentLocation = currentLocation,
+            savedTriggers = settings.savedTriggers,
+            nfcLatchStates = settings.nfcLatches,
+            nowEpochMillis = nowMillis,
+        )
+        appAccessController.reconcileBlockedPackages(
+            blockedComponents = workingSet.blockedComponents,
+            defaultDialerPackage = dialerPkg,
+        )
     }
 
     companion object {

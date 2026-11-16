@@ -100,4 +100,10 @@ interface SettingsRepository {
      * While locked, all user configuration mutations to both live and shadow settings are rejected.
      */
     suspend fun setSettingsLocked(locked: Boolean) {}
+
+    /**
+     * Persists the set of package names currently suspended at the OS level by Threshold's
+     * Hardened Mode (Device Owner) controller so they can be unsuspended across process restarts.
+     */
+    suspend fun updateDpcSuspendedPackages(packages: Set<String>) {}
 }
