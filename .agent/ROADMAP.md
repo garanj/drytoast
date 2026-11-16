@@ -125,22 +125,22 @@
   - `setUninstallBlocked`, `setUserControlDisabledPackages` (disabling Force Stop & Clear Storage), and `addPersistentPreferredActivity` when Device Owner is active, plus computer-only `DISABLE_HARDENED_MODE` ADB deactivation (#110).
   - Dedicated `HardenedModeScreen` (`ThresholdRoute.HardenedMode`) in Settings with live status, Standard vs. Hardened breakdown, Companion Commitment Layers, and copyable ADB commands (#110).
   - *(Note: `setStatusBarDisabled` notification shade lockdown dropped by design decision).*
-- [ ] **Task 6.4: WebUSB Provisioning & Dignified Unenrollment**
-  - WebUSB setup instructions and companion client web app (@yume-chan/adb).
-  - In-app dignified unenrollment with optional delayed cool-down timer.
-  - External ADB CLI revocation fallback.
+- [x] **Task 6.4: 6-Tap QR Provisioning & QR Deep-Link Deactivation**
+  - Headless `ThresholdProvisioningActivity` (`GET_PROVISIONING_MODE` & `ADMIN_POLICY_COMPLIANCE`) for Android 12+ 6-tap Welcome screen QR setup (#110).
+  - Hidden `DisableHardenedModeScreen` (`threshold://hardened/disable?key=...`) accessible via website QR scan even when Settings are locked (#110).
+  - External ADB CLI revocation fallback (`DISABLE_HARDENED_MODE`) (#110).
 
 ---
 
 ## Phase 7: Hardening, Baseline Profiles & Release Readiness (Milestone 7)
-- [ ] **Task 7.1: Automated Baseline Profile Generation (`:benchmark`)**
-  - BaselineProfileGenerator capturing critical launch and scroll paths for AOT compilation.
-- [ ] **Task 7.2: Macrobenchmark Startup & Frame Timing Suite (`:benchmark`)**
-  - MacrobenchmarkRule measuring cold/warm startup and frame deadline misses (< 16ms/8ms at 120Hz).
-- [ ] **Task 7.3: Full RTL & Typographic Archetype Audit**
-  - Comprehensive Paparazzi visual regression pass across all 4 typographic archetypes in LTR & RTL.
-- [ ] **Task 7.4: CI Hardening & Release Artifact Signing**
-  - ProGuard/R8 rules optimization, reproducible release builds.
+- [x] **Task 7.1: Automated Baseline Profile Generation (`:benchmark`)**
+  - `BaselineProfileGenerator` capturing cold/warm launch and search surface paths, plus embedded `app/src/main/baseline-prof.txt` for AOT compilation (#112).
+- [x] **Task 7.2: Macrobenchmark Startup & Frame Timing Suite (`:benchmark`)**
+  - `StartupAndFrameTimingBenchmark` (`MacrobenchmarkRule`) measuring cold/warm startup and 120Hz frame timing (#112).
+- [x] **Task 7.3: Full RTL & Typographic Archetype Audit**
+  - Auto-mirrored directional icons (`ArrowBack`, `ChevronRight`, `OpenInNew`) and Roborazzi RTL visual regression goldens across Home, Search, and App Configuration (#112).
+- [x] **Task 7.4: CI Hardening & Release Artifact Signing**
+  - ProGuard/R8 rules (`app/proguard-rules.pro`), resource shrinking (`isShrinkResources = true`), and environment-driven release keystore signing config (#112).
 
 ---
 

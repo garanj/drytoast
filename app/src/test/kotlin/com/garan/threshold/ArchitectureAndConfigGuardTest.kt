@@ -136,4 +136,28 @@ class ArchitectureAndConfigGuardTest {
         }
         assertThat(hardcodedStringViolations).isEmpty()
     }
+
+    @Test
+    fun releaseHardening_proguardRulesBaselineProfileAndMacrobenchmarkExist() {
+        val proguardFile = File(rootDir, "app/proguard-rules.pro")
+        assertThat(proguardFile.exists()).isTrue()
+        val proguard = proguardFile.readText()
+        assertThat(proguard).contains("kotlinx.serialization.Serializable")
+        assertThat(proguard).contains("com.garan.threshold.ThresholdRoute")
+        assertThat(proguard).contains("com.garan.threshold.dpc.ThresholdDeviceAdminReceiver")
+        assertThat(proguard).contains("com.garan.threshold.dpc.ThresholdProvisioningActivity")
+
+        val baselineProfFile = File(rootDir, "app/src/main/baseline-prof.txt")
+        assertThat(baselineProfFile.exists()).isTrue()
+        val baselineProf = baselineProfFile.readText()
+        assertThat(baselineProf).contains("com/garan/threshold/MainActivity")
+        assertThat(baselineProf).contains("com/garan/threshold/core/search/SearchEngine")
+        assertThat(baselineProf).contains("com/garan/threshold/core/cascading/CascadingResolutionEngine")
+
+        val startupBenchmarkFile = File(
+            rootDir,
+            "benchmark/src/main/kotlin/com/garan/threshold/benchmark/StartupAndFrameTimingBenchmark.kt",
+        )
+        assertThat(startupBenchmarkFile.exists()).isTrue()
+    }
 }

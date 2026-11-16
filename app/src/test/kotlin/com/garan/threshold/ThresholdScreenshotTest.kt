@@ -2,9 +2,12 @@ package com.garan.threshold
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.garan.threshold.core.model.AppAccessState
 import com.garan.threshold.core.model.ComponentKey
@@ -553,5 +556,121 @@ class ThresholdScreenshotTest {
             }
         }
         verifyAndArchiveSnapshot("hardened_mode_screen.png")
+    }
+
+    @Test
+    fun snapshotHomeCanvasRtl() {
+        val quickActions = persistentListOf(
+            com.garan.threshold.ui.search.QuickActionUiItem(
+                slotNumber = 1,
+                component = ComponentKey("com.android.chrome", "Main"),
+                label = "Chrome",
+                accessState = AppAccessState.Direct,
+            ),
+            com.garan.threshold.ui.search.QuickActionUiItem(
+                slotNumber = 2,
+                component = ComponentKey("com.google.android.gm", "ConversationListActivityGmail"),
+                label = "Gmail",
+                accessState = AppAccessState.Guarded(FrictionPolicy.TypedIntention),
+            ),
+        )
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                ThresholdTheme {
+                    ThresholdHomeCanvas(
+                        timeText = "10:09",
+                        dateText = "Monday, November 2",
+                        statusText = "REST 48M  ·  2 UNLOCKS",
+                    ) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        ThresholdSearchSurface(
+                            query = "",
+                            onQueryChange = {},
+                            results = persistentListOf(),
+                            onItemClick = {},
+                            quickActions = quickActions,
+                        )
+                    }
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("home_canvas_rtl.png")
+    }
+
+    @Test
+    fun snapshotSearchSurfaceRtl() {
+        val cameraKey = ComponentKey("com.android.camera", "com.android.camera.CameraActivity", 0L)
+        val socialKey = ComponentKey("com.example.social", "com.example.social.MainActivity", 0L)
+
+        val results = persistentListOf(
+            SearchResult(
+                item = SearchItem.App(cameraKey, "Camera", AppAccessState.Direct),
+                score = 100,
+                matchType = MatchType.PREFIX,
+            ),
+            SearchResult(
+                item = SearchItem.App(
+                    component = socialKey,
+                    label = "Social Feed",
+                    accessState = AppAccessState.Guarded(FrictionPolicy.TimedDelay(10)),
+                ),
+                score = 95,
+                matchType = MatchType.PREFIX,
+            ),
+        )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                ThresholdTheme {
+                    ThresholdHomeCanvas(
+                        timeText = "10:09",
+                        dateText = "Monday, November 2",
+                        statusText = "Threshold",
+                        showDialerIcon = false,
+                    ) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        ThresholdSearchSurface(
+                            query = "ca",
+                            onQueryChange = {},
+                            results = results,
+                            onItemClick = {},
+                        )
+                    }
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("search_results_rtl.png")
+    }
+
+    @Test
+    fun snapshotConfigureAppsScreenRtl() {
+        val chromeKey = ComponentKey("com.android.chrome", "Main")
+        val clockKey = ComponentKey("com.google.android.deskclock", "DeskClock")
+        val socialKey = ComponentKey("com.instagram.android", "MainActivity")
+
+        val apps = persistentListOf(
+            com.garan.threshold.core.model.InstalledApp(chromeKey, "Chrome"),
+            com.garan.threshold.core.model.InstalledApp(clockKey, "Clock"),
+            com.garan.threshold.core.model.InstalledApp(socialKey, "Instagram"),
+        )
+        val assignments = mapOf(
+            chromeKey to com.garan.threshold.core.model.AppAssignment.Guarded(),
+            socialKey to com.garan.threshold.core.model.AppAssignment.Blocked,
+        )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                ThresholdTheme {
+                    com.garan.threshold.ui.settings.ConfigureAppsScreen(
+                        availableApps = apps,
+                        initialAssignments = assignments,
+                        defaultFriction = com.garan.threshold.core.model.FrictionChoice.TYPED_INTENTION,
+                        onSave = {},
+                        onBack = {},
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("configure_apps_rtl.png")
     }
 }
