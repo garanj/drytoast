@@ -59,6 +59,7 @@ class AndroidSettingsRepositoryTest {
 
         assertThat(settings.general.showUnlocks).isTrue()
         assertThat(settings.general.showRest).isTrue()
+        assertThat(settings.general.showDialerIcon).isTrue()
         assertThat(settings.general.requireFullTypingOfGuardedApps).isFalse()
         assertThat(settings.general.hasSeenFirstRunHint).isFalse()
 
@@ -72,6 +73,7 @@ class AndroidSettingsRepositoryTest {
         val updatedGeneral = GeneralSettings(
             showUnlocks = false,
             showRest = false,
+            showDialerIcon = false,
             requireFullTypingOfGuardedApps = true,
             hasSeenFirstRunHint = true,
         )

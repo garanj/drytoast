@@ -1,11 +1,13 @@
 # Current Task
 
-- **Active Issue**: [#104](https://github.com/garanj/threshold/issues/104) — `feat(settings): add 'Feedback is a gift!' email button and :feedback shortcut`
-- **Branch**: `feat/104-feedback-action`
+- **Active Issue**: [#106](https://github.com/garanj/threshold/issues/106) — `feat(home): add dialer keypad icon on launcher with settings toggle`
+- **Branch**: `feat/106-dialer-keypad-icon`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:app`: Add `FeedbackEmailIntentFactory` creating an `ACTION_SENDTO` (`mailto:`) intent to `plop@plop.com` with subject `Threshold feedback` and pre-populated `App version`, `Android version`, and `Device` lines
-- [x] `:app`: Add `"Feedback is a gift!"` button at the bottom of `ThresholdSettingsScreen`
-- [x] `:app`: Register `:feedback` action shortcut in `MainActivity` and handle `"feedback"` in `ThresholdHomeScreen`
+- [x] `:core`: Add `showDialerIcon: Boolean = true` to `GeneralSettings` and `hasSameConfigurationAs`
+- [x] `:data`: Persist `show_dialer_icon` in `AndroidSettingsRepository` (live and staged shadow snapshots)
+- [x] `:app`: Add `ThresholdIcons.Dialpad` vector icon and `AppLauncher.launchDialer()`
+- [x] `:app`: Render the centered keypad icon near the bottom of `ThresholdHomeCanvas` / `ThresholdHomeScreen` when `showDialerIcon` is enabled
+- [x] `:app`: Add `"Show dialer icon on launcher"` toggle in `ThresholdSettingsScreen` and `SettingsViewModel`
 - [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

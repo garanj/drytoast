@@ -540,4 +540,40 @@ object ThresholdIcons {
             }
         }.build()
     }
+
+    /**
+     * Canonical Material keypad / dialpad icon for launching the default dialer.
+     */
+    val Dialpad: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "Dialpad",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.White)) {
+                val keys = arrayOf(
+                    6f to 3f,
+                    12f to 3f,
+                    18f to 3f,
+                    6f to 9f,
+                    12f to 9f,
+                    18f to 9f,
+                    6f to 15f,
+                    12f to 15f,
+                    18f to 15f,
+                    12f to 21f,
+                )
+                for ((cx, cy) in keys) {
+                    moveTo(cx, cy - 2f)
+                    curveTo(cx - 1.1f, cy - 2f, cx - 2f, cy - 1.1f, cx - 2f, cy)
+                    curveTo(cx - 2f, cy + 1.1f, cx - 1.1f, cy + 2f, cx, cy + 2f)
+                    curveTo(cx + 1.1f, cy + 2f, cx + 2f, cy + 1.1f, cx + 2f, cy)
+                    curveTo(cx + 2f, cy - 1.1f, cx + 1.1f, cy - 2f, cx, cy - 2f)
+                    close()
+                }
+            }
+        }.build()
+    }
 }

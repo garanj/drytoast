@@ -612,6 +612,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onUpdateShowUnlocks = settingsViewModel::updateShowUnlocks,
                                 onUpdateShowRest = settingsViewModel::updateShowRest,
+                                onUpdateShowDialerIcon = settingsViewModel::updateShowDialerIcon,
                                 onUpdateRequireFullTyping = settingsViewModel::updateRequireFullTyping,
                                 onUpdateDefaultFriction = settingsViewModel::updateDefaultFriction,
                                 onAddQuickAction = settingsViewModel::addQuickAction,

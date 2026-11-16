@@ -137,6 +137,13 @@ class SettingsViewModel(
         }
     }
 
+    fun updateShowDialerIcon(show: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(current.copy(showDialerIcon = show))
+        }
+    }
+
     fun updateRequireFullTyping(requireFull: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             val current = settingsRepository.getSettings().editableSnapshot.general

@@ -69,6 +69,7 @@ class SettingsViewModelTest {
         val state = viewModel.uiState.value
         assertThat(state.general.showUnlocks).isTrue()
         assertThat(state.general.showRest).isTrue()
+        assertThat(state.general.showDialerIcon).isTrue()
         assertThat(state.general.requireFullTypingOfGuardedApps).isFalse()
         assertThat(state.baseProfile.defaultFriction).isEqualTo(FrictionChoice.TYPED_INTENTION)
 
@@ -84,12 +85,14 @@ class SettingsViewModelTest {
 
         viewModel.updateShowUnlocks(false)
         viewModel.updateShowRest(false)
+        viewModel.updateShowDialerIcon(false)
         viewModel.updateRequireFullTyping(true)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertThat(state.general.showUnlocks).isFalse()
         assertThat(state.general.showRest).isFalse()
+        assertThat(state.general.showDialerIcon).isFalse()
         assertThat(state.general.requireFullTypingOfGuardedApps).isTrue()
     }
 

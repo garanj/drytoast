@@ -258,6 +258,14 @@ fun ThresholdHomeScreen(
                 activeProfiles = uiState.activeProfiles,
                 hasCapabilityIssues = uiState.capabilityIssues.isNotEmpty(),
                 onCapabilityFaultClick = { showCapabilityFaultSheet = true },
+                showDialerIcon = uiState.generalSettings.showDialerIcon && !inSearch,
+                onDialerClick = {
+                    hapticEngine.rotaryDetent()
+                    val launched = appLauncher.launchDialer()
+                    if (launched) {
+                        resetSearchAndHideIme()
+                    }
+                },
                 onTimeTick = {
                     antiMetricsRepository?.refreshForCurrentDate()
                     viewModel.refreshScheduleEvaluation()
