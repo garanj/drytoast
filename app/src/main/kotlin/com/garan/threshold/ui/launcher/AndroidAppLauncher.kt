@@ -15,6 +15,7 @@ import com.garan.threshold.ui.util.ImeUtils.findActivity
 interface AppLauncher {
     fun launchApp(component: ComponentKey): Boolean
     fun openAppInfo(component: ComponentKey): Boolean
+    fun launchDialer(): Boolean = false
 }
 
 class AndroidAppLauncher(
@@ -22,6 +23,36 @@ class AndroidAppLauncher(
     private val launcherApps: LauncherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps,
     private val userManager: UserManager = context.getSystemService(Context.USER_SERVICE) as UserManager,
 ) : AppLauncher {
+
+    override fun launchDialer(): Boolean {
+        context.findActivity()?.let { ImeUtils.dismissIme(it) }
+
+        val options = ActivityOptions.makeBasic().toBundle()
+        val dialerPackage = DialerPackageResolver.resolveDefaultDialerPackage(context)
+        val targetedDialIntent = Intent(Intent.ACTION_DIAL).apply {
+            setPackage(dialerPackage)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (runCatching { context.startActivity(targetedDialIntent, options) }.isSuccess) {
+            return true
+        }
+
+        val genericDialIntent = Intent(Intent.ACTION_DIAL).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (runCatching { context.startActivity(genericDialIntent, options) }.isSuccess) {
+            return true
+        }
+
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(dialerPackage)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (launchIntent != null && runCatching { context.startActivity(launchIntent, options) }.isSuccess) {
+            return true
+        }
+
+        return false
+    }
 
     override fun launchApp(component: ComponentKey): Boolean {
         context.findActivity()?.let { ImeUtils.dismissIme(it) }

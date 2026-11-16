@@ -61,6 +61,7 @@ object SettingsTestTags {
     const val ADD_QUICK_ACTION = "settings_add_quick_action"
     const val PENDING_REBOOT_BANNER = "settings_pending_reboot_banner"
     const val DISCARD_PENDING_CHANGES_BUTTON = "settings_discard_pending_changes"
+    const val TOGGLE_SHOW_DIALER_ICON = "settings_toggle_show_dialer_icon"
     const val TOGGLE_REQUIRE_REBOOT = "settings_toggle_require_reboot"
     const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
     const val CONFIRM_REQUIRE_REBOOT_BUTTON = "settings_confirm_require_reboot_button"
@@ -86,6 +87,7 @@ fun ThresholdSettingsScreen(
     onRemoveQuickAction: (ComponentKey) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProfiles: () -> Unit = {},
+    onUpdateShowDialerIcon: (Boolean) -> Unit = {},
     onUpdateRequireReboot: (Boolean) -> Unit = {},
     onDiscardPendingChanges: () -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
@@ -355,6 +357,15 @@ fun ThresholdSettingsScreen(
                     label = stringResource(R.string.setting_show_rest),
                     checked = uiState.general.showRest,
                     onCheckedChange = onUpdateShowRest,
+                )
+            }
+
+            item(key = "toggle_show_dialer_icon") {
+                SettingsToggleItem(
+                    label = stringResource(R.string.setting_show_dialer_icon),
+                    checked = uiState.general.showDialerIcon,
+                    onCheckedChange = onUpdateShowDialerIcon,
+                    modifier = Modifier.testTag(SettingsTestTags.TOGGLE_SHOW_DIALER_ICON),
                 )
             }
 

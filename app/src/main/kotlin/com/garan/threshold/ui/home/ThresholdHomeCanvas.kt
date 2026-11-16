@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,6 +37,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -48,11 +51,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.garan.threshold.R
 import com.garan.threshold.core.model.CustomProfile
+import com.garan.threshold.ui.settings.ThresholdIcons
 import com.garan.threshold.ui.theme.profileBaseColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+
+const val HOME_DIALER_BUTTON_TEST_TAG = "home_dialer_button"
 
 private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d")
@@ -72,6 +78,8 @@ fun ThresholdHomeCanvas(
     activeProfiles: ImmutableList<CustomProfile> = persistentListOf(),
     hasCapabilityIssues: Boolean = false,
     onCapabilityFaultClick: () -> Unit = {},
+    showDialerIcon: Boolean = true,
+    onDialerClick: () -> Unit = {},
     clockProvider: () -> ZonedDateTime = { ZonedDateTime.now() },
     onTimeTick: () -> Unit = {},
     content: @Composable () -> Unit = {},
@@ -159,7 +167,7 @@ fun ThresholdHomeCanvas(
         )
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -169,7 +177,7 @@ fun ThresholdHomeCanvas(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopStart),
+                .weight(1f),
             verticalArrangement = Arrangement.Top,
         ) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -258,6 +266,21 @@ fun ThresholdHomeCanvas(
             }
 
             content()
+        }
+
+        if (showDialerIcon) {
+            IconButton(
+                onClick = onDialerClick,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .testTag(HOME_DIALER_BUTTON_TEST_TAG),
+            ) {
+                Icon(
+                    imageVector = ThresholdIcons.Dialpad,
+                    contentDescription = stringResource(R.string.cd_open_dialer),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

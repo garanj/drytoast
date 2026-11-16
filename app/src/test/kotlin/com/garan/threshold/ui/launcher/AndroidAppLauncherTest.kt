@@ -73,4 +73,13 @@ class AndroidAppLauncherTest {
         val result = launcher.openAppInfo(workComponent)
         assertThat(result).isFalse()
     }
+
+    @Test
+    fun launchDialer_dispatchesActionDialIntentGracefully() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val launcher = AndroidAppLauncher(context)
+
+        val result = launcher.launchDialer()
+        assertThat(result).isTrue()
+    }
 }

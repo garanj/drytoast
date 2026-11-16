@@ -101,6 +101,7 @@
     <string name="section_general">General</string>
     <string name="setting_show_unlocks">Show unlocks</string>
     <string name="setting_show_rest">Show rest</string>
+    <string name="setting_show_dialer_icon">Show dialer icon on launcher</string>
     <string name="setting_require_full_typing">Require full typing of guarded apps</string>
     <string name="setting_require_reboot">Require reboot for settings changes</string>
     <string name="setting_require_reboot_summary">Changes to settings, apps, profiles, and triggers take effect after device restart</string>
@@ -154,6 +155,7 @@
     <string name="cd_reset">Reset to standard</string>
     <string name="cd_delete">Remove</string>
     <string name="cd_add">Add</string>
+    <string name="cd_open_dialer">Open dialer</string>
 
     <!-- Action Labels -->
     <string name="action_go_back">Go back</string>

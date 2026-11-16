@@ -216,4 +216,35 @@ class ThresholdHomeCanvasTest {
 
         assertThat(topWithBadges2x).isEqualTo(topWithoutBadges2x)
     }
+
+    @Test
+    fun canvas_displaysCenteredDialerIconNearBottomWhenEnabled_andHidesWhenDisabled() {
+        var dialerClicked = false
+        var showDialer by mutableStateOf(true)
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeCanvas(
+                    timeText = "10:09",
+                    dateText = "Monday, November 2",
+                    statusText = "Threshold",
+                    showDialerIcon = showDialer,
+                    onDialerClick = { dialerClicked = true },
+                )
+            }
+        }
+
+        val dialerNode = composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG)
+        dialerNode.assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Open dialer").assertIsDisplayed()
+
+        dialerNode.performClick()
+        assertThat(dialerClicked).isTrue()
+
+        composeTestRule.runOnIdle {
+            showDialer = false
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertDoesNotExist()
+    }
 }

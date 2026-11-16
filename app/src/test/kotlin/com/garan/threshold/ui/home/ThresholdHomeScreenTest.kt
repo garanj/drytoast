@@ -554,6 +554,72 @@ class ThresholdHomeScreenTest {
     }
 
     @Test
+    fun homeScreen_dialerIconDisplayedByDefault_andLaunchesDialerOnClick() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+        val haptic = TestHapticEngine()
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                    hapticEngine = haptic,
+                )
+            }
+        }
+
+        val dialerButton = composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG)
+        dialerButton.assertIsDisplayed()
+        dialerButton.performClick()
+        composeTestRule.waitForIdle()
+
+        assertThat(launcher.dialerLaunchedCount).isEqualTo(1)
+        assertThat(haptic.rotaryDetentCount).isEqualTo(1)
+    }
+
+    @Test
+    fun homeScreen_dialerIconHiddenWhenShowDialerIconSettingDisabled_orWhenSearching() {
+        val fakeSettingsRepo = com.garan.threshold.ui.settings.FakeSettingsRepository()
+        val viewModel = SearchViewModel(
+            packageIndexSource = fakePackageIndexSource,
+            settingsRepository = fakeSettingsRepo,
+        )
+        val launcher = FakeAppLauncher()
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertIsDisplayed()
+
+        // Activate search -> dialer icon hides while searching
+        composeTestRule.onNodeWithText("Type to launch...").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertDoesNotExist()
+
+        // Dismiss search -> dialer icon reappears
+        viewModel.dismissSearch()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertIsDisplayed()
+
+        // Disable setting "Show dialer icon on launcher" -> dialer icon hides on launcher screen
+        kotlinx.coroutines.runBlocking {
+            val currentGeneral = fakeSettingsRepo.getSettings().general
+            fakeSettingsRepo.updateGeneralSettings(currentGeneral.copy(showDialerIcon = false))
+            viewModel.reconcileForTesting(fakeSettingsRepo.getSettings())
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun mainActivity_recreate_doesNotRetainActivityInViewModels() {
         Robolectric.buildActivity(MainActivity::class.java).use { controller ->
             controller.setup()
@@ -701,6 +767,8 @@ class ThresholdHomeScreenTest {
     private class FakeAppLauncher : AppLauncher {
         val launchedComponents = mutableListOf<ComponentKey>()
         val appInfoComponents = mutableListOf<ComponentKey>()
+        var dialerLaunchedCount = 0
+            private set
 
         override fun launchApp(component: ComponentKey): Boolean {
             launchedComponents.add(component)
@@ -709,6 +777,11 @@ class ThresholdHomeScreenTest {
 
         override fun openAppInfo(component: ComponentKey): Boolean {
             appInfoComponents.add(component)
+            return true
+        }
+
+        override fun launchDialer(): Boolean {
+            dialerLaunchedCount++
             return true
         }
     }

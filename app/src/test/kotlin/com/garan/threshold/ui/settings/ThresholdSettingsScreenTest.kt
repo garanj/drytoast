@@ -167,6 +167,39 @@ class ThresholdSettingsScreenTest {
     }
 
     @Test
+    fun showDialerIconToggle_displaysDefaultCheckedAndInvokesCallback() {
+        var updatedValue: Boolean? = null
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(
+                        general = GeneralSettings(showDialerIcon = true),
+                        isLoading = false,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateShowDialerIcon = { updatedValue = it },
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.TOGGLE_SHOW_DIALER_ICON))
+        composeRule.onNodeWithTag(SettingsTestTags.TOGGLE_SHOW_DIALER_ICON)
+            .assertIsDisplayed()
+            .performClick()
+
+        assertThat(updatedValue).isFalse()
+    }
+
+    @Test
     fun feedbackEmailIntentFactory_createsMailtoIntentWithExpectedRecipientSubjectAndBody() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val intent = FeedbackEmailIntentFactory.createFeedbackEmailIntent(

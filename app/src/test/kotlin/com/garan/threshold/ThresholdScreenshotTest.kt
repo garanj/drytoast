@@ -126,6 +126,7 @@ class ThresholdScreenshotTest {
                     timeText = "10:09",
                     dateText = "Monday, November 2",
                     statusText = "Threshold",
+                    showDialerIcon = false,
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     ThresholdSearchSurface(
@@ -162,6 +163,7 @@ class ThresholdScreenshotTest {
                     timeText = "10:09",
                     dateText = "Monday, November 2",
                     statusText = "Focus · Deep Work",
+                    showDialerIcon = false,
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     ThresholdSearchSurface(
@@ -184,6 +186,7 @@ class ThresholdScreenshotTest {
                     timeText = "10:09",
                     dateText = "Monday, November 2",
                     statusText = "Threshold",
+                    showDialerIcon = false,
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     ThresholdSearchSurface(
@@ -206,6 +209,7 @@ class ThresholdScreenshotTest {
                     timeText = "10:09",
                     dateText = "Monday, November 2",
                     statusText = "Threshold",
+                    showDialerIcon = false,
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     ThresholdSearchSurface(
