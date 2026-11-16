@@ -3,9 +3,11 @@ package com.garan.threshold.ui.settings
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +44,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.garan.threshold.R
 
+/**
+ * Validates the QR-code deep link URI (`threshold://hardened/disable?key=...`) used to open
+ * the hidden [DisableHardenedModeScreen].
+ *
+ * The 64-character hex token prevents a user from casually typing a short URL on the phone
+ * itself without scanning the QR code hosted on the Threshold website.
+ */
+object HardenedModeDeepLink {
+    const val SCHEME = "threshold"
+    const val HOST = "hardened"
+    const val PATH_DISABLE = "/disable"
+    const val QUERY_PARAM_KEY = "key"
+    const val DISABLE_KEY = "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
+    const val FULL_DISABLE_URI = "$SCHEME://$HOST$PATH_DISABLE?$QUERY_PARAM_KEY=$DISABLE_KEY"
+    private const val EXTRA_CONSUMED = "com.garan.threshold.extra.DISABLE_DEEP_LINK_CONSUMED"
+
+    fun isValidDisableIntent(intent: Intent?): Boolean {
+        if (intent?.action != Intent.ACTION_VIEW) return false
+        if (intent.getBooleanExtra(EXTRA_CONSUMED, false)) return false
+        val uri = intent.data ?: return false
+        return uri.scheme == SCHEME &&
+            uri.host == HOST &&
+            uri.path == PATH_DISABLE &&
+            uri.getQueryParameter(QUERY_PARAM_KEY) == DISABLE_KEY
+    }
+
+    fun markConsumed(intent: Intent?) {
+        intent?.putExtra(EXTRA_CONSUMED, true)
+    }
+}
+
 object HardenedModeTestTags {
     const val SCREEN_LIST = "hardened_mode_list"
     const val STATUS_CARD = "hardened_mode_status_card"
@@ -48,6 +82,9 @@ object HardenedModeTestTags {
     const val COPY_DISABLE_COMMAND = "hardened_mode_copy_disable_command"
     const val COPY_LOCK_SETTINGS_COMMAND = "hardened_mode_copy_lock_settings_command"
     const val COPY_UNLOCK_SETTINGS_COMMAND = "hardened_mode_copy_unlock_settings_command"
+    const val DISABLE_SCREEN_ROOT = "disable_hardened_mode_screen"
+    const val CONFIRM_DISABLE_BUTTON = "disable_hardened_mode_confirm_button"
+    const val CANCEL_DISABLE_BUTTON = "disable_hardened_mode_cancel_button"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -225,7 +262,7 @@ fun HardenedModeScreen(
                 )
             }
 
-            // SECTION 3: SETUP & REMOVAL (COMPUTER REQUIRED)
+            // SECTION 3: SETUP & REMOVAL
             item(key = "header_setup") {
                 SettingsSectionHeader(title = stringResource(R.string.hardened_mode_section_setup))
             }
@@ -244,6 +281,17 @@ fun HardenedModeScreen(
                     title = stringResource(R.string.hardened_mode_setup_prereq_title),
                     body = stringResource(R.string.hardened_mode_setup_prereq_body),
                 )
+            }
+
+            item(key = "setup_qr") {
+                HardenedFeatureRow(
+                    title = stringResource(R.string.hardened_mode_qr_setup_title),
+                    body = stringResource(R.string.hardened_mode_qr_setup_body),
+                )
+            }
+
+            item(key = "setup_adb_header") {
+                SettingsSectionHeader(title = stringResource(R.string.hardened_mode_adb_setup_title))
             }
 
             item(key = "cmd_enable") {
@@ -288,6 +336,106 @@ fun HardenedModeScreen(
 
             item(key = "bottom_spacer") {
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Hidden screen reachable strictly via the external QR-code deep link
+ * ([HardenedModeDeepLink.FULL_DISABLE_URI]). Remains accessible even when
+ * `isSettingsLocked` is true so scanning the website QR code always provides a clean exit path.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+fun DisableHardenedModeScreen(
+    isHardenedModeActive: Boolean,
+    onConfirmDisable: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BackHandler(onBack = onCancel)
+
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .semantics { testTagsAsResourceId = true }
+            .testTag(HardenedModeTestTags.DISABLE_SCREEN_ROOT),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.disable_hardened_mode_title),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onCancel) {
+                        Icon(
+                            imageVector = ThresholdIcons.ArrowBack,
+                            contentDescription = stringResource(R.string.action_go_back),
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(innerPadding)
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.disable_hardened_mode_headline),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+
+            Text(
+                text = if (isHardenedModeActive) {
+                    stringResource(R.string.disable_hardened_mode_body)
+                } else {
+                    stringResource(R.string.disable_hardened_mode_inactive_body)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isHardenedModeActive) {
+                Button(
+                    onClick = onConfirmDisable,
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(HardenedModeTestTags.CONFIRM_DISABLE_BUTTON),
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_disable_hardened_mode),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(HardenedModeTestTags.CANCEL_DISABLE_BUTTON),
+            ) {
+                Text(
+                    text = stringResource(R.string.action_cancel),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         }
     }

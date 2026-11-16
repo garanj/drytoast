@@ -47,7 +47,9 @@ import com.garan.threshold.ui.motion.ThresholdMotion
 import com.garan.threshold.ui.onboarding.OnboardingScreen
 import com.garan.threshold.ui.search.SearchViewModel
 import com.garan.threshold.ui.settings.ConfigureAppsScreen
+import com.garan.threshold.ui.settings.DisableHardenedModeScreen
 import com.garan.threshold.ui.settings.FeedbackEmailIntentFactory
+import com.garan.threshold.ui.settings.HardenedModeDeepLink
 import com.garan.threshold.ui.settings.HardenedModeScreen
 import com.garan.threshold.ui.settings.ProfilesScreen
 import com.garan.threshold.ui.settings.SettingsViewModel
@@ -70,6 +72,9 @@ sealed interface ThresholdRoute : NavKey {
 
     @Serializable
     data object HardenedMode : ThresholdRoute
+
+    @Serializable
+    data object DisableHardenedMode : ThresholdRoute
 
     @Serializable
     data object Profiles : ThresholdRoute
@@ -118,6 +123,7 @@ class MainActivity : ComponentActivity() {
         private set
 
     private val homeIntentResetCounter = mutableIntStateOf(0)
+    private val disableHardenedModeDeepLinkCounter = mutableIntStateOf(0)
 
     private val defaultLauncherRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -172,15 +178,19 @@ class MainActivity : ComponentActivity() {
         // As a root home launcher, never delegate to super.onBackPressed() which finishes the activity
     }
 
-    override fun onNewIntent(intent: Intent) {
+    public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        // Pressing Home while already on Threshold collapses transient search/friction/settings state and hides IME
         if (::searchViewModel.isInitialized) {
             searchViewModel.dismissSearch()
         }
-        homeIntentResetCounter.intValue++
         ImeUtils.dismissIme(this)
+        if (HardenedModeDeepLink.isValidDisableIntent(intent)) {
+            HardenedModeDeepLink.markConsumed(intent)
+            disableHardenedModeDeepLinkCounter.intValue++
+        } else {
+            // Pressing Home while already on Threshold collapses transient search/friction/settings state and hides IME
+            homeIntentResetCounter.intValue++
+        }
     }
 
     override fun onResume() {
@@ -454,6 +464,11 @@ class MainActivity : ComponentActivity() {
             settingsViewModel.completeOnboarding()
         }
 
+        if (HardenedModeDeepLink.isValidDisableIntent(intent)) {
+            HardenedModeDeepLink.markConsumed(intent)
+            disableHardenedModeDeepLinkCounter.intValue++
+        }
+
         // IMPORTANT MEMORY INVARIANT (< 25 MB Typographic Mode / < 35 MB CI PSS Ceiling):
         // Never call searchViewModel.ensureIndexLoaded() eagerly in onCreate().
         // Resolving LauncherActivityInfo.getLabel() across all installed apps causes Android's
@@ -469,6 +484,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val backStack = rememberNavBackStack(initialRoute)
                 val resetTrigger by homeIntentResetCounter
+                val disableHardenedModeTrigger by disableHardenedModeDeepLinkCounter
                 val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
                 val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow
                     .collectAsStateWithLifecycle()
@@ -504,6 +520,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(disableHardenedModeTrigger, requiresOnboarding) {
+                    if (disableHardenedModeTrigger > 0 && !requiresOnboarding) {
+                        settingsViewModel.refreshHardenedModeStatus()
+                        while (backStack.size > 1) {
+                            backStack.removeLastOrNull()
+                        }
+                        if (backStack.lastOrNull() != ThresholdRoute.DisableHardenedMode) {
+                            backStack.add(ThresholdRoute.DisableHardenedMode)
+                        }
+                    }
+                }
+
                 val topRoute = backStack.lastOrNull()
                 LaunchedEffect(topRoute) {
                     if (topRoute == ThresholdRoute.Home) {
@@ -512,7 +540,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(settingsUiState.isSettingsLocked, topRoute) {
-                    if (settingsUiState.isSettingsLocked && backStack.size > 1) {
+                    if (settingsUiState.isSettingsLocked &&
+                        backStack.size > 1 &&
+                        topRoute != ThresholdRoute.DisableHardenedMode
+                    ) {
                         while (backStack.size > 1) {
                             backStack.removeLastOrNull()
                         }
@@ -649,6 +680,34 @@ class MainActivity : ComponentActivity() {
                             HardenedModeScreen(
                                 isHardenedModeActive = settingsUiState.isHardenedModeActive,
                                 onBack = {
+                                    if (backStack.size > 1) backStack.removeLastOrNull()
+                                },
+                            )
+                        }
+
+                        entry<ThresholdRoute.DisableHardenedMode> {
+                            LaunchedEffect(Unit) {
+                                settingsViewModel.refreshHardenedModeStatus()
+                            }
+                            DisableHardenedModeScreen(
+                                isHardenedModeActive = settingsUiState.isHardenedModeActive,
+                                onConfirmDisable = {
+                                    lifecycleScope.launch {
+                                        container.appAccessController.deactivateHardenedMode()
+                                        settingsViewModel.refreshHardenedModeStatus()
+                                        ScheduleTransitionNotifier.notifyTransition()
+                                        hapticEngine.targetSnap()
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(R.string.toast_hardened_mode_disabled),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                        if (backStack.size > 1) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
+                                },
+                                onCancel = {
                                     if (backStack.size > 1) backStack.removeLastOrNull()
                                 },
                             )

@@ -1,5 +1,7 @@
 package com.garan.threshold.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -82,5 +84,54 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithText(
             "Threshold holds Device Owner privileges. Blocked apps are suspended at the OS level and launcher self-protection is active.",
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun hardenedModeDeepLink_validatesOnlyExactDisableUriAndKey() {
+        val validIntent = Intent(Intent.ACTION_VIEW, Uri.parse(HardenedModeDeepLink.FULL_DISABLE_URI))
+        assertThat(HardenedModeDeepLink.isValidDisableIntent(validIntent)).isTrue()
+
+        val wrongKeyIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("threshold://hardened/disable?key=wrong"),
+        )
+        assertThat(HardenedModeDeepLink.isValidDisableIntent(wrongKeyIntent)).isFalse()
+
+        val missingKeyIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("threshold://hardened/disable"),
+        )
+        assertThat(HardenedModeDeepLink.isValidDisableIntent(missingKeyIntent)).isFalse()
+
+        val wrongActionIntent = Intent(
+            Intent.ACTION_MAIN,
+            Uri.parse(HardenedModeDeepLink.FULL_DISABLE_URI),
+        )
+        assertThat(HardenedModeDeepLink.isValidDisableIntent(wrongActionIntent)).isFalse()
+
+        assertThat(HardenedModeDeepLink.isValidDisableIntent(null)).isFalse()
+    }
+
+    @Test
+    fun disableHardenedModeScreen_whenActive_invokesConfirmAndCancelCallbacks() {
+        var confirmed = false
+        var cancelled = false
+
+        composeRule.setContent {
+            ThresholdTheme {
+                DisableHardenedModeScreen(
+                    isHardenedModeActive = true,
+                    onConfirmDisable = { confirmed = true },
+                    onCancel = { cancelled = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.DISABLE_SCREEN_ROOT).assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.CONFIRM_DISABLE_BUTTON).performClick()
+        assertThat(confirmed).isTrue()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CANCEL_DISABLE_BUTTON).performClick()
+        assertThat(cancelled).isTrue()
     }
 }
