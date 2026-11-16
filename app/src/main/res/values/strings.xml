@@ -129,8 +129,8 @@
     <string name="hardened_mode_companion_adb_body">Completely locks Threshold Settings from being opened on the phone until unlocked from a computer.</string>
     <string name="hardened_mode_section_setup">Setup &amp; Removal (Computer Required)</string>
     <string name="hardened_mode_setup_intro">Hardened Mode can only be enabled or disabled from a computer via USB debugging (ADB) so it cannot be turned off impulsively on the phone.</string>
-    <string name="hardened_mode_setup_prereq_title">Before Enabling: Android Account Check</string>
-    <string name="hardened_mode_setup_prereq_body">Android only grants Device Owner when no accounts are signed in on the phone. Temporarily remove your accounts in Android Settings → Passwords &amp; accounts, run the Enable command below, and then sign back into your accounts immediately afterward.</string>
+    <string name="hardened_mode_setup_prereq_title">Important: Android Account &amp; Multi-User Restriction</string>
+    <string name="hardened_mode_setup_prereq_body">Android rejects set-device-owner if any accounts, Work Profiles, or Private Spaces are active on the phone. On an existing daily-driver phone:\n• Removing your Google account in Settings → Passwords &amp; accounts is temporary (cloud data syncs back once you sign in again), but may require re-verifying Google Wallet contactless cards.\n• Removing third-party app accounts (e.g. WhatsApp, Signal, Outlook) in Settings can sign you out of those apps. Instead, temporarily freeze third-party account apps via ADB (adb shell pm disable-user --user 0 &lt;package&gt;), run set-device-owner, and immediately re-enable them (adb shell pm enable &lt;package&gt;) to preserve their local data.</string>
     <string name="hardened_mode_cmd_enable_label">1. Enable Hardened Mode</string>
     <string name="hardened_mode_cmd_enable" translatable="false">adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver</string>
     <string name="hardened_mode_cmd_disable_label">2. Disable Hardened Mode (Unsuspends Apps &amp; Releases Device Owner)</string>

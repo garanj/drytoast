@@ -39,8 +39,13 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithText("STATUS: STANDARD MODE (NOT ENABLED)").assertIsDisplayed()
         composeRule.onNodeWithText("OS-Level Package Suspension").assertIsDisplayed()
 
-        // Scroll to and click each ADB command Copy button
+        // Scroll to prerequisite warning and verify detailed account/Wallet/pm-disable guidance is shown
         val list = composeRule.onNodeWithTag(HardenedModeTestTags.SCREEN_LIST)
+        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_ENABLE_COMMAND))
+        composeRule.onNodeWithText("Important: Android Account & Multi-User Restriction")
+            .assertIsDisplayed()
+
+        // Scroll to and click each ADB command Copy button
 
         list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_ENABLE_COMMAND))
         composeRule.onNodeWithTag(HardenedModeTestTags.COPY_ENABLE_COMMAND).performClick()
