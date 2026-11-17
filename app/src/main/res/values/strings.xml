@@ -184,7 +184,7 @@
     <string name="action_set_black_wallpaper_command">Set Pure Black Wallpaper</string>
     <string name="action_send_feedback">Send Feedback</string>
     <string name="action_feedback_is_a_gift">Feedback is a gift!</string>
-    <string name="feedback_email_recipient" translatable="false">plop@plop.com</string>
+    <string name="feedback_email_recipient" translatable="false">moc.liamg=sppaydrab</string>
     <string name="feedback_email_subject">Threshold feedback</string>
     <string name="feedback_email_body_template">App version: %1$s\nAndroid version: %2$s\nDevice: %3$s\n\nAdd your feedback here.</string>
     <string name="toast_no_email_app">No email app found</string>
