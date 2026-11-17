@@ -189,11 +189,16 @@ class AndroidPackageIndexSource(
 
         override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
             for (pkg in packageNames) {
-                onPackageAdded(pkg, user)
+                if (replacing) {
+                    onPackageChanged(pkg, user)
+                } else {
+                    onPackageAdded(pkg, user)
+                }
             }
         }
 
         override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
+            if (replacing) return
             for (pkg in packageNames) {
                 onPackageRemoved(pkg, user)
             }

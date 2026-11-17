@@ -1,12 +1,13 @@
 # Current Task
 
-- **Active Issue**: [#112](https://github.com/garanj/threshold/issues/112) — `feat(release): implement Phase 7 hardening, baseline profiles, RTL visual audit & R8 release configuration`
-- **Branch**: `feat/112-phase7-hardening`
+- **Active Issue**: [#114](https://github.com/garanj/threshold/issues/114) — `fix(hardening): resolve red-team audit findings across package replacement, DPC restrictions, background reconciliation & UI strings`
+- **Branch**: `fix/114-red-team-audit-fixes`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:benchmark`: Expand `BaselineProfileGenerator` and add `StartupAndFrameTimingBenchmark` (`MacrobenchmarkRule`)
-- [x] `:app`: Add `app/src/main/baseline-prof.txt` AOT baseline profile rules
-- [x] `:app`: Enable `autoMirror = true` on directional icons (`ArrowBack`, `ChevronRight`, `OpenInNew`) and record RTL Roborazzi golden screenshots
-- [x] `:app`: Configure `app/proguard-rules.pro`, `isShrinkResources = true`, and environment-driven release signing in `app/build.gradle.kts`
-- [x] Verify `./gradlew spotlessApply spotlessCheck test assembleRelease` and open PR assigned to `garanj`
+- [x] `:data`: Guard `AndroidPackageIndexSource.onPackagesUnavailable` / `onPackagesAvailable` when `replacing == true` and add unit tests in `AndroidPackageIndexSourceTest`
+- [x] `:app`: Add `addUserRestriction` / `clearUserRestriction` (`DISALLOW_ADD_USER`, `DISALLOW_SAFE_BOOT`) to `DpcPolicyBridge` and `AndroidAppAccessController`, and verify in `AndroidAppAccessControllerTest`
+- [x] `:app`: Refresh location for enabled Geo profiles and persist pruned `activeNfcLatches` in `ThresholdAppContainer.reconcileDpcFromSettings()`
+- [x] `:app`: Ensure `ThresholdProvisioningActivity` applies self-protection before completing `ACTION_ADMIN_POLICY_COMPLIANCE`
+- [x] `:app`: Externalize `CapabilityFaultBottomSheet` and `ThresholdHomeCanvas` strings to `strings.xml` and make fault rows clickable
+- [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

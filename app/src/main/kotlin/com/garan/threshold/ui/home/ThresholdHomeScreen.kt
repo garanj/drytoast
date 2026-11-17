@@ -2,6 +2,7 @@ package com.garan.threshold.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -425,19 +426,24 @@ internal fun CapabilityFaultBottomSheet(
                 .padding(bottom = 24.dp),
         ) {
             Text(
-                text = "Profile permissions required",
+                text = stringResource(R.string.capability_fault_sheet_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "The following enabled profiles are missing permissions needed to trigger reliably:",
+                text = stringResource(R.string.capability_fault_sheet_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(12.dp))
 
+            val exactAlarmLabel = stringResource(R.string.capability_fault_exact_alarm)
+            val backgroundLocationLabel = stringResource(R.string.capability_fault_background_location)
+            val nfcHardwareLabel = stringResource(R.string.capability_fault_nfc_hardware)
+
             issues.forEach { issue ->
+                val issueCapability = issue.missingCapabilities.firstOrNull() ?: primaryCapability
                 ListItem(
                     leadingContent = {
                         ActiveProfileSquareBadge(profile = issue.profile)
@@ -451,12 +457,19 @@ internal fun CapabilityFaultBottomSheet(
                     },
                     supportingContent = {
                         Text(
-                            text = issue.missingCapabilities.joinToString(", ") { capabilityLabel(it) },
+                            text = issue.missingCapabilities.joinToString(", ") { cap ->
+                                when (cap) {
+                                    ProfileCapability.EXACT_ALARM -> exactAlarmLabel
+                                    ProfileCapability.BACKGROUND_LOCATION -> backgroundLocationLabel
+                                    ProfileCapability.NFC_HARDWARE_ENABLED -> nfcHardwareLabel
+                                }
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onGrantPermission(issueCapability) },
                 )
             }
 
@@ -466,20 +479,14 @@ internal fun CapabilityFaultBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End),
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Dismiss")
+                    Text(stringResource(R.string.action_dismiss))
                 }
                 Button(onClick = { onGrantPermission(primaryCapability) }) {
-                    Text("Grant Permission")
+                    Text(stringResource(R.string.action_grant_permission))
                 }
             }
         }
     }
-}
-
-private fun capabilityLabel(capability: ProfileCapability): String = when (capability) {
-    ProfileCapability.EXACT_ALARM -> "Exact schedule alarms permission required"
-    ProfileCapability.BACKGROUND_LOCATION -> "Location permission & Location Services required"
-    ProfileCapability.NFC_HARDWARE_ENABLED -> "NFC must be enabled in system settings"
 }
 
 /**

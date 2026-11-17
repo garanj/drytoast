@@ -83,9 +83,9 @@ class ThresholdProvisioningActivity : Activity() {
             }
             DevicePolicyManager.ACTION_ADMIN_POLICY_COMPLIANCE -> {
                 val appContext = applicationContext ?: this
+                val container = ThresholdAppContainer.from(appContext)
+                container.appAccessController.applySelfProtectionImmediate()
                 CoroutineScope(Dispatchers.IO).launch {
-                    val container = ThresholdAppContainer.from(appContext)
-                    container.appAccessController.enforceHardenedSelfProtection()
                     container.reconcileDpcFromSettings()
                     ScheduleTransitionNotifier.notifyTransition()
                 }

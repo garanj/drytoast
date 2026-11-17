@@ -297,11 +297,12 @@ internal fun ActiveProfileSquareBadge(profile: CustomProfile, modifier: Modifier
     val badgeBorder = baseColor.copy(alpha = 0.65f)
         .compositeOver(MaterialTheme.colorScheme.outlineVariant)
 
+    val cdActiveProfile = stringResource(R.string.cd_active_profile, profile.name)
     Surface(
         modifier = modifier
             .size(22.dp)
             .semantics {
-                contentDescription = "Active profile: ${profile.name}"
+                contentDescription = cdActiveProfile
             },
         shape = RoundedCornerShape(3.dp),
         color = badgeFill,
@@ -324,12 +325,13 @@ internal fun ActiveProfileSquareBadge(profile: CustomProfile, modifier: Modifier
  */
 @Composable
 internal fun CapabilityFaultSquareBadge(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val cdMissingPermissions = stringResource(R.string.cd_missing_profile_permissions)
     Surface(
         modifier = modifier
             .size(22.dp)
             .clickable(onClick = onClick)
             .semantics {
-                contentDescription = "Missing profile permissions"
+                contentDescription = cdMissingPermissions
             },
         shape = RoundedCornerShape(3.dp),
         color = MaterialTheme.colorScheme.errorContainer,
