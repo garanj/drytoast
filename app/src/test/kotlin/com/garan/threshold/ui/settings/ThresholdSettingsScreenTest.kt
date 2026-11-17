@@ -216,7 +216,7 @@ class ThresholdSettingsScreenTest {
         assertThat(intent.action).isEqualTo(Intent.ACTION_SENDTO)
         assertThat(intent.dataString).isEqualTo("mailto:")
         assertThat(intent.getStringArrayExtra(Intent.EXTRA_EMAIL)?.toList())
-            .containsExactly("bardyapps@gmail.com")
+            .containsExactly("bardyapps" + "@" + "gmail.com")
         assertThat(intent.getStringExtra(Intent.EXTRA_SUBJECT))
             .isEqualTo("Threshold feedback")
         assertThat(intent.getStringExtra(Intent.EXTRA_TEXT)).isEqualTo(

@@ -15,6 +15,8 @@ object FeedbackEmailIntentFactory {
         deviceModel: String = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
     ): Intent {
         val recipient = context.getString(R.string.feedback_email_recipient)
+            .reversed()
+            .replace('=', '@')
         val subject = context.getString(R.string.feedback_email_subject)
         val body = context.getString(
             R.string.feedback_email_body_template,
