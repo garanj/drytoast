@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.UserManager
 import com.garan.threshold.MainActivity
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.port.AppAccessController
@@ -25,6 +26,8 @@ interface DpcPolicyBridge {
     fun setPackagesSuspended(admin: ComponentName, packageNames: Array<String>, suspended: Boolean): Array<String>
     fun setUninstallBlocked(admin: ComponentName, packageName: String, uninstallBlocked: Boolean)
     fun setUserControlDisabledPackages(admin: ComponentName, packages: List<String>)
+    fun addUserRestriction(admin: ComponentName, key: String)
+    fun clearUserRestriction(admin: ComponentName, key: String)
     fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName)
     fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String)
     fun clearDeviceOwnerApp(packageName: String)
@@ -52,6 +55,14 @@ internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyB
 
     override fun setUserControlDisabledPackages(admin: ComponentName, packages: List<String>) {
         runCatching { dpm?.setUserControlDisabledPackages(admin, packages) }
+    }
+
+    override fun addUserRestriction(admin: ComponentName, key: String) {
+        runCatching { dpm?.addUserRestriction(admin, key) }
+    }
+
+    override fun clearUserRestriction(admin: ComponentName, key: String) {
+        runCatching { dpm?.clearUserRestriction(admin, key) }
     }
 
     override fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName) {
@@ -117,17 +128,24 @@ class AndroidAppAccessController(
     }
 
     override suspend fun enforceHardenedSelfProtection(): Boolean = mutex.withLock {
+        applySelfProtectionImmediate()
+    }
+
+    internal fun applySelfProtectionImmediate(): Boolean {
         if (!isDeviceOwner()) {
             isSelfProtectionApplied = false
             return false
         }
         applySelfProtectionLocked()
-        true
+        return true
     }
 
     private fun applySelfProtectionLocked() {
         bridge.setUninstallBlocked(adminComponent, selfPackageName, true)
         bridge.setUserControlDisabledPackages(adminComponent, listOf(selfPackageName))
+        for (restriction in HARDENED_USER_RESTRICTIONS) {
+            bridge.addUserRestriction(adminComponent, restriction)
+        }
         val homeFilter = IntentFilter(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             addCategory(Intent.CATEGORY_DEFAULT)
@@ -240,6 +258,9 @@ class AndroidAppAccessController(
             if (packagesToUnsuspend.isNotEmpty()) {
                 bridge.setPackagesSuspended(adminComponent, packagesToUnsuspend, false)
             }
+            for (restriction in HARDENED_USER_RESTRICTIONS) {
+                bridge.clearUserRestriction(adminComponent, restriction)
+            }
             bridge.clearPackagePersistentPreferredActivities(adminComponent, selfPackageName)
             bridge.setUserControlDisabledPackages(adminComponent, emptyList())
             bridge.setUninstallBlocked(adminComponent, selfPackageName, false)
@@ -262,6 +283,11 @@ class AndroidAppAccessController(
             packageName !in PROTECTED_SYSTEM_PACKAGES
 
     companion object {
+        val HARDENED_USER_RESTRICTIONS = listOf(
+            UserManager.DISALLOW_SAFE_BOOT,
+            UserManager.DISALLOW_ADD_USER,
+        )
+
         val PROTECTED_SYSTEM_PACKAGES = setOf(
             "android",
             "com.android.systemui",

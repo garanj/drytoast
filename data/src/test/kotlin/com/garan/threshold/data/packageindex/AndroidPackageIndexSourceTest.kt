@@ -177,9 +177,19 @@ class AndroidPackageIndexSourceTest {
         // 2 activities re-added
         assertThat(events).hasSize(7)
 
+        // When replacing = true (in-place app update), onPackagesUnavailable must NOT emit Removed events
+        callback.onPackagesUnavailable(arrayOf("com.example.clock"), user, true)
+        assertThat(events).hasSize(7)
+
+        // And onPackagesAvailable(replacing = true) emits Changed events
+        callback.onPackagesAvailable(arrayOf("com.example.clock"), user, true)
+        assertThat(events).hasSize(9)
+        assertThat(events[7]).isInstanceOf(PackageChangeEvent.Changed::class.java)
+        assertThat(events[8]).isInstanceOf(PackageChangeEvent.Changed::class.java)
+
         callback.onPackagesUnavailable(arrayOf("com.example.clock"), user, false)
         // 2 activities removed
-        assertThat(events).hasSize(9)
+        assertThat(events).hasSize(11)
     }
 
     @Test

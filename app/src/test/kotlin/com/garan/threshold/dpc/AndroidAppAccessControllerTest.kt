@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.UserManager
 import androidx.test.core.app.ApplicationProvider
 import com.garan.threshold.ThresholdAppContainer
 import com.garan.threshold.core.model.AppAssignment
@@ -16,9 +17,15 @@ import com.garan.threshold.core.model.BaseProfileSettings
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.CustomProfile
 import com.garan.threshold.core.model.DayOfWeek
+import com.garan.threshold.core.model.NfcLatchState
+import com.garan.threshold.core.model.NfcTagEntry
+import com.garan.threshold.core.model.NfcTrigger
+import com.garan.threshold.core.model.NfcTriggerMode
 import com.garan.threshold.core.model.ProfileTrigger
+import com.garan.threshold.core.model.SavedTrigger
 import com.garan.threshold.core.model.ScheduleTrigger
 import com.garan.threshold.core.model.TimeOfDay
+import com.garan.threshold.core.model.TriggerRule
 import com.garan.threshold.core.port.ClockSource
 import com.garan.threshold.core.port.LocalDayTime
 import com.garan.threshold.settings.SettingsLockReceiver
@@ -142,6 +149,10 @@ class AndroidAppAccessControllerTest {
         assertThat(controller.isDeviceOwnerFlow.value).isTrue()
         assertThat(recordingBridge.uninstallBlockedCalls).containsExactly("com.garan.threshold" to true)
         assertThat(recordingBridge.userControlDisabledCalls).containsExactly(listOf("com.garan.threshold"))
+        assertThat(recordingBridge.addedUserRestrictions).containsExactly(
+            UserManager.DISALLOW_SAFE_BOOT,
+            UserManager.DISALLOW_ADD_USER,
+        )
         assertThat(recordingBridge.persistentHomeAddedCalls).isEqualTo(1)
     }
 
@@ -322,6 +333,10 @@ class AndroidAppAccessControllerTest {
             ),
         )
         assertThat(recordingBridge.persistentHomeClearedPackages).containsExactly("com.garan.threshold")
+        assertThat(recordingBridge.clearedUserRestrictions).containsExactly(
+            UserManager.DISALLOW_SAFE_BOOT,
+            UserManager.DISALLOW_ADD_USER,
+        )
         assertThat(recordingBridge.userControlDisabledCalls.last()).isEmpty()
         assertThat(recordingBridge.uninstallBlockedCalls.last()).isEqualTo("com.garan.threshold" to false)
         assertThat(recordingBridge.clearedDeviceOwnerPackages).containsExactly("com.garan.threshold")
@@ -425,6 +440,70 @@ class AndroidAppAccessControllerTest {
         }
     }
 
+    @Test
+    fun backgroundReconcile_prunesCompanionInvalidatedNfcLatchesEvenInStandardMode() = runTest {
+        val container = ThresholdAppContainer.from(context)
+        try {
+            container.deviceOwnerOverrideForTesting = false
+            val scheduleTrigger = SavedTrigger(
+                id = "trig-schedule",
+                name = "Work Hours",
+                trigger = ProfileTrigger.Schedule(
+                    ScheduleTrigger(
+                        days = setOf(DayOfWeek.MONDAY),
+                        startTime = TimeOfDay(9, 0),
+                        endTime = TimeOfDay(17, 0),
+                    ),
+                ),
+            )
+            val nfcTrigger = SavedTrigger(
+                id = "trig-nfc",
+                name = "Desk Tag",
+                trigger = ProfileTrigger.Nfc(
+                    NfcTrigger(
+                        tags = listOf(NfcTagEntry("04:A1:B2:C3", "Desk")),
+                        mode = NfcTriggerMode.TOGGLE_ON_TAP,
+                    ),
+                ),
+            )
+            val profile = CustomProfile(
+                id = "work-nfc",
+                name = "Work NFC",
+                enabled = true,
+                priority = 0,
+                activationRules = listOf(TriggerRule(listOf("trig-schedule", "trig-nfc"))),
+                appAssignments = mapOf(instagramKey to AppAssignment.Blocked),
+            )
+            container.settingsRepository.saveTrigger(scheduleTrigger)
+            container.settingsRepository.saveTrigger(nfcTrigger)
+            container.settingsRepository.updateCustomProfiles(listOf(profile))
+            container.settingsRepository.updateNfcLatches(
+                mapOf(
+                    "trig-nfc" to NfcLatchState(
+                        triggerId = "trig-nfc",
+                        latchedAtEpochMillis = 1_000L,
+                        latchedByTagUid = "04:A1:B2:C3",
+                    ),
+                ),
+            )
+
+            // At 18:00 Monday (schedule ended), background reconciliation must unlatch and persist empty latches
+            container.clockOverrideForTesting = ClockSource {
+                LocalDayTime(DayOfWeek.MONDAY, TimeOfDay(18, 0))
+            }
+            container.reconcileDpcFromSettings()
+
+            assertThat(container.settingsRepository.getSettings().nfcLatches).isEmpty()
+        } finally {
+            container.clockOverrideForTesting = null
+            container.deviceOwnerOverrideForTesting = null
+            container.settingsRepository.updateNfcLatches(emptyMap())
+            container.settingsRepository.updateCustomProfiles(emptyList())
+            container.settingsRepository.deleteTrigger("trig-schedule")
+            container.settingsRepository.deleteTrigger("trig-nfc")
+        }
+    }
+
     private data class SuspendCall(val packages: List<String>, val suspended: Boolean)
 
     private class RecordingDpcPolicyBridge(var isDeviceOwner: Boolean) : DpcPolicyBridge {
@@ -432,6 +511,8 @@ class AndroidAppAccessControllerTest {
         val suspendCalls = mutableListOf<SuspendCall>()
         val uninstallBlockedCalls = mutableListOf<Pair<String, Boolean>>()
         val userControlDisabledCalls = mutableListOf<List<String>>()
+        val addedUserRestrictions = mutableListOf<String>()
+        val clearedUserRestrictions = mutableListOf<String>()
         var persistentHomeAddedCalls = 0
         val persistentHomeClearedPackages = mutableListOf<String>()
         val clearedDeviceOwnerPackages = mutableListOf<String>()
@@ -457,6 +538,14 @@ class AndroidAppAccessControllerTest {
 
         override fun setUserControlDisabledPackages(admin: ComponentName, packages: List<String>) {
             userControlDisabledCalls.add(packages)
+        }
+
+        override fun addUserRestriction(admin: ComponentName, key: String) {
+            addedUserRestrictions.add(key)
+        }
+
+        override fun clearUserRestriction(admin: ComponentName, key: String) {
+            clearedUserRestrictions.add(key)
         }
 
         override fun addPersistentPreferredActivity(

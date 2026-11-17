@@ -3,6 +3,7 @@ package com.garan.threshold
 import android.app.Application
 import android.content.Context
 import com.garan.threshold.core.cascading.CascadingResolutionEngine
+import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.port.ClockSource
 import com.garan.threshold.core.port.SystemClockSource
 import com.garan.threshold.data.antimetrics.AndroidAntiMetricsRepository
@@ -119,15 +120,22 @@ class ThresholdAppContainer(context: Context) {
     }
 
     /**
-     * Evaluates the current effective working set from persisted [settingsRepository] state and
-     * reconciles OS-level package suspension via [appAccessController] when Hardened Mode is active.
+     * Evaluates the current effective working set from persisted [settingsRepository] state,
+     * prunes expired or companion-invalidated NFC latches, and reconciles OS-level package
+     * suspension via [appAccessController] when Hardened Mode is active.
      * Safe to call from background receivers ([com.garan.threshold.schedule.ScheduleAlarmReceiver],
      * [com.garan.threshold.dpc.ThresholdDeviceAdminReceiver], [com.garan.threshold.settings.SettingsLockReceiver])
      * even when [MainActivity] is not running.
      */
     suspend fun reconcileDpcFromSettings() {
-        if (!appAccessController.isDeviceOwner()) return
         val settings = settingsRepository.getSettings()
+        val triggersById = settings.savedTriggersById
+        val hasEnabledGeoProfiles = settings.customProfiles.any { profile ->
+            profile.enabled && profile.resolvedTriggers(triggersById).any { it is ProfileTrigger.Geo }
+        }
+        if (hasEnabledGeoProfiles && locationSource.currentLocation.value == null) {
+            locationSource.refreshLocation()
+        }
         val now = activeClockSource.now()
         val nowMillis = activeNowEpochMillisProvider()
         val currentLocation = locationSource.currentLocation.value
@@ -144,10 +152,20 @@ class ThresholdAppContainer(context: Context) {
             nfcLatchStates = settings.nfcLatches,
             nowEpochMillis = nowMillis,
         )
-        appAccessController.reconcileBlockedPackages(
-            blockedComponents = workingSet.blockedComponents,
-            defaultDialerPackage = dialerPkg,
-        )
+        if (workingSet.activeNfcLatches != settings.nfcLatches) {
+            settingsRepository.updateNfcLatches(workingSet.activeNfcLatches)
+            scheduleAlarmScheduler.syncNextScheduleAlarm(
+                profiles = settings.customProfiles,
+                savedTriggers = settings.savedTriggers,
+                nfcLatches = workingSet.activeNfcLatches,
+            )
+        }
+        if (appAccessController.isDeviceOwner()) {
+            appAccessController.reconcileBlockedPackages(
+                blockedComponents = workingSet.blockedComponents,
+                defaultDialerPackage = dialerPkg,
+            )
+        }
     }
 
     companion object {

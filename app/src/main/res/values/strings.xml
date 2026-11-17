@@ -201,6 +201,15 @@
     <string name="cd_delete">Remove</string>
     <string name="cd_add">Add</string>
     <string name="cd_open_dialer">Open dialer</string>
+    <string name="cd_active_profile">Active profile: %1$s</string>
+    <string name="cd_missing_profile_permissions">Missing profile permissions</string>
+    <string name="capability_fault_sheet_title">Profile permissions required</string>
+    <string name="capability_fault_sheet_body">The following enabled profiles are missing permissions needed to trigger reliably:</string>
+    <string name="capability_fault_exact_alarm">Exact schedule alarms permission required</string>
+    <string name="capability_fault_background_location">Location permission &amp; Location Services required</string>
+    <string name="capability_fault_nfc_hardware">NFC must be enabled in system settings</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_grant_permission">Grant Permission</string>
 
     <!-- Action Labels -->
     <string name="action_go_back">Go back</string>
