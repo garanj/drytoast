@@ -673,4 +673,34 @@ class ThresholdScreenshotTest {
         }
         verifyAndArchiveSnapshot("configure_apps_rtl.png")
     }
+
+    @Test
+    fun snapshotDisableHardenedModeScreen() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                com.garan.threshold.ui.settings.DisableHardenedModeScreen(
+                    isHardenedModeActive = true,
+                    onConfirmDisable = {},
+                    onCancel = {},
+                    initialChallenge = "492",
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("disable_hardened_mode_screen.png")
+    }
+
+    @Test
+    fun snapshotSettingsLockScreen() {
+        composeTestRule.setContent {
+            ThresholdTheme {
+                com.garan.threshold.ui.settings.SettingsLockScreen(
+                    isSettingsLocked = true,
+                    onConfirmSetSettingsLocked = {},
+                    onCancel = {},
+                    initialChallenge = "815",
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("settings_lock_screen.png")
+    }
 }

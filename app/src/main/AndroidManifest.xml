@@ -33,6 +33,7 @@
             android:stateNotNeeded="true"
             android:taskAffinity=""
             android:resumeWhilePausing="true"
+            android:resizeableActivity="false"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
@@ -50,6 +51,15 @@
                     android:scheme="threshold"
                     android:host="hardened"
                     android:path="/disable" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="threshold"
+                    android:host="settings"
+                    android:path="/lock" />
             </intent-filter>
         </activity>
 

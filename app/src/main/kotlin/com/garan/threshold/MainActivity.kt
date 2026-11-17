@@ -52,6 +52,7 @@ import com.garan.threshold.ui.settings.FeedbackEmailIntentFactory
 import com.garan.threshold.ui.settings.HardenedModeDeepLink
 import com.garan.threshold.ui.settings.HardenedModeScreen
 import com.garan.threshold.ui.settings.ProfilesScreen
+import com.garan.threshold.ui.settings.SettingsLockScreen
 import com.garan.threshold.ui.settings.SettingsViewModel
 import com.garan.threshold.ui.settings.ThresholdSettingsScreen
 import com.garan.threshold.ui.theme.ThresholdTheme
@@ -75,6 +76,9 @@ sealed interface ThresholdRoute : NavKey {
 
     @Serializable
     data object DisableHardenedMode : ThresholdRoute
+
+    @Serializable
+    data object SettingsLock : ThresholdRoute
 
     @Serializable
     data object Profiles : ThresholdRoute
@@ -124,6 +128,7 @@ class MainActivity : ComponentActivity() {
 
     private val homeIntentResetCounter = mutableIntStateOf(0)
     private val disableHardenedModeDeepLinkCounter = mutableIntStateOf(0)
+    private val settingsLockDeepLinkCounter = mutableIntStateOf(0)
 
     private val defaultLauncherRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -187,6 +192,9 @@ class MainActivity : ComponentActivity() {
         if (HardenedModeDeepLink.isValidDisableIntent(intent)) {
             HardenedModeDeepLink.markConsumed(intent)
             disableHardenedModeDeepLinkCounter.intValue++
+        } else if (HardenedModeDeepLink.isValidSettingsLockIntent(intent)) {
+            HardenedModeDeepLink.markConsumed(intent)
+            settingsLockDeepLinkCounter.intValue++
         } else {
             // Pressing Home while already on Threshold collapses transient search/friction/settings state and hides IME
             homeIntentResetCounter.intValue++
@@ -467,6 +475,9 @@ class MainActivity : ComponentActivity() {
         if (HardenedModeDeepLink.isValidDisableIntent(intent)) {
             HardenedModeDeepLink.markConsumed(intent)
             disableHardenedModeDeepLinkCounter.intValue++
+        } else if (HardenedModeDeepLink.isValidSettingsLockIntent(intent)) {
+            HardenedModeDeepLink.markConsumed(intent)
+            settingsLockDeepLinkCounter.intValue++
         }
 
         // IMPORTANT MEMORY INVARIANT (< 25 MB Typographic Mode / < 35 MB CI PSS Ceiling):
@@ -485,6 +496,7 @@ class MainActivity : ComponentActivity() {
                 val backStack = rememberNavBackStack(initialRoute)
                 val resetTrigger by homeIntentResetCounter
                 val disableHardenedModeTrigger by disableHardenedModeDeepLinkCounter
+                val settingsLockTrigger by settingsLockDeepLinkCounter
                 val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
                 val isDefaultLauncher by container.launcherRoleController.isDefaultLauncherFlow
                     .collectAsStateWithLifecycle()
@@ -532,6 +544,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(settingsLockTrigger, requiresOnboarding) {
+                    if (settingsLockTrigger > 0 && !requiresOnboarding) {
+                        while (backStack.size > 1) {
+                            backStack.removeLastOrNull()
+                        }
+                        if (backStack.lastOrNull() != ThresholdRoute.SettingsLock) {
+                            backStack.add(ThresholdRoute.SettingsLock)
+                        }
+                    }
+                }
+
                 val topRoute = backStack.lastOrNull()
                 LaunchedEffect(topRoute) {
                     if (topRoute == ThresholdRoute.Home) {
@@ -542,7 +565,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(settingsUiState.isSettingsLocked, topRoute) {
                     if (settingsUiState.isSettingsLocked &&
                         backStack.size > 1 &&
-                        topRoute != ThresholdRoute.DisableHardenedMode
+                        topRoute != ThresholdRoute.DisableHardenedMode &&
+                        topRoute != ThresholdRoute.SettingsLock
                     ) {
                         while (backStack.size > 1) {
                             backStack.removeLastOrNull()
@@ -691,6 +715,7 @@ class MainActivity : ComponentActivity() {
                             }
                             DisableHardenedModeScreen(
                                 isHardenedModeActive = settingsUiState.isHardenedModeActive,
+                                nowEpochMillisProvider = container.activeNowEpochMillisProvider,
                                 onConfirmDisable = {
                                     lifecycleScope.launch {
                                         container.appAccessController.deactivateHardenedMode()
@@ -700,6 +725,35 @@ class MainActivity : ComponentActivity() {
                                         Toast.makeText(
                                             this@MainActivity,
                                             getString(R.string.toast_hardened_mode_disabled),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                        if (backStack.size > 1) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
+                                },
+                                onCancel = {
+                                    if (backStack.size > 1) backStack.removeLastOrNull()
+                                },
+                            )
+                        }
+
+                        entry<ThresholdRoute.SettingsLock> {
+                            SettingsLockScreen(
+                                isSettingsLocked = settingsUiState.isSettingsLocked,
+                                nowEpochMillisProvider = container.activeNowEpochMillisProvider,
+                                onConfirmSetSettingsLocked = { locked ->
+                                    lifecycleScope.launch {
+                                        container.settingsRepository.setSettingsLocked(locked)
+                                        hapticEngine.targetSnap()
+                                        val toastRes = if (locked) {
+                                            R.string.toast_settings_lock_enabled
+                                        } else {
+                                            R.string.toast_settings_lock_disabled
+                                        }
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(toastRes),
                                             Toast.LENGTH_SHORT,
                                         ).show()
                                         if (backStack.size > 1) {

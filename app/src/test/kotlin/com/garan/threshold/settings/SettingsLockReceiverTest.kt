@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -20,6 +21,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.garan.threshold.MainActivity
 import com.garan.threshold.ThresholdAppContainer
 import com.garan.threshold.core.model.GeneralSettings
+import com.garan.threshold.core.security.ChallengeResponseVerifier
+import com.garan.threshold.core.security.VerificationDomain
 import com.garan.threshold.ui.home.HOME_CANVAS_TEST_TAG
 import com.garan.threshold.ui.settings.FakeSettingsRepository
 import com.garan.threshold.ui.settings.HardenedModeDeepLink
@@ -174,6 +177,49 @@ class SettingsLockReceiverTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(HOME_CANVAS_TEST_TAG)
             .assertIsDisplayed()
+
+        // 5b. Delivering the Settings Lock QR deep link while settings are locked opens SettingsLockScreen
+        //     and entering the 6-digit verification code for the displayed 3-digit challenge unlocks Settings
+        val fixedNowMillis = 1_795_549_500_000L
+        composeRule.activity.setNowEpochMillisForTesting(fixedNowMillis)
+        val settingsLockIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(HardenedModeDeepLink.FULL_SETTINGS_LOCK_URI),
+        )
+        composeRule.runOnUiThread {
+            composeRule.activity.onNewIntent(settingsLockIntent)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(HardenedModeTestTags.SETTINGS_LOCK_SCREEN_ROOT)
+            .assertIsDisplayed()
+
+        val displayedChallenge = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .first()
+            .text
+        val unlockCode = ChallengeResponseVerifier.computeCodeForBucket(
+            domain = VerificationDomain.SETTINGS_LOCK,
+            challenge = displayedChallenge,
+            bucket = ChallengeResponseVerifier.timeBucket(fixedNowMillis),
+        )
+        for (ch in unlockCode) {
+            composeRule.onNodeWithTag(HardenedModeTestTags.keypadDigitTag(ch.digitToInt())).performClick()
+        }
+        composeRule.onNodeWithTag(HardenedModeTestTags.CONFIRM_SETTINGS_LOCK_BUTTON)
+            .performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            !composeRule.activity.settingsViewModel.uiState.value.isSettingsLocked
+        }
+        composeRule.waitForIdle()
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Settings unlocked")
+
+        // Re-lock via ADB so step 6 can also verify ADB UNLOCK_SETTINGS
+        SettingsLockReceiver().onReceive(context, Intent(SettingsLockReceiver.ACTION_LOCK_SETTINGS))
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.activity.settingsViewModel.uiState.value.isSettingsLocked
+        }
+        composeRule.waitForIdle()
 
         // 6. Unlock via ADB UNLOCK_SETTINGS broadcast through SettingsLockReceiver ->
         //    long-pressing home canvas opens Settings again
