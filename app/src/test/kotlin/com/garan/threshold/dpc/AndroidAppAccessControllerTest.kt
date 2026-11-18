@@ -51,6 +51,7 @@ class AndroidAppAccessControllerTest {
     private lateinit var fakeRepository: FakeSettingsRepository
     private lateinit var recordingBridge: RecordingDpcPolicyBridge
     private lateinit var controller: AndroidAppAccessController
+    private var currentNowMillis: Long = 1_000_000L
 
     private val dialerKey = ComponentKey("com.google.android.dialer", "DialtactsActivity")
     private val instagramKey = ComponentKey("com.instagram.android", "MainActivity")
@@ -65,10 +66,12 @@ class AndroidAppAccessControllerTest {
         context = ApplicationProvider.getApplicationContext()
         fakeRepository = FakeSettingsRepository()
         recordingBridge = RecordingDpcPolicyBridge(isDeviceOwner = false)
+        currentNowMillis = 1_000_000L
         controller = AndroidAppAccessController(
             context = context,
             settingsRepository = fakeRepository,
             bridge = recordingBridge,
+            nowEpochMillisProvider = { currentNowMillis },
         )
     }
 
@@ -502,6 +505,161 @@ class AndroidAppAccessControllerTest {
             container.settingsRepository.deleteTrigger("trig-schedule")
             container.settingsRepository.deleteTrigger("trig-nfc")
         }
+    }
+
+    @Test
+    fun guardedComponents_suspendedAtRest_unsuspendedDuringGraceLease_andResuspendedWhenLeaseExpires() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        // 1. At rest: Instagram is Blocked, YouTube and Dialer are Guarded -> Instagram and YouTube suspended
+        val suspendedAtRest = controller.reconcileBlockedPackages(
+            blockedComponents = setOf(instagramKey),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey, dialerKey),
+        )
+        assertThat(suspendedAtRest).containsExactly("com.instagram.android", "com.google.android.youtube")
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(
+                packages = listOf("com.google.android.youtube", "com.instagram.android"),
+                suspended = true,
+            ),
+        )
+
+        // 2. User completes friction gate for YouTube with 5-minute grace period
+        recordingBridge.suspendCalls.clear()
+        val granted = controller.grantGuardedSession(
+            component = youtubeKey,
+            graceDurationMillis = 5 * 60_000L,
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        assertThat(granted).isTrue()
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(packages = listOf("com.google.android.youtube"), suspended = false),
+        )
+        assertThat(fakeRepository.getSettings().dpcSuspendedPackages).containsExactly("com.instagram.android")
+
+        // 3. Two minutes later (within 5-min grace period), user returns home (ON_RESUME) -> stays unsuspended
+        recordingBridge.suspendCalls.clear()
+        currentNowMillis += 2 * 60_000L
+        val suspendedDuringLease = controller.reconcileBlockedPackages(
+            blockedComponents = setOf(instagramKey),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey, dialerKey),
+        )
+        assertThat(suspendedDuringLease).containsExactly("com.instagram.android")
+        assertThat(recordingBridge.suspendCalls).isEmpty()
+
+        // 4. Five minutes elapsed -> next ON_RESUME or ACTION_SCREEN_OFF re-suspends YouTube
+        currentNowMillis += 3 * 60_000L
+        val suspendedAfterExpiry = controller.reconcileBlockedPackages(
+            blockedComponents = setOf(instagramKey),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey, dialerKey),
+        )
+        assertThat(suspendedAfterExpiry).containsExactly("com.instagram.android", "com.google.android.youtube")
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(packages = listOf("com.google.android.youtube"), suspended = true),
+        )
+        assertThat(fakeRepository.getSettings().dpcSuspendedPackages)
+            .containsExactly("com.instagram.android", "com.google.android.youtube")
+    }
+
+    @Test
+    fun guardedSession_immediatelyRevokedAndSuspended_whenProfileUpgradesAppFromGuardedToBlocked() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        controller.grantGuardedSession(
+            component = youtubeKey,
+            graceDurationMillis = 15 * 60_000L,
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        recordingBridge.suspendCalls.clear()
+
+        // Custom profile activates 1 minute later and blocks YouTube
+        currentNowMillis += 60_000L
+        val suspendedWhenBlocked = controller.reconcileBlockedPackages(
+            blockedComponents = setOf(youtubeKey),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = emptySet(),
+        )
+        assertThat(suspendedWhenBlocked).containsExactly("com.google.android.youtube")
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(packages = listOf("com.google.android.youtube"), suspended = true),
+        )
+    }
+
+    @Test
+    fun zeroMinuteGracePeriod_appliesMinimumLaunchHandoverGuard_thenResuspendsAfterHandoverWindow() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        controller.grantGuardedSession(
+            component = youtubeKey,
+            graceDurationMillis = 0L,
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        recordingBridge.suspendCalls.clear()
+
+        // 1 second later (during activity start handover): still unsuspended
+        currentNowMillis += 1_000L
+        val duringHandover = controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        assertThat(duringHandover).isEmpty()
+        assertThat(recordingBridge.suspendCalls).isEmpty()
+
+        // 6 seconds later (user returns home or locks screen): re-suspended
+        currentNowMillis += 5_000L
+        val afterReturn = controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        assertThat(afterReturn).containsExactly("com.google.android.youtube")
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(packages = listOf("com.google.android.youtube"), suspended = true),
+        )
+    }
+
+    @Test
+    fun revokeGuardedSession_clearsActiveLeaseSoNextReconcileResuspendsImmediately() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        controller.grantGuardedSession(
+            component = youtubeKey,
+            graceDurationMillis = 15 * 60_000L,
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        recordingBridge.suspendCalls.clear()
+
+        val revoked = controller.revokeGuardedSession(youtubeKey.packageName)
+        assertThat(revoked).isTrue()
+
+        val suspended = controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+            guardedComponents = setOf(youtubeKey),
+        )
+        assertThat(suspended).containsExactly("com.google.android.youtube")
+        assertThat(recordingBridge.suspendCalls).containsExactly(
+            SuspendCall(packages = listOf("com.google.android.youtube"), suspended = true),
+        )
     }
 
     private data class SuspendCall(val packages: List<String>, val suspended: Boolean)

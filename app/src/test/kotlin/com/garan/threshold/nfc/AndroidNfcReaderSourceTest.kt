@@ -235,6 +235,13 @@ class AndroidNfcReaderSourceTest {
     fun nfcTagDispatchActivity_dispatchesScannedTagUidToAppContainerAndFinishesImmediately() =
         runTest(UnconfinedTestDispatcher()) {
             val app = ApplicationProvider.getApplicationContext<ThresholdApplication>()
+            val activityInfo = app.packageManager.getActivityInfo(
+                android.content.ComponentName(app, NfcTagDispatchActivity::class.java),
+                0,
+            )
+            assertThat(activityInfo.permission).isEqualTo("android.permission.DISPATCH_NFC_MESSAGE")
+            assertThat(activityInfo.taskAffinity).isNull()
+
             var emittedUid: String? = null
             val job = launch {
                 emittedUid = app.container.nfcReaderSource.tagScans.first()

@@ -200,4 +200,19 @@ class AndroidAntiMetricsRepositoryTest {
         assertThat(repo.metrics.value.restDurationMs).isEqualTo(20 * 60_000L)
         assertThat(repo.metrics.value.unlockCount).isEqualTo(1)
     }
+
+    @Test
+    fun onScreenOff_invokesRegisteredScreenOffListener() {
+        var callbackCount = 0
+        val repo = AndroidAntiMetricsRepository(
+            context = context,
+            zoneIdProvider = { fixedZone },
+            onScreenOffListener = { callbackCount++ },
+        )
+
+        val wallOffTime = LocalDate.of(2026, 11, 5).atTime(10, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+        repo.onScreenOff(wallOffTime)
+
+        assertThat(callbackCount).isEqualTo(1)
+    }
 }

@@ -92,7 +92,7 @@ class HardenedModeScreenTest {
 
         composeRule.onNodeWithText("STATUS: HARDENED MODE ACTIVE").assertIsDisplayed()
         composeRule.onNodeWithText(
-            "Threshold holds Device Owner privileges. Blocked apps are suspended at the OS level and launcher self-protection is active.",
+            "Threshold holds Device Owner privileges. Blocked and Guarded apps are suspended at the OS level and launcher self-protection is active.",
         ).assertIsDisplayed()
     }
 

@@ -151,14 +151,21 @@ fun ThresholdHomeScreen(
         hideImeAndClearFocus()
     }
 
+    fun confirmGuardedOpen(component: com.garan.threshold.core.model.ComponentKey) {
+        viewModel.confirmFrictionAndLaunch(component) {
+            val launched = appLauncher.launchApp(component)
+            if (launched) {
+                resetSearchAndHideIme()
+            }
+        }
+    }
+
     // Clear any open or completed friction gate when the screen locks or the user leaves the launcher,
     // preventing pre-warmed friction checkpoints from lingering across sessions.
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START,
-                Lifecycle.Event.ON_RESUME,
-                -> {
+                Lifecycle.Event.ON_RESUME -> {
                     viewModel.refreshScheduleEvaluation()
                 }
                 Lifecycle.Event.ON_STOP -> {
@@ -190,10 +197,7 @@ fun ThresholdHomeScreen(
                 DragSortSurface(
                     pairCount = policy.pairCount,
                     onConfirmOpen = {
-                        val launched = appLauncher.launchApp(activeFriction.app.component)
-                        if (launched) {
-                            resetSearchAndHideIme()
-                        }
+                        confirmGuardedOpen(activeFriction.app.component)
                     },
                     onDismiss = {
                         viewModel.dismissFriction()
@@ -205,10 +209,7 @@ fun ThresholdHomeScreen(
                 CaretTracingSurface(
                     totalDurationMs = policy.seconds * 1000L,
                     onConfirmOpen = {
-                        val launched = appLauncher.launchApp(activeFriction.app.component)
-                        if (launched) {
-                            resetSearchAndHideIme()
-                        }
+                        confirmGuardedOpen(activeFriction.app.component)
                     },
                     onDismiss = {
                         viewModel.dismissFriction()
@@ -220,10 +221,7 @@ fun ThresholdHomeScreen(
                 TypedIntentionSurface(
                     appLabel = activeFriction.app.label,
                     onConfirmOpen = {
-                        val launched = appLauncher.launchApp(activeFriction.app.component)
-                        if (launched) {
-                            resetSearchAndHideIme()
-                        }
+                        confirmGuardedOpen(activeFriction.app.component)
                     },
                     onDismiss = {
                         viewModel.dismissFriction()

@@ -77,6 +77,7 @@ class AndroidSettingsRepository(
         val REQUIRE_REBOOT = booleanPreferencesKey("require_reboot_for_settings_change")
         val HAS_SEEN_FIRST_RUN_HINT = booleanPreferencesKey("has_seen_first_run_hint")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val GUARDED_SESSION_GRACE_MINUTES = intPreferencesKey("guarded_session_grace_minutes")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
         val APP_ASSIGNMENTS = stringPreferencesKey("app_assignments")
@@ -341,6 +342,7 @@ class AndroidSettingsRepository(
         prefs[Keys.SHOW_DIALER_ICON] = updated.general.showDialerIcon
         prefs[Keys.REQUIRE_FULL_TYPING] = updated.general.requireFullTypingOfGuardedApps
         prefs[Keys.REQUIRE_REBOOT] = updated.general.requireRebootForSettingsChange
+        prefs[Keys.GUARDED_SESSION_GRACE_MINUTES] = updated.general.guardedSessionGraceMinutes
         prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
         prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(updated.baseProfile.quickActions)
         prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
@@ -507,6 +509,8 @@ class AndroidSettingsRepository(
         val requireReboot = prefs[Keys.REQUIRE_REBOOT] ?: false
         val hasSeenHint = prefs[Keys.HAS_SEEN_FIRST_RUN_HINT] ?: false
         val hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
+        val guardedSessionGraceMinutes = prefs[Keys.GUARDED_SESSION_GRACE_MINUTES]
+            ?: GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
         val dpcSuspendedPackagesRaw = prefs[Keys.DPC_SUSPENDED_PACKAGES].orEmpty()
         val dpcSuspendedPackages = if (dpcSuspendedPackagesRaw.isBlank()) {
@@ -620,6 +624,7 @@ class AndroidSettingsRepository(
                 requireRebootForSettingsChange = requireReboot,
                 hasSeenFirstRunHint = hasSeenHint,
                 hasCompletedOnboarding = hasCompletedOnboarding,
+                guardedSessionGraceMinutes = guardedSessionGraceMinutes,
             ),
             baseProfile = BaseProfileSettings(
                 defaultFriction = defaultFriction,
@@ -642,6 +647,7 @@ class AndroidSettingsRepository(
         obj.put("showDialerIcon", snapshot.general.showDialerIcon)
         obj.put("requireFullTyping", snapshot.general.requireFullTypingOfGuardedApps)
         obj.put("requireReboot", snapshot.general.requireRebootForSettingsChange)
+        obj.put("guardedSessionGraceMinutes", snapshot.general.guardedSessionGraceMinutes)
         obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
         obj.put(
             "quickActions",
@@ -666,6 +672,10 @@ class AndroidSettingsRepository(
             val showDialerIcon = obj.optBoolean("showDialerIcon", true)
             val requireFullTyping = obj.optBoolean("requireFullTyping", false)
             val requireReboot = obj.optBoolean("requireReboot", false)
+            val guardedSessionGraceMinutes = obj.optInt(
+                "guardedSessionGraceMinutes",
+                GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES,
+            )
             val defaultFriction = runCatching {
                 FrictionChoice.valueOf(
                     obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
@@ -684,6 +694,7 @@ class AndroidSettingsRepository(
                     requireRebootForSettingsChange = requireReboot,
                     hasSeenFirstRunHint = liveHasSeenFirstRunHint,
                     hasCompletedOnboarding = liveHasCompletedOnboarding,
+                    guardedSessionGraceMinutes = guardedSessionGraceMinutes,
                 ),
                 baseProfile = BaseProfileSettings(
                     defaultFriction = defaultFriction,

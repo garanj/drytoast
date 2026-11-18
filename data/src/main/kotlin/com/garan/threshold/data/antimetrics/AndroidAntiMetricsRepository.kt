@@ -29,6 +29,7 @@ class AndroidAntiMetricsRepository(
     private val zoneIdProvider: () -> ZoneId = { ZoneId.systemDefault() },
     private val elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() },
     registerSystemReceiver: Boolean = true,
+    private val onScreenOffListener: (() -> Unit)? = null,
 ) : AntiMetricsRepository {
 
     private val appContext = context.applicationContext ?: context
@@ -109,6 +110,7 @@ class AndroidAntiMetricsRepository(
             .putLong(KEY_SCREEN_OFF_TIMESTAMP, timestampMs)
             .putLong(KEY_SCREEN_OFF_ELAPSED, elapsedRealtimeProvider())
             .apply()
+        onScreenOffListener?.invoke()
     }
 
     override fun onUnlock(timestampMs: Long) {
