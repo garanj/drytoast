@@ -1,10 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#120](https://github.com/garanj/threshold/issues/120) — `feat(ci): add tag-driven GitHub Release pipeline, dynamic VERSION_CODE/VERSION_NAME, and 6-tap QR checksum output`
-- **Branch**: `feat/120-release-pipeline`
+- **Active Issue**: [#122](https://github.com/garanj/threshold/issues/122) — `fix(nfc): write NDEF tag records on registration and use manifest NDEF dispatch to avoid blocking Google Wallet on home screen`
+- **Branch**: `fix/122-nfc-ndef-wallet-compat`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:app`: Support `VERSION_CODE` and `VERSION_NAME` environment variables in `app/build.gradle.kts` with local fallbacks (`1` and `"0.1.0"`)
-- [x] `.github/workflows/release.yml`: Add tag-driven (`v*`) & `workflow_dispatch` release pipeline building signed `.apk` and `.aab`, computing URL-safe Base64 SHA-256 checksum for 6-tap QR provisioning, and publishing a GitHub Release
+- [x] `:core`: Add `NfcTagRegistrationResult` (`Success`, `UnsupportedCard`, `ReadOnlyTag`, `InsufficientCapacity`, `WriteInterrupted`) with unit tests
+- [x] `:app` (`AndroidNfcReaderSource` & `NfcTagProvisioner`): Scope `enableReaderMode()` strictly to active NFC registration sheet; provision `threshold://tag` NDEF message on registration and emit `NfcTagRegistrationResult`
+- [x] `:app` (`NfcTagDispatchActivity` & `AndroidManifest.xml`): Add `Theme.NoDisplay` activity for `android.nfc.action.NDEF_DISCOVERED` (`threshold://tag`) that dispatches scanned tag UIDs and finishes immediately
+- [x] `:app` (`TriggerEditorSheet`, `TriggerTypeEditorFields`, `ProfilesScreen`, `ProfileRulesEditorSheet`): Display M3 diagnostic feedback in `NfcEditorFields` when a non-writable or unsupported card is scanned
 - [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`

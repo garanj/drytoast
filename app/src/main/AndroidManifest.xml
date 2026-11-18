@@ -121,6 +121,21 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".nfc.NfcTagDispatchActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="threshold"
+                    android:host="tag" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>

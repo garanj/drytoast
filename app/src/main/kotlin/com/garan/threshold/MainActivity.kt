@@ -203,7 +203,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        appContainer.nfcReaderSource.enableForegroundReader(this)
+        appContainer.nfcReaderSource.onActivityResumed(this)
         appContainer.appAccessController.isDeviceOwner()
         if (::settingsViewModel.isInitialized) {
             settingsViewModel.refreshHardenedModeStatus()
@@ -243,7 +243,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
-        appContainer.nfcReaderSource.disableForegroundReader(this)
+        appContainer.nfcReaderSource.onActivityPaused(this)
         super.onPause()
     }
 
@@ -331,7 +331,8 @@ class MainActivity : ComponentActivity() {
     @androidx.annotation.VisibleForTesting
     fun simulateNfcTapForTesting(rawUid: String) {
         val registrationListener = appContainer.nfcReaderSource.activeRegistrationListener
-        if (registrationListener != null) {
+        val registrationResultListener = appContainer.nfcReaderSource.activeRegistrationResultListener
+        if (registrationListener != null || registrationResultListener != null) {
             appContainer.nfcReaderSource.dispatchScannedUid(rawUid)
         } else if (::searchViewModel.isInitialized) {
             kotlinx.coroutines.runBlocking {
@@ -798,7 +799,10 @@ class MainActivity : ComponentActivity() {
                                 onSaveTrigger = settingsViewModel::saveTrigger,
                                 onDeleteTrigger = settingsViewModel::deleteTrigger,
                                 onRegisterNfcScanListener = { listener ->
-                                    container.nfcReaderSource.activeRegistrationListener = listener
+                                    container.nfcReaderSource.setRegistrationListener(this@MainActivity, listener)
+                                },
+                                onRegisterNfcRegistrationListener = { listener ->
+                                    container.nfcReaderSource.setRegistrationResultListener(this@MainActivity, listener)
                                 },
                             )
                         }

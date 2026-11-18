@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.garan.threshold.core.model.CustomProfile
 import com.garan.threshold.core.model.LocationFix
+import com.garan.threshold.core.model.NfcTagRegistrationResult
 import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.model.SavedTrigger
 import com.garan.threshold.core.model.TriggerRule
@@ -76,6 +77,7 @@ fun ProfileRulesEditorSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     onRegisterNfcScanListener: (((String) -> Unit)?) -> Unit = {},
+    onRegisterNfcRegistrationListener: (((NfcTagRegistrationResult) -> Unit)?) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var profileName by remember { mutableStateOf(initialName) }
@@ -556,6 +558,7 @@ fun ProfileRulesEditorSheet(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             allowNfcTriggerType = !targetRuleAlreadyHasNfc(target),
             hapticEngine = hapticEngine,
             onSaveTrigger = { triggerName, profileTrigger ->
@@ -583,6 +586,7 @@ fun ProfileRulesEditorSheet(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             hapticEngine = hapticEngine,
             onSaveTrigger = { updatedName, updatedTrigger ->
                 val updated = existing.copy(

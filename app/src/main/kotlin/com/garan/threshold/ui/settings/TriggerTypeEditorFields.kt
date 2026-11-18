@@ -45,6 +45,7 @@ import com.garan.threshold.core.model.GeoTrigger
 import com.garan.threshold.core.model.GeoTriggerMode
 import com.garan.threshold.core.model.LocationFix
 import com.garan.threshold.core.model.NfcTagEntry
+import com.garan.threshold.core.model.NfcTagRegistrationResult
 import com.garan.threshold.core.model.NfcTrigger
 import com.garan.threshold.core.model.NfcTriggerMode
 import com.garan.threshold.core.model.TimeWindow
@@ -503,6 +504,7 @@ internal fun NfcEditorFields(
     nfcTags: List<NfcTagEntry>,
     onTagLabelChange: (uid: String, label: String) -> Unit,
     onRemoveTag: (uid: String) -> Unit,
+    lastRegistrationResult: NfcTagRegistrationResult? = null,
 ) {
     Text(
         text = "ACTIVATION MODE",
@@ -697,12 +699,32 @@ internal fun NfcEditorFields(
 
     Spacer(modifier = Modifier.height(8.dp))
 
+    val errorMessage = when (lastRegistrationResult) {
+        is NfcTagRegistrationResult.UnsupportedCard ->
+            "Unsupported card (${lastRegistrationResult.uid}) — this card does not support NDEF storage. " +
+                "Use a writable NFC tag (e.g. NTAG213/215/216)."
+        is NfcTagRegistrationResult.ReadOnlyTag ->
+            "Read-only tag (${lastRegistrationResult.uid}) — this tag is write-locked and cannot be configured for Threshold."
+        is NfcTagRegistrationResult.InsufficientCapacity ->
+            "Tag capacity too small (${lastRegistrationResult.maxSizeBytes} bytes) — " +
+                "Threshold requires at least ${lastRegistrationResult.requiredBytes} bytes."
+        is NfcTagRegistrationResult.WriteInterrupted ->
+            "Write interrupted (${lastRegistrationResult.uid}) — " +
+                "hold the tag steady against your phone for a moment to finish formatting."
+        is NfcTagRegistrationResult.Success, null -> null
+    }
+    val isRegistrationError = errorMessage != null
+
     ListItem(
         leadingContent = {
             Icon(
                 imageVector = ThresholdIcons.Nfc,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = if (isRegistrationError) {
+                    MaterialTheme.colorScheme.onErrorContainer
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 modifier = Modifier.size(22.dp),
             )
         },
@@ -711,23 +733,38 @@ internal fun NfcEditorFields(
                 text = "Hold an NFC tag against your phone",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
+                color = if (isRegistrationError) {
+                    MaterialTheme.colorScheme.onErrorContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
             )
         },
         supportingContent = {
             Text(
-                text = if (nfcTags.isEmpty()) {
-                    "Scan at least one NFC tag to create this trigger."
+                text = errorMessage ?: if (nfcTags.isEmpty()) {
+                    "Scan at least one writable NFC tag to format and bind it to this trigger."
                 } else {
-                    "Scan additional NFC tags to bind them to this same trigger."
+                    "Scan additional writable NFC tags to format and bind them to this same trigger."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isRegistrationError) {
+                    MaterialTheme.colorScheme.onErrorContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
         },
         colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = if (isRegistrationError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         ),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(ProfilesTestTags.TRIGGER_EDITOR_NFC_REGISTRATION_STATUS),
     )
 
     if (nfcTags.isNotEmpty()) {
