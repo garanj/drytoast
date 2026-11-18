@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.garan.threshold.core.model.AppAssignment
 import com.garan.threshold.core.model.CustomProfile
 import com.garan.threshold.core.model.LocationFix
+import com.garan.threshold.core.model.NfcTagRegistrationResult
 import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.model.SavedTrigger
 import com.garan.threshold.core.model.TriggerRule
@@ -103,6 +104,7 @@ fun ProfilesScreen(
     onSaveTrigger: ((SavedTrigger) -> Unit)? = null,
     onDeleteTrigger: ((String) -> Unit)? = null,
     onRegisterNfcScanListener: (((String) -> Unit)?) -> Unit = {},
+    onRegisterNfcRegistrationListener: (((NfcTagRegistrationResult) -> Unit)?) -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
@@ -510,6 +512,7 @@ fun ProfilesScreen(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             onSaveTrigger = { trigger ->
                 persistTrigger(trigger)
                 checkPermissionsForTriggers(listOf(trigger.trigger))
@@ -544,6 +547,7 @@ fun ProfilesScreen(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             onSaveTrigger = { trigger ->
                 persistTrigger(trigger)
                 checkPermissionsForTriggers(listOf(trigger.trigger))
@@ -579,6 +583,7 @@ fun ProfilesScreen(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             hapticEngine = hapticEngine,
             onSaveTrigger = { updatedName, updatedTrigger ->
                 persistTrigger(
@@ -603,6 +608,7 @@ fun ProfilesScreen(
             onUseCurrentLocation = onUseCurrentLocation,
             onOpenMapApp = onOpenMapApp,
             onRegisterNfcScanListener = onRegisterNfcScanListener,
+            onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
             hapticEngine = hapticEngine,
             onSaveTrigger = { name, trigger ->
                 val created = SavedTrigger(

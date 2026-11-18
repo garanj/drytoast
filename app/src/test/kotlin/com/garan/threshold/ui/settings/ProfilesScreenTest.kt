@@ -17,6 +17,7 @@ import com.garan.threshold.core.model.GeoTrigger
 import com.garan.threshold.core.model.GeoTriggerMode
 import com.garan.threshold.core.model.LocationFix
 import com.garan.threshold.core.model.NfcTagEntry
+import com.garan.threshold.core.model.NfcTagRegistrationResult
 import com.garan.threshold.core.model.NfcTrigger
 import com.garan.threshold.core.model.NfcTriggerMode
 import com.garan.threshold.core.model.ProfileTrigger
@@ -785,5 +786,65 @@ class ProfilesScreenTest {
         composeTestRule
             .onNodeWithTag(ProfilesTestTags.triggerPickerItem("t-nfc-b"))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun triggerEditorSheet_nfcRegistrationErrorStates_displaysDiagnosticMessageAndClearsOnValidScan() {
+        var activeRegistrationResultListener: ((NfcTagRegistrationResult) -> Unit)? = null
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                TriggerEditorSheet(
+                    initialName = "Desk Tag",
+                    initialTrigger = ProfileTrigger.Nfc(NfcTrigger()),
+                    isNewTrigger = true,
+                    onSaveTrigger = { _, _ -> },
+                    onDismiss = {},
+                    onRegisterNfcRegistrationListener = { listener ->
+                        activeRegistrationResultListener = listener
+                    },
+                )
+            }
+        }
+
+        assertThat(activeRegistrationResultListener).isNotNull()
+
+        // 1. Scan an unsupported non-NDEF card
+        composeTestRule.runOnIdle {
+            activeRegistrationResultListener?.invoke(
+                NfcTagRegistrationResult.UnsupportedCard("04:B1:22:99"),
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(
+                "Unsupported card (04:B1:22:99) — this card does not support NDEF storage. " +
+                    "Use a writable NFC tag (e.g. NTAG213/215/216).",
+            )
+            .assertIsDisplayed()
+
+        // 2. Scan a read-only locked tag
+        composeTestRule.runOnIdle {
+            activeRegistrationResultListener?.invoke(
+                NfcTagRegistrationResult.ReadOnlyTag("04:C1:D2:E3"),
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(
+                "Read-only tag (04:C1:D2:E3) — this tag is write-locked and cannot be configured for Threshold.",
+            )
+            .assertIsDisplayed()
+
+        // 3. Scan a valid writable NDEF tag -> error clears and tag is added
+        composeTestRule.runOnIdle {
+            activeRegistrationResultListener?.invoke(
+                NfcTagRegistrationResult.Success("04:A2:3F:8B"),
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithTag(ProfilesTestTags.triggerEditorNfcTagLabel("04:A2:3F:8B"))
+            .assertIsDisplayed()
     }
 }
