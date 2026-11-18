@@ -691,6 +691,8 @@ class MainActivity : ComponentActivity() {
                                 onAddQuickAction = settingsViewModel::addQuickAction,
                                 onRemoveQuickAction = settingsViewModel::removeQuickAction,
                                 onUpdateRequireReboot = settingsViewModel::updateRequireRebootForSettingsChange,
+                                onUpdateGuardedSessionGraceMinutes =
+                                settingsViewModel::updateGuardedSessionGraceMinutes,
                                 onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 onSendFeedback = ::launchFeedbackEmail,

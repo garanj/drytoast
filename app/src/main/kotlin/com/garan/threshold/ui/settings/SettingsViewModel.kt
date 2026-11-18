@@ -173,6 +173,13 @@ class SettingsViewModel(
         }
     }
 
+    fun updateGuardedSessionGraceMinutes(minutes: Int) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(current.copy(guardedSessionGraceMinutes = minutes))
+        }
+    }
+
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()

@@ -73,6 +73,9 @@ data class ResolvedWorkingSet(
 ) {
     val blockedComponents: Set<ComponentKey>
         get() = effectiveProfile.appRules.filterValues { it is AppAccessState.Blocked }.keys
+
+    val guardedComponents: Set<ComponentKey>
+        get() = effectiveProfile.appRules.filterValues { it is AppAccessState.Guarded }.keys
 }
 
 /**

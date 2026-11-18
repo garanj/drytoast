@@ -89,6 +89,7 @@ class SettingsViewModelTest {
         viewModel.updateShowRest(false)
         viewModel.updateShowDialerIcon(false)
         viewModel.updateRequireFullTyping(true)
+        viewModel.updateGuardedSessionGraceMinutes(15)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -96,6 +97,7 @@ class SettingsViewModelTest {
         assertThat(state.general.showRest).isFalse()
         assertThat(state.general.showDialerIcon).isFalse()
         assertThat(state.general.requireFullTypingOfGuardedApps).isTrue()
+        assertThat(state.general.guardedSessionGraceMinutes).isEqualTo(15)
     }
 
     @Test

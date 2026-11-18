@@ -85,9 +85,9 @@ internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyB
  * When Threshold holds Device Owner privileges ("Hardened Mode"):
  * 1. Enforces anti-tamper self-protection (`setUninstallBlocked`, `setUserControlDisabledPackages`,
  *    and persistent default `CATEGORY_HOME` launcher activity).
- * 2. Diff-reconciles `Blocked` packages via `setPackagesSuspended`, while strictly preserving
- *    Prime Invariant #2 (Universal Dialer Safety Invariant) and leaving `Guarded` apps unsuspended
- *    so their notifications arrive normally.
+ * 2. Diff-reconciles `Blocked` packages and resting-state `Guarded` packages via `setPackagesSuspended`,
+ *    while strictly preserving Prime Invariant #2 (Universal Dialer Safety Invariant) and temporarily
+ *    exempting `Guarded` packages holding an active post-friction session lease.
  * 3. Persists the set of suspended packages in [SettingsRepository] so unblocked apps or ended
  *    profiles are reliably unsuspended even across process restarts or device reboots.
  */
@@ -102,6 +102,7 @@ class AndroidAppAccessController(
     ),
     private val selfPackageName: String = (context.applicationContext ?: context).packageName,
     private val deviceOwnerOverrideProvider: () -> Boolean? = { null },
+    private val nowEpochMillisProvider: () -> Long = System::currentTimeMillis,
 ) : AppAccessController {
 
     private val mutex = Mutex()
@@ -111,6 +112,16 @@ class AndroidAppAccessController(
 
     @Volatile
     private var isSelfProtectionApplied: Boolean = false
+
+    private val activeGuardedLeases = mutableMapOf<String, Long>()
+
+    @Volatile
+    private var nextLeaseExpiryEpochMillis: Long = Long.MAX_VALUE
+
+    private var lastReconciledBlocked: Set<ComponentKey>? = null
+    private var lastReconciledGuarded: Set<ComponentKey>? = null
+    private var lastReconciledDialer: String? = null
+    private var hasPendingRetry: Boolean = false
 
     private val _isDeviceOwnerFlow = MutableStateFlow(computeIsDeviceOwner())
     override val isDeviceOwnerFlow: StateFlow<Boolean> = _isDeviceOwnerFlow.asStateFlow()
@@ -157,9 +168,11 @@ class AndroidAppAccessController(
     override suspend fun reconcileBlockedPackages(
         blockedComponents: Set<ComponentKey>,
         defaultDialerPackage: String,
+        guardedComponents: Set<ComponentKey>,
     ): Set<String> = mutex.withLock {
         if (!isDeviceOwner()) {
             isSelfProtectionApplied = false
+            invalidateFastPathLocked()
             return emptySet()
         }
 
@@ -167,28 +180,67 @@ class AndroidAppAccessController(
             applySelfProtectionLocked()
         }
 
+        val now = nowEpochMillisProvider()
+
+        // O(1) fast-path short-circuit when no guarded session lease has expired, no prior partial
+        // OS failure needs retrying, and the resolved blocked/guarded component sets are unchanged.
+        if (!hasPendingRetry &&
+            now < nextLeaseExpiryEpochMillis &&
+            lastReconciledBlocked == blockedComponents &&
+            lastReconciledGuarded == guardedComponents &&
+            lastReconciledDialer == defaultDialerPackage
+        ) {
+            return lastSuspendedPackages
+        }
+
+        val blockedPackageNames = blockedComponents.mapTo(hashSetOf()) { it.packageName }
+
+        // Prune expired guarded leases and any lease for a package that is now explicitly Blocked
+        if (activeGuardedLeases.isNotEmpty()) {
+            val iterator = activeGuardedLeases.entries.iterator()
+            while (iterator.hasNext()) {
+                val (pkg, expiresAt) = iterator.next()
+                if (now >= expiresAt || pkg in blockedPackageNames) {
+                    iterator.remove()
+                }
+            }
+            nextLeaseExpiryEpochMillis = activeGuardedLeases.values.minOrNull() ?: Long.MAX_VALUE
+        }
+
         val settings = settingsRepository.getSettings()
         val previouslySuspended = lastSuspendedPackages + settings.dpcSuspendedPackages
 
         // Prime Invariant #2 (Universal Dialer Safety Invariant) + Self-Protection:
         // Never suspend the default dialer, Threshold itself, or core system packages.
-        val targetPackages = blockedComponents
-            .map { it.packageName }
-            .filter { pkg ->
-                isSuspendablePackage(pkg, defaultDialerPackage)
+        // Guarded packages are suspended at rest except while holding an active, non-expired session lease.
+        val targetPackages = buildSet {
+            for (pkg in blockedPackageNames) {
+                if (isSuspendablePackage(pkg, defaultDialerPackage)) {
+                    add(pkg)
+                }
             }
-            .toSet()
+            for (comp in guardedComponents) {
+                val pkg = comp.packageName
+                if (pkg !in blockedPackageNames &&
+                    pkg !in activeGuardedLeases &&
+                    isSuspendablePackage(pkg, defaultDialerPackage)
+                ) {
+                    add(pkg)
+                }
+            }
+        }
 
         val toSuspend = targetPackages - previouslySuspended
         val toUnsuspend = previouslySuspended - targetPackages
 
+        var failedToSuspend: Set<String> = emptySet()
         val newlySuspended = if (toSuspend.isNotEmpty()) {
-            val failed = bridge.setPackagesSuspended(
+            failedToSuspend = bridge.setPackagesSuspended(
                 adminComponent,
                 toSuspend.sorted().toTypedArray(),
                 true,
             ).toSet()
-            toSuspend - failed
+            toSuspend - failedToSuspend
         } else {
             emptySet()
         }
@@ -208,10 +260,54 @@ class AndroidAppAccessController(
             toUnsuspend.intersect(failedToUnsuspend)
 
         lastSuspendedPackages = updatedSuspended
+        lastReconciledBlocked = blockedComponents
+        lastReconciledGuarded = guardedComponents
+        lastReconciledDialer = defaultDialerPackage
+        hasPendingRetry = failedToSuspend.isNotEmpty() || failedToUnsuspend.isNotEmpty()
+
         if (updatedSuspended != settings.dpcSuspendedPackages) {
             settingsRepository.updateDpcSuspendedPackages(updatedSuspended)
         }
         updatedSuspended
+    }
+
+    override suspend fun grantGuardedSession(
+        component: ComponentKey,
+        graceDurationMillis: Long,
+        defaultDialerPackage: String,
+    ): Boolean = mutex.withLock {
+        if (!isDeviceOwner()) return false
+        val pkg = component.packageName
+        if (!isSuspendablePackage(pkg, defaultDialerPackage)) return false
+
+        val now = nowEpochMillisProvider()
+        val effectiveGraceMs = maxOf(graceDurationMillis, MIN_LAUNCH_HANDOVER_GRACE_MS)
+        activeGuardedLeases[pkg] = now + effectiveGraceMs
+        nextLeaseExpiryEpochMillis = activeGuardedLeases.values.minOrNull() ?: Long.MAX_VALUE
+        invalidateFastPathLocked()
+
+        val failed = bridge.setPackagesSuspended(adminComponent, arrayOf(pkg), false)
+        if (failed.isNotEmpty()) {
+            hasPendingRetry = true
+            return false
+        }
+
+        val currentPersisted = settingsRepository.getSettings().dpcSuspendedPackages
+        val updated = (lastSuspendedPackages + currentPersisted) - pkg
+        lastSuspendedPackages = updated
+        if (updated != currentPersisted) {
+            settingsRepository.updateDpcSuspendedPackages(updated)
+        }
+        true
+    }
+
+    override suspend fun revokeGuardedSession(packageName: String): Boolean = mutex.withLock {
+        val removed = activeGuardedLeases.remove(packageName) != null
+        nextLeaseExpiryEpochMillis = activeGuardedLeases.values.minOrNull() ?: Long.MAX_VALUE
+        if (removed) {
+            invalidateFastPathLocked()
+        }
+        removed
     }
 
     override suspend fun setPackagesSuspended(components: Set<ComponentKey>, suspended: Boolean): Boolean =
@@ -233,6 +329,7 @@ class AndroidAppAccessController(
                 (lastSuspendedPackages + currentPersisted) - succeeded
             }
             lastSuspendedPackages = updated
+            invalidateFastPathLocked()
             if (updated != currentPersisted) {
                 settingsRepository.updateDpcSuspendedPackages(updated)
             }
@@ -267,6 +364,9 @@ class AndroidAppAccessController(
             bridge.clearDeviceOwnerApp(selfPackageName)
         }
 
+        activeGuardedLeases.clear()
+        nextLeaseExpiryEpochMillis = Long.MAX_VALUE
+        invalidateFastPathLocked()
         lastSuspendedPackages = emptySet()
         isSelfProtectionApplied = false
         if (settings.dpcSuspendedPackages.isNotEmpty()) {
@@ -276,6 +376,12 @@ class AndroidAppAccessController(
         wasDeviceOwner
     }
 
+    private fun invalidateFastPathLocked() {
+        lastReconciledBlocked = null
+        lastReconciledGuarded = null
+        lastReconciledDialer = null
+    }
+
     private fun isSuspendablePackage(packageName: String, defaultDialerPackage: String): Boolean =
         packageName.isNotBlank() &&
             packageName != selfPackageName &&
@@ -283,6 +389,12 @@ class AndroidAppAccessController(
             packageName !in PROTECTED_SYSTEM_PACKAGES
 
     companion object {
+        /**
+         * Minimum handover window (5 seconds) when a guarded app is launched with a 0-minute grace period
+         * so activity transition lifecycle callbacks cannot re-suspend the target package before it starts.
+         */
+        const val MIN_LAUNCH_HANDOVER_GRACE_MS = 5_000L
+
         val HARDENED_USER_RESTRICTIONS = listOf(
             UserManager.DISALLOW_SAFE_BOOT,
             UserManager.DISALLOW_ADD_USER,

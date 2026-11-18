@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +54,7 @@ import com.garan.threshold.core.model.AppAssignment
 import com.garan.threshold.core.model.BaseProfileSettings
 import com.garan.threshold.core.model.ComponentKey
 import com.garan.threshold.core.model.FrictionChoice
+import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.core.model.InstalledApp
 import com.garan.threshold.ui.search.SearchKeyboardOptions
 
@@ -65,6 +68,8 @@ object SettingsTestTags {
     const val TOGGLE_SHOW_DIALER_ICON = "settings_toggle_show_dialer_icon"
     const val TOGGLE_REQUIRE_REBOOT = "settings_toggle_require_reboot"
     const val NAV_HARDENED_MODE = "settings_nav_hardened_mode"
+    const val GUARDED_GRACE_PERIOD_ROW = "settings_guarded_grace_period_row"
+    const val GUARDED_GRACE_PERIOD_SHEET = "settings_guarded_grace_period_sheet"
     const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
     const val CONFIRM_REQUIRE_REBOOT_BUTTON = "settings_confirm_require_reboot_button"
     const val CANCEL_REQUIRE_REBOOT_BUTTON = "settings_cancel_require_reboot_button"
@@ -73,6 +78,8 @@ object SettingsTestTags {
     const val CONFIRM_BLACK_WALLPAPER_BUTTON = "settings_confirm_black_wallpaper_button"
     const val CANCEL_BLACK_WALLPAPER_BUTTON = "settings_cancel_black_wallpaper_button"
     const val FEEDBACK_BUTTON = "settings_feedback_button"
+
+    fun guardedGraceOptionTag(minutes: Int): String = "settings_guarded_grace_option_$minutes"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -92,6 +99,7 @@ fun ThresholdSettingsScreen(
     onNavigateToHardenedMode: () -> Unit = {},
     onUpdateShowDialerIcon: (Boolean) -> Unit = {},
     onUpdateRequireReboot: (Boolean) -> Unit = {},
+    onUpdateGuardedSessionGraceMinutes: (Int) -> Unit = {},
     onDiscardPendingChanges: () -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
     onSendFeedback: () -> Unit = {},
@@ -99,6 +107,7 @@ fun ThresholdSettingsScreen(
     BackHandler(onBack = onBack)
 
     var showAddQuickActionSheet by remember { mutableStateOf(false) }
+    var showGuardedGraceSheet by remember { mutableStateOf(false) }
     var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
     var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -428,6 +437,36 @@ fun ThresholdSettingsScreen(
                 )
             }
 
+            item(key = "setting_guarded_grace_period") {
+                val graceMinutes = uiState.general.guardedSessionGraceMinutes
+                val summary = formatGuardedGraceOptionLabel(graceMinutes)
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_guarded_grace_period),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW)
+                        .clickable { showGuardedGraceSheet = true },
+                )
+            }
+
             item(key = "action_set_black_wallpaper") {
                 ListItem(
                     headlineContent = {
@@ -582,6 +621,52 @@ fun ThresholdSettingsScreen(
         }
     }
 
+    if (showGuardedGraceSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val currentMinutes = uiState.general.guardedSessionGraceMinutes
+
+        ModalBottomSheet(
+            onDismissRequest = { showGuardedGraceSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 16.dp)
+                    .selectableGroup()
+                    .testTag(SettingsTestTags.GUARDED_GRACE_PERIOD_SHEET),
+            ) {
+                Text(
+                    text = stringResource(R.string.setting_guarded_grace_period),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                Text(
+                    text = stringResource(R.string.setting_guarded_grace_period_sheet_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                )
+
+                for (optionMinutes in GeneralSettings.GUARDED_SESSION_GRACE_OPTIONS_MINUTES) {
+                    FrictionRadioOption(
+                        title = formatGuardedGraceOptionLabel(optionMinutes),
+                        selected = currentMinutes == optionMinutes,
+                        onSelect = {
+                            onUpdateGuardedSessionGraceMinutes(optionMinutes)
+                            showGuardedGraceSheet = false
+                        },
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.testTag(SettingsTestTags.guardedGraceOptionTag(optionMinutes)),
+                    )
+                }
+            }
+        }
+    }
+
     if (showConfirmRequireRebootDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmRequireRebootDialog = false },
@@ -697,4 +782,11 @@ private fun SettingsToggleItem(
                 onValueChange = onCheckedChange,
             ),
     )
+}
+
+@Composable
+private fun formatGuardedGraceOptionLabel(minutes: Int): String = when (minutes) {
+    0 -> stringResource(R.string.guarded_grace_immediate)
+    1 -> stringResource(R.string.guarded_grace_minutes_one)
+    else -> stringResource(R.string.guarded_grace_minutes_format, minutes)
 }

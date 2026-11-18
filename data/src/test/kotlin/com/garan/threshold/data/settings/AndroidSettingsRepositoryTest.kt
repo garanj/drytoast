@@ -807,4 +807,33 @@ class AndroidSettingsRepositoryTest {
         repository.updateDpcSuspendedPackages(emptySet())
         assertThat(repository.getSettings().dpcSuspendedPackages).isEmpty()
     }
+
+    @Test
+    fun guardedSessionGraceMinutes_persistsInLiveAndStagedRebootShadow() = runTest(testDispatcher) {
+        assertThat(repository.getSettings().general.guardedSessionGraceMinutes).isEqualTo(5)
+
+        repository.updateGeneralSettings(
+            GeneralSettings(
+                guardedSessionGraceMinutes = 15,
+                requireRebootForSettingsChange = true,
+            ),
+        )
+        assertThat(repository.getSettings().general.guardedSessionGraceMinutes).isEqualTo(15)
+
+        // Stage change to 0 minutes while requireRebootForSettingsChange is active
+        repository.updateGeneralSettings(
+            GeneralSettings(
+                guardedSessionGraceMinutes = 0,
+                requireRebootForSettingsChange = true,
+            ),
+        )
+        val staged = repository.getSettings()
+        assertThat(staged.hasPendingRebootChanges).isTrue()
+        assertThat(staged.general.guardedSessionGraceMinutes).isEqualTo(15)
+        assertThat(staged.editableSnapshot.general.guardedSessionGraceMinutes).isEqualTo(0)
+
+        // Promote on boot
+        repository.promotePendingSettingsOnBoot()
+        assertThat(repository.getSettings().general.guardedSessionGraceMinutes).isEqualTo(0)
+    }
 }

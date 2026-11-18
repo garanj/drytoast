@@ -1198,4 +1198,27 @@ class CascadingResolutionEngineTest {
         assertThat(wsAfterTagRemoved.activeProfiles).isEmpty()
         assertThat(wsAfterTagRemoved.activeNfcLatches).isEmpty()
     }
+
+    @Test
+    fun resolvedWorkingSet_exposesGuardedAndBlockedComponentsExcludingDialer() {
+        val base = BaseProfileSettings(
+            appAssignments = mapOf(
+                socialComponent to AppAssignment.Blocked,
+                workComponent to AppAssignment.Guarded(),
+                utilityComponent to AppAssignment.Standard,
+                dialerComponent to AppAssignment.Guarded(),
+            ),
+        )
+
+        val ws = engine.resolveWorkingSet(
+            baseProfile = base,
+            customProfiles = emptyList(),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(10, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+        )
+
+        assertThat(ws.blockedComponents).containsExactly(socialComponent)
+        assertThat(ws.guardedComponents).containsExactly(workComponent)
+    }
 }

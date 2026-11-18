@@ -1195,13 +1195,27 @@ class SearchViewModelTest {
 
             // 1. At 08:00 (only Base Profile active):
             //    - blockedComponent ("com.example.games") is Blocked -> suspended
-            //    - socialComponent ("com.example.social") is Guarded -> NOT suspended (preserves notifications)
+            //    - socialComponent ("com.example.social") is Guarded -> suspended at rest in Hardened Mode
             //    - dialerComponent ("com.android.dialer") is default dialer -> NEVER suspended
+            assertThat(fakeAccessController.currentlySuspendedPackages).containsExactly(
+                blockedComponent.packageName,
+                socialComponent.packageName,
+            )
+
+            // 1b. Authorizing a guarded launch for socialComponent grants a session lease and unsuspends it
+            var launchedCallbackInvoked = false
+            vm.confirmFrictionAndLaunch(socialComponent) {
+                launchedCallbackInvoked = true
+            }
+            advanceUntilIdle()
+            assertThat(launchedCallbackInvoked).isTrue()
+            assertThat(fakeAccessController.lastGrantedGraceDurationMillis).isEqualTo(5 * 60_000L)
             assertThat(fakeAccessController.currentlySuspendedPackages)
                 .containsExactly(blockedComponent.packageName)
 
             // 2. At 09:30 (Work Profile activates):
             //    - socialComponent and calculatorComponent become Blocked -> suspended alongside blockedComponent
+            //      (Blocked overrides any active Guarded lease)
             currentDayTime = com.garan.threshold.core.port.LocalDayTime(
                 com.garan.threshold.core.model.DayOfWeek.MONDAY,
                 com.garan.threshold.core.model.TimeOfDay(9, 30),
@@ -1233,16 +1247,18 @@ class SearchViewModelTest {
                 calculatorComponent.packageName,
             )
 
-            // 5. Work Profile ends at 17:05 -> socialComponent (back to Guarded) and calculatorComponent (Standard)
-            //    are unsuspended; only blockedComponent remains suspended
+            // 5. Work Profile ends at 17:05 -> calculatorComponent (Standard) is unsuspended;
+            //    blockedComponent (Blocked) and socialComponent (Guarded at rest) remain suspended
             currentDayTime = com.garan.threshold.core.port.LocalDayTime(
                 com.garan.threshold.core.model.DayOfWeek.MONDAY,
                 com.garan.threshold.core.model.TimeOfDay(17, 5),
             )
             vm.refreshScheduleEvaluation()
             advanceUntilIdle()
-            assertThat(fakeAccessController.currentlySuspendedPackages)
-                .containsExactly(blockedComponent.packageName)
+            assertThat(fakeAccessController.currentlySuspendedPackages).containsExactly(
+                blockedComponent.packageName,
+                socialComponent.packageName,
+            )
         }
 
     private class FakeAppAccessController(deviceOwner: Boolean) :
@@ -1250,19 +1266,40 @@ class SearchViewModelTest {
         override val isDeviceOwnerFlow = kotlinx.coroutines.flow.MutableStateFlow(deviceOwner)
         var currentlySuspendedPackages: Set<String> = emptySet()
             private set
+        private val activeGuardedSessionPackages = mutableSetOf<String>()
+        var lastGrantedGraceDurationMillis: Long? = null
+            private set
 
         override fun isDeviceOwner(): Boolean = isDeviceOwnerFlow.value
 
         override suspend fun reconcileBlockedPackages(
             blockedComponents: Set<ComponentKey>,
             defaultDialerPackage: String,
+            guardedComponents: Set<ComponentKey>,
         ): Set<String> {
             if (!isDeviceOwner()) return emptySet()
-            currentlySuspendedPackages = blockedComponents
+            val blockedPkgs = blockedComponents.map { it.packageName }.toSet()
+            activeGuardedSessionPackages.removeAll(blockedPkgs)
+            val guardedPkgs = guardedComponents
                 .map { it.packageName }
+                .filter { it !in blockedPkgs && it !in activeGuardedSessionPackages }
+                .toSet()
+            currentlySuspendedPackages = (blockedPkgs + guardedPkgs)
                 .filter { it != defaultDialerPackage }
                 .toSet()
             return currentlySuspendedPackages
+        }
+
+        override suspend fun grantGuardedSession(
+            component: ComponentKey,
+            graceDurationMillis: Long,
+            defaultDialerPackage: String,
+        ): Boolean {
+            if (!isDeviceOwner()) return false
+            lastGrantedGraceDurationMillis = graceDurationMillis
+            activeGuardedSessionPackages.add(component.packageName)
+            currentlySuspendedPackages = currentlySuspendedPackages - component.packageName
+            return true
         }
     }
 

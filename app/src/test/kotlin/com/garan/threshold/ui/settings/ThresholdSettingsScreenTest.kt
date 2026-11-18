@@ -2,6 +2,7 @@ package com.garan.threshold.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import com.garan.threshold.core.model.BaseProfileSettings
 import com.garan.threshold.core.model.ComponentKey
@@ -291,5 +293,43 @@ class ThresholdSettingsScreenTest {
             .performClick()
 
         assertThat(navigatedToHardenedMode).isTrue()
+    }
+
+    @Test
+    fun guardedGracePeriodRow_opensBottomSheetAndUpdatesGraceMinutes() {
+        var selectedMinutes: Int? = null
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(
+                        general = GeneralSettings(guardedSessionGraceMinutes = 5),
+                        isLoading = false,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                    onUpdateGuardedSessionGraceMinutes = { selectedMinutes = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW))
+        composeRule.onNodeWithText("5 minutes").assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW)
+            .performClick()
+
+        composeRule.onNodeWithTag(SettingsTestTags.GUARDED_GRACE_PERIOD_SHEET)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsTestTags.guardedGraceOptionTag(15))
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(selectedMinutes).isEqualTo(15)
     }
 }

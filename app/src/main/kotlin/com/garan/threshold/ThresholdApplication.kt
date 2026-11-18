@@ -16,8 +16,13 @@ import com.garan.threshold.dpc.AndroidAppAccessController
 import com.garan.threshold.nfc.AndroidNfcReaderSource
 import com.garan.threshold.schedule.AndroidProfileCapabilityChecker
 import com.garan.threshold.schedule.AndroidScheduleAlarmScheduler
+import com.garan.threshold.schedule.ScheduleTransitionNotifier
 import com.garan.threshold.ui.launcher.AndroidLauncherRoleController
 import com.garan.threshold.ui.launcher.DialerPackageResolver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
@@ -32,12 +37,23 @@ class ThresholdApplication : Application() {
  */
 class ThresholdAppContainer(context: Context) {
     private val appContext: Context = context.applicationContext ?: context
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val packageIndexSource by lazy { AndroidPackageIndexSource(appContext) }
     val hapticEngine by lazy { AndroidHapticEngine(appContext) }
     val settingsRepository by lazy { AndroidSettingsRepository(appContext) }
     val locationSource by lazy { AndroidLocationSource(appContext) }
-    val antiMetricsRepository by lazy { AndroidAntiMetricsRepository(appContext) }
+    val antiMetricsRepository by lazy {
+        AndroidAntiMetricsRepository(
+            context = appContext,
+            onScreenOffListener = {
+                ScheduleTransitionNotifier.notifyTransition()
+                backgroundScope.launch {
+                    reconcileDpcFromSettings()
+                }
+            },
+        )
+    }
     val nfcReaderSource by lazy { AndroidNfcReaderSource(appContext, hapticEngine) }
     val wallpaperController by lazy { AndroidWallpaperController(appContext) }
 
@@ -77,16 +93,6 @@ class ThresholdAppContainer(context: Context) {
         )
     }
 
-    val appAccessController by lazy {
-        AndroidAppAccessController(
-            context = appContext,
-            settingsRepository = settingsRepository,
-            deviceOwnerOverrideProvider = { deviceOwnerOverrideForTesting },
-        )
-    }
-
-    private val dpcCascadingEngine = CascadingResolutionEngine()
-
     val activeClockSource: ClockSource = ClockSource {
         clockOverrideForTesting?.now() ?: SystemClockSource.now()
     }
@@ -94,6 +100,17 @@ class ThresholdAppContainer(context: Context) {
     val activeNowEpochMillisProvider: () -> Long = {
         nowEpochMillisOverrideForTesting ?: System.currentTimeMillis()
     }
+
+    val appAccessController by lazy {
+        AndroidAppAccessController(
+            context = appContext,
+            settingsRepository = settingsRepository,
+            deviceOwnerOverrideProvider = { deviceOwnerOverrideForTesting },
+            nowEpochMillisProvider = activeNowEpochMillisProvider,
+        )
+    }
+
+    private val dpcCascadingEngine = CascadingResolutionEngine()
 
     val scheduleAlarmScheduler by lazy {
         AndroidScheduleAlarmScheduler(
@@ -164,6 +181,7 @@ class ThresholdAppContainer(context: Context) {
             appAccessController.reconcileBlockedPackages(
                 blockedComponents = workingSet.blockedComponents,
                 defaultDialerPackage = dialerPkg,
+                guardedComponents = workingSet.guardedComponents,
             )
         }
     }

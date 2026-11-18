@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
@@ -363,6 +364,35 @@ class SearchViewModel(
         _uiState.update { it.copy(activeFriction = null) }
     }
 
+    /**
+     * Temporarily unsuspends a Guarded [component] in Hardened Mode for the configured
+     * [com.garan.threshold.core.model.GeneralSettings.guardedSessionGraceMinutes] duration.
+     */
+    suspend fun authorizeGuardedLaunch(component: ComponentKey): Boolean {
+        val graceMinutes = _uiState.value.generalSettings.guardedSessionGraceMinutes
+        return appAccessController.grantGuardedSession(
+            component = component,
+            graceDurationMillis = graceMinutes * 60_000L,
+            defaultDialerPackage = resolvedDialerPackage,
+        )
+    }
+
+    /**
+     * Unsuspends [component] when Hardened Mode is active before invoking [onAuthorizedLaunch].
+     */
+    fun confirmFrictionAndLaunch(component: ComponentKey, onAuthorizedLaunch: () -> Unit) {
+        if (!appAccessController.isDeviceOwnerFlow.value) {
+            onAuthorizedLaunch()
+            return
+        }
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                authorizeGuardedLaunch(component)
+            }
+            onAuthorizedLaunch()
+        }
+    }
+
     fun markFirstRunHintSeen() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository?.setHasSeenFirstRunHint(true)
@@ -467,6 +497,7 @@ class SearchViewModel(
         appAccessController.reconcileBlockedPackages(
             blockedComponents = workingSet.blockedComponents,
             defaultDialerPackage = resolvedDialerPackage,
+            guardedComponents = workingSet.guardedComponents,
         )
 
         val quickApps = settings.baseProfile.quickActions

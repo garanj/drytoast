@@ -46,20 +46,38 @@ interface AppAccessController {
 
     /**
      * Reconciles OS-level package suspension (`setPackagesSuspended`) against the current set
-     * of [blockedComponents] resolved by the cascading profile engine.
+     * of [blockedComponents] and resting-state [guardedComponents] resolved by the cascading profile engine.
      *
      * Invariants:
      * 1. No-op when [isDeviceOwner] is `false`.
      * 2. Never suspends [defaultDialerPackage] (Universal Dialer Safety Invariant) or Threshold itself.
-     * 3. Suspends newly blocked packages and unsuspends any previously suspended packages that are
-     *    no longer blocked.
+     * 3. Suspends newly blocked packages and guarded packages at rest (except guarded packages holding
+     *    an active, non-expired session lease that are not currently blocked), and unsuspends any
+     *    previously suspended packages that are no longer blocked/guarded or have an active lease.
      *
      * @return The set of package names currently suspended by Threshold after reconciliation.
      */
     suspend fun reconcileBlockedPackages(
         blockedComponents: Set<ComponentKey>,
         defaultDialerPackage: String,
+        guardedComponents: Set<ComponentKey> = emptySet(),
     ): Set<String> = emptySet()
+
+    /**
+     * Temporarily unsuspends a Guarded [component] prior to launch after passing a friction gate,
+     * recording a session lease for [graceDurationMillis].
+     * Returns `true` if the package was unsuspended (or if not in Device Owner mode, `false`).
+     */
+    suspend fun grantGuardedSession(
+        component: ComponentKey,
+        graceDurationMillis: Long,
+        defaultDialerPackage: String = "",
+    ): Boolean = false
+
+    /**
+     * Explicitly revokes a Guarded session lease for [packageName] and re-suspends it if applicable.
+     */
+    suspend fun revokeGuardedSession(packageName: String): Boolean = false
 
     /**
      * Direct DPC-level package suspension (`setPackagesSuspended`).
