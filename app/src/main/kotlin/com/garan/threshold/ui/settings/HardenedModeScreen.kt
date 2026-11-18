@@ -1,14 +1,11 @@
 package com.garan.threshold.ui.settings
 
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.widget.Toast
+import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -111,10 +108,7 @@ object HardenedModeDeepLink {
 object HardenedModeTestTags {
     const val SCREEN_LIST = "hardened_mode_list"
     const val STATUS_CARD = "hardened_mode_status_card"
-    const val COPY_ENABLE_COMMAND = "hardened_mode_copy_enable_command"
-    const val COPY_DISABLE_COMMAND = "hardened_mode_copy_disable_command"
-    const val COPY_LOCK_SETTINGS_COMMAND = "hardened_mode_copy_lock_settings_command"
-    const val COPY_UNLOCK_SETTINGS_COMMAND = "hardened_mode_copy_unlock_settings_command"
+    const val OPEN_WEBSITE_BUTTON = "hardened_mode_open_website_button"
     const val DISABLE_SCREEN_ROOT = "disable_hardened_mode_screen"
     const val CONFIRM_DISABLE_BUTTON = "disable_hardened_mode_confirm_button"
     const val CANCEL_DISABLE_BUTTON = "disable_hardened_mode_cancel_button"
@@ -137,17 +131,18 @@ fun HardenedModeScreen(
     isHardenedModeActive: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onCopyCommand: ((String) -> Unit)? = null,
+    onOpenWebsite: ((String) -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
 
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    val copyHandler: (String) -> Unit = onCopyCommand ?: { command ->
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Threshold ADB command", command))
-        Toast.makeText(context, context.getString(R.string.toast_command_copied), Toast.LENGTH_SHORT).show()
+    val openWebsiteHandler: (String) -> Unit = onOpenWebsite ?: { url ->
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { context.startActivity(intent) }
     }
 
     Scaffold(
@@ -320,62 +315,22 @@ fun HardenedModeScreen(
                 )
             }
 
-            item(key = "setup_prereq") {
-                HardenedFeatureRow(
-                    title = stringResource(R.string.hardened_mode_setup_prereq_title),
-                    body = stringResource(R.string.hardened_mode_setup_prereq_body),
-                )
-            }
-
-            item(key = "setup_qr") {
-                HardenedFeatureRow(
-                    title = stringResource(R.string.hardened_mode_qr_setup_title),
-                    body = stringResource(R.string.hardened_mode_qr_setup_body),
-                )
-            }
-
-            item(key = "setup_adb_header") {
-                SettingsSectionHeader(title = stringResource(R.string.hardened_mode_adb_setup_title))
-            }
-
-            item(key = "cmd_enable") {
-                val cmd = stringResource(R.string.hardened_mode_cmd_enable)
-                AdbCommandBlock(
-                    label = stringResource(R.string.hardened_mode_cmd_enable_label),
-                    command = cmd,
-                    copyButtonTestTag = HardenedModeTestTags.COPY_ENABLE_COMMAND,
-                    onCopy = { copyHandler(cmd) },
-                )
-            }
-
-            item(key = "cmd_disable") {
-                val cmd = stringResource(R.string.hardened_mode_cmd_disable)
-                AdbCommandBlock(
-                    label = stringResource(R.string.hardened_mode_cmd_disable_label),
-                    command = cmd,
-                    copyButtonTestTag = HardenedModeTestTags.COPY_DISABLE_COMMAND,
-                    onCopy = { copyHandler(cmd) },
-                )
-            }
-
-            item(key = "cmd_lock_settings") {
-                val cmd = stringResource(R.string.hardened_mode_cmd_lock_settings)
-                AdbCommandBlock(
-                    label = stringResource(R.string.hardened_mode_cmd_lock_settings_label),
-                    command = cmd,
-                    copyButtonTestTag = HardenedModeTestTags.COPY_LOCK_SETTINGS_COMMAND,
-                    onCopy = { copyHandler(cmd) },
-                )
-            }
-
-            item(key = "cmd_unlock_settings") {
-                val cmd = stringResource(R.string.hardened_mode_cmd_unlock_settings)
-                AdbCommandBlock(
-                    label = stringResource(R.string.hardened_mode_cmd_unlock_settings_label),
-                    command = cmd,
-                    copyButtonTestTag = HardenedModeTestTags.COPY_UNLOCK_SETTINGS_COMMAND,
-                    onCopy = { copyHandler(cmd) },
-                )
+            item(key = "open_website_button") {
+                val websiteUrl = stringResource(R.string.hardened_mode_website_url)
+                OutlinedButton(
+                    onClick = { openWebsiteHandler(websiteUrl) },
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .heightIn(min = 48.dp)
+                        .testTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON),
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_open_hardened_mode_website),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
 
             item(key = "bottom_spacer") {
@@ -900,51 +855,4 @@ private fun HardenedFeatureRow(title: String, body: String, modifier: Modifier =
         },
         modifier = modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun AdbCommandBlock(
-    label: String,
-    command: String,
-    copyButtonTestTag: String,
-    onCopy: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Surface(
-            shape = RoundedCornerShape(2.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = command,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(12.dp),
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        OutlinedButton(
-            onClick = onCopy,
-            shape = RoundedCornerShape(2.dp),
-            modifier = Modifier.testTag(copyButtonTestTag),
-        ) {
-            Text(
-                text = stringResource(R.string.action_copy_command),
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
-    }
 }

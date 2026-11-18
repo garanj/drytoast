@@ -35,15 +35,15 @@ class HardenedModeScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun hardenedModeScreen_whenInactive_displaysStandardModeStatusAndCopiesAllAdbCommands() {
-        val copiedCommands = mutableListOf<String>()
+    fun hardenedModeScreen_whenInactive_displaysStandardModeStatusAndLaunchesSetupWebsite() {
+        var openedUrls = mutableListOf<String>()
 
         composeRule.setContent {
             ThresholdTheme {
                 HardenedModeScreen(
                     isHardenedModeActive = false,
                     onBack = {},
-                    onCopyCommand = { copiedCommands.add(it) },
+                    onOpenWebsite = { openedUrls.add(it) },
                 )
             }
         }
@@ -51,32 +51,16 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithText("STATUS: STANDARD MODE (NOT ENABLED)").assertIsDisplayed()
         composeRule.onNodeWithText("OS-Level Package Suspension").assertIsDisplayed()
 
-        // Scroll to prerequisite warning and verify "new devices only" guidance is shown
         val list = composeRule.onNodeWithTag(HardenedModeTestTags.SCREEN_LIST)
-        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_ENABLE_COMMAND))
-        composeRule.onNodeWithText("Recommended Only for New or Freshly Reset Devices")
+        list.performScrollToNode(hasTestTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON))
+        composeRule.onNodeWithText(
+            "Hardened Mode cannot be toggled from inside Threshold's normal menus. You can enable or disable it either by scanning the QR codes on the Threshold website or via USB debugging (ADB) from a computer.",
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON)
             .assertIsDisplayed()
+            .performClick()
 
-        // Scroll to and click each ADB command Copy button
-
-        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_ENABLE_COMMAND))
-        composeRule.onNodeWithTag(HardenedModeTestTags.COPY_ENABLE_COMMAND).performClick()
-
-        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_DISABLE_COMMAND))
-        composeRule.onNodeWithTag(HardenedModeTestTags.COPY_DISABLE_COMMAND).performClick()
-
-        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_LOCK_SETTINGS_COMMAND))
-        composeRule.onNodeWithTag(HardenedModeTestTags.COPY_LOCK_SETTINGS_COMMAND).performClick()
-
-        list.performScrollToNode(hasTestTag(HardenedModeTestTags.COPY_UNLOCK_SETTINGS_COMMAND))
-        composeRule.onNodeWithTag(HardenedModeTestTags.COPY_UNLOCK_SETTINGS_COMMAND).performClick()
-
-        assertThat(copiedCommands).containsExactly(
-            "adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver",
-            "adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n com.garan.threshold/.settings.SettingsLockReceiver",
-            "adb shell am broadcast -a com.garan.threshold.action.LOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver",
-            "adb shell am broadcast -a com.garan.threshold.action.UNLOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver",
-        ).inOrder()
+        assertThat(openedUrls).containsExactly("https://threshold.app/hardened-mode")
     }
 
     @Test
