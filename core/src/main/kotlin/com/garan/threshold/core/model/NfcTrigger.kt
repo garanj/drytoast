@@ -31,6 +31,10 @@ data class NfcTagEntry(val uid: String, val label: String = "") {
     }
 
     companion object {
+        const val THRESHOLD_NDEF_SCHEME = "threshold"
+        const val THRESHOLD_NDEF_HOST = "tag"
+        const val THRESHOLD_NDEF_URI = "$THRESHOLD_NDEF_SCHEME://$THRESHOLD_NDEF_HOST"
+
         /**
          * Normalizes a raw hex UID string (with or without colons, dashes, or spaces) into
          * uppercase colon-separated byte pairs (e.g. `"04a23f8b"` -> `"04:A2:3F:8B"`).
@@ -58,6 +62,39 @@ data class NfcTagEntry(val uid: String, val label: String = "") {
             "$hi$lo"
         }
     }
+}
+
+/**
+ * Outcome of scanning and provisioning a physical NFC tag during trigger registration.
+ */
+sealed interface NfcTagRegistrationResult {
+    val uid: String
+
+    /**
+     * Tag already contains (or was successfully formatted/written with) Threshold's NDEF record.
+     */
+    data class Success(override val uid: String) : NfcTagRegistrationResult
+
+    /**
+     * Card does not expose `Ndef` or `NdefFormatable` technologies (e.g. non-NDEF access badge or bank card).
+     */
+    data class UnsupportedCard(override val uid: String) : NfcTagRegistrationResult
+
+    /**
+     * Tag exposes `Ndef` but is write-locked (`!isWritable`) and does not already contain Threshold's NDEF record.
+     */
+    data class ReadOnlyTag(override val uid: String) : NfcTagRegistrationResult
+
+    /**
+     * Tag exposes writable `Ndef` but its maximum byte capacity is smaller than Threshold's NDEF record.
+     */
+    data class InsufficientCapacity(override val uid: String, val maxSizeBytes: Int, val requiredBytes: Int) :
+        NfcTagRegistrationResult
+
+    /**
+     * Tag was pulled out of the RF field or encountered an I/O error before NDEF formatting/writing completed.
+     */
+    data class WriteInterrupted(override val uid: String) : NfcTagRegistrationResult
 }
 
 /**

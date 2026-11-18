@@ -29,6 +29,7 @@ object ProfilesTestTags {
     const val TRIGGER_EDITOR_NFC_MAX_USES_VALUE = "trigger_editor_nfc_max_uses_value"
     const val TRIGGER_EDITOR_NFC_MAX_USES_DECREMENT = "trigger_editor_nfc_max_uses_decrement"
     const val TRIGGER_EDITOR_NFC_MAX_USES_INCREMENT = "trigger_editor_nfc_max_uses_increment"
+    const val TRIGGER_EDITOR_NFC_REGISTRATION_STATUS = "trigger_editor_nfc_registration_status"
     const val TRIGGER_EDITOR_SAVE_BUTTON = "trigger_editor_save_button"
     const val TRIGGER_EDITOR_CANCEL_BUTTON = "trigger_editor_cancel_button"
 

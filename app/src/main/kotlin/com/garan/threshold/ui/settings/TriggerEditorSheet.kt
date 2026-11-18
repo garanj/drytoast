@@ -50,6 +50,7 @@ import com.garan.threshold.core.model.GeoTrigger
 import com.garan.threshold.core.model.GeoTriggerMode
 import com.garan.threshold.core.model.LocationFix
 import com.garan.threshold.core.model.NfcTagEntry
+import com.garan.threshold.core.model.NfcTagRegistrationResult
 import com.garan.threshold.core.model.NfcTrigger
 import com.garan.threshold.core.model.NfcTriggerMode
 import com.garan.threshold.core.model.ProfileTrigger
@@ -102,6 +103,7 @@ fun TriggerEditorSheet(
     onUseCurrentLocation: ((onLocationResolved: (LocationFix) -> Unit) -> Unit)? = null,
     onOpenMapApp: (LocationFix?) -> Unit = {},
     onRegisterNfcScanListener: (((String) -> Unit)?) -> Unit = {},
+    onRegisterNfcRegistrationListener: (((NfcTagRegistrationResult) -> Unit)?) -> Unit = {},
     allowNfcTriggerType: Boolean = true,
 ) {
     ProfileEditorSheet(
@@ -116,6 +118,7 @@ fun TriggerEditorSheet(
         onUseCurrentLocation = onUseCurrentLocation,
         onOpenMapApp = onOpenMapApp,
         onRegisterNfcScanListener = onRegisterNfcScanListener,
+        onRegisterNfcRegistrationListener = onRegisterNfcRegistrationListener,
         allowNfcTriggerType = allowNfcTriggerType,
         nameFieldLabel = "Trigger name",
         newTitle = "New Trigger",
@@ -162,6 +165,7 @@ fun ProfileEditorSheet(
     onUseCurrentLocation: ((onLocationResolved: (LocationFix) -> Unit) -> Unit)? = null,
     onOpenMapApp: (LocationFix?) -> Unit = {},
     onRegisterNfcScanListener: (((String) -> Unit)?) -> Unit = {},
+    onRegisterNfcRegistrationListener: (((NfcTagRegistrationResult) -> Unit)?) -> Unit = {},
     onSaveTrigger: ((name: String, trigger: ProfileTrigger) -> Unit)? = null,
     allowNfcTriggerType: Boolean = true,
     nameFieldLabel: String = "Profile name",
@@ -239,19 +243,32 @@ fun ProfileEditorSheet(
     }
     var nfcMaxDailyUses by remember { mutableStateOf(seedNfc?.maxDailyUses) }
     var nfcTags by remember { mutableStateOf(seedNfc?.tags ?: emptyList()) }
+    var lastNfcRegistrationResult by remember { mutableStateOf<NfcTagRegistrationResult?>(null) }
 
-    DisposableEffect(selectedKind, onRegisterNfcScanListener) {
-        if (selectedKind == EditorTriggerKind.NFC) {
-            onRegisterNfcScanListener { rawUid ->
-                val normalized = NfcTagEntry.normalizeUid(rawUid)
+    DisposableEffect(selectedKind, onRegisterNfcScanListener, onRegisterNfcRegistrationListener) {
+        val handleResult: (NfcTagRegistrationResult) -> Unit = { result ->
+            lastNfcRegistrationResult = result
+            if (result is NfcTagRegistrationResult.Success) {
+                val normalized = NfcTagEntry.normalizeUid(result.uid)
                 if (normalized.isNotEmpty() && nfcTags.none { it.uid == normalized }) {
                     nfcTags = nfcTags + NfcTagEntry(uid = normalized)
                 }
             }
+        }
+        if (selectedKind == EditorTriggerKind.NFC) {
+            onRegisterNfcRegistrationListener(handleResult)
+            onRegisterNfcScanListener { rawUid ->
+                val normalized = NfcTagEntry.normalizeUid(rawUid)
+                if (normalized.isNotEmpty()) {
+                    handleResult(NfcTagRegistrationResult.Success(normalized))
+                }
+            }
         } else {
+            onRegisterNfcRegistrationListener(null)
             onRegisterNfcScanListener(null)
         }
         onDispose {
+            onRegisterNfcRegistrationListener(null)
             onRegisterNfcScanListener(null)
         }
     }
@@ -461,6 +478,7 @@ fun ProfileEditorSheet(
                             hapticEngine.rotaryDetent()
                             nfcTags = nfcTags.filterNot { it.uid == uid }
                         },
+                        lastRegistrationResult = lastNfcRegistrationResult,
                     )
                 }
             }

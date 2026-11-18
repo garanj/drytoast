@@ -59,4 +59,27 @@ class NfcTriggerTest {
         assertThat(nfcProfileTrigger.requiredCapabilities)
             .containsExactly(ProfileCapability.NFC_HARDWARE_ENABLED)
     }
+
+    @Test
+    fun nfcTagRegistrationResult_preservesNormalizedUidAndMetadataAcrossVariants() {
+        val success: NfcTagRegistrationResult = NfcTagRegistrationResult.Success("04:A2:3F:8B")
+        val unsupported: NfcTagRegistrationResult = NfcTagRegistrationResult.UnsupportedCard("04:B1:22:99")
+        val readOnly: NfcTagRegistrationResult = NfcTagRegistrationResult.ReadOnlyTag("04:C1:D2:E3")
+        val small: NfcTagRegistrationResult = NfcTagRegistrationResult.InsufficientCapacity(
+            uid = "04:D4:E5:F6",
+            maxSizeBytes = 8,
+            requiredBytes = 19,
+        )
+        val interrupted: NfcTagRegistrationResult = NfcTagRegistrationResult.WriteInterrupted("04:11:22:33")
+
+        assertThat(success.uid).isEqualTo("04:A2:3F:8B")
+        assertThat(unsupported.uid).isEqualTo("04:B1:22:99")
+        assertThat(readOnly.uid).isEqualTo("04:C1:D2:E3")
+        assertThat((small as NfcTagRegistrationResult.InsufficientCapacity).maxSizeBytes).isEqualTo(8)
+        assertThat(small.requiredBytes).isEqualTo(19)
+        assertThat(interrupted.uid).isEqualTo("04:11:22:33")
+        assertThat(NfcTagEntry.THRESHOLD_NDEF_SCHEME).isEqualTo("threshold")
+        assertThat(NfcTagEntry.THRESHOLD_NDEF_HOST).isEqualTo("tag")
+        assertThat(NfcTagEntry.THRESHOLD_NDEF_URI).isEqualTo("threshold://tag")
+    }
 }
