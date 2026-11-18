@@ -204,8 +204,11 @@ class AndroidNfcReaderSource(
     @Volatile
     var activeRegistrationResultListener: ((NfcTagRegistrationResult) -> Unit)? = null
 
-    private val hasActiveRegistrationListener: Boolean
+    internal val hasActiveRegistrationListener: Boolean
         get() = activeRegistrationListener != null || activeRegistrationResultListener != null
+
+    internal val hasActiveScanCollectors: Boolean
+        get() = _tagScans.subscriptionCount.value > 0
 
     private val readerCallback = NfcAdapter.ReaderCallback { tag: Tag? ->
         onTagDiscovered(tag)

@@ -3,6 +3,7 @@ package com.garan.threshold
 import android.app.Application
 import android.content.Context
 import com.garan.threshold.core.cascading.CascadingResolutionEngine
+import com.garan.threshold.core.cascading.NfcTapOutcome
 import com.garan.threshold.core.model.ProfileTrigger
 import com.garan.threshold.core.port.ClockSource
 import com.garan.threshold.core.port.SystemClockSource
@@ -183,6 +184,63 @@ class ThresholdAppContainer(context: Context) {
                 defaultDialerPackage = dialerPkg,
                 guardedComponents = workingSet.guardedComponents,
             )
+        }
+    }
+
+    /**
+     * Fallback handler when an NFC tag is tapped via [com.garan.threshold.nfc.NfcTagDispatchActivity]
+     * while no active [com.garan.threshold.ui.search.SearchViewModel] is currently subscribed to
+     * [nfcReaderSource].
+     */
+    fun processBackgroundNfcTagScan(rawUid: String) {
+        backgroundScope.launch {
+            val settings = settingsRepository.getSettings()
+            val triggersById = settings.savedTriggersById
+            val hasEnabledGeoProfiles = settings.customProfiles.any { profile ->
+                profile.enabled && profile.resolvedTriggers(triggersById).any { it is ProfileTrigger.Geo }
+            }
+            if (hasEnabledGeoProfiles && locationSource.currentLocation.value == null) {
+                locationSource.refreshLocation()
+            }
+            val now = activeClockSource.now()
+            val nowMillis = activeNowEpochMillisProvider()
+            val currentLocation = locationSource.currentLocation.value
+            val tapResult = dpcCascadingEngine.processNfcTagTap(
+                rawTagUid = rawUid,
+                customProfiles = settings.customProfiles,
+                savedTriggers = settings.savedTriggers,
+                currentDay = now.dayOfWeek,
+                currentTime = now.timeOfDay,
+                currentLocation = currentLocation,
+                currentNfcLatches = settings.nfcLatches,
+                nowEpochMillis = nowMillis,
+                currentDailyUsage = settings.nfcDailyUsage,
+                currentLocalDate = now.localDate,
+            )
+            if (tapResult.updatedLatches != settings.nfcLatches ||
+                tapResult.updatedDailyUsage != settings.nfcDailyUsage
+            ) {
+                settingsRepository.updateNfcLatches(
+                    latches = tapResult.updatedLatches,
+                    dailyUsage = tapResult.updatedDailyUsage,
+                )
+            }
+            when (tapResult.outcome) {
+                NfcTapOutcome.LATCHED_ON,
+                NfcTapOutcome.UNLATCHED_OFF,
+                -> hapticEngine.relaySnap()
+                NfcTapOutcome.COMPANION_CONDITIONS_NOT_MET,
+                NfcTapOutcome.DAILY_LIMIT_REACHED,
+                -> hapticEngine.resistanceDetent()
+                NfcTapOutcome.UNRECOGNIZED_TAG -> Unit
+            }
+            scheduleAlarmScheduler.syncNextScheduleAlarm(
+                profiles = settings.customProfiles,
+                savedTriggers = settings.savedTriggers,
+                nfcLatches = tapResult.updatedLatches,
+            )
+            ScheduleTransitionNotifier.notifyTransition()
+            reconcileDpcFromSettings()
         }
     }
 

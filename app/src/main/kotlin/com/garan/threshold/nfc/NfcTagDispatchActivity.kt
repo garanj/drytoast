@@ -7,6 +7,7 @@ import android.nfc.Tag
 import android.os.Build
 import android.os.Bundle
 import com.garan.threshold.ThresholdAppContainer
+import com.garan.threshold.core.model.NfcTagEntry
 
 /**
  * Zero-UI (`Theme.NoDisplay`) activity registered for `android.nfc.action.NDEF_DISCOVERED`
@@ -37,20 +38,24 @@ class NfcTagDispatchActivity : Activity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        val readerSource = ThresholdAppContainer.from(this).nfcReaderSource
+        val container = ThresholdAppContainer.from(this)
+        val readerSource = container.nfcReaderSource
         val tag: Tag? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
         } else {
             @Suppress("DEPRECATION")
             intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
         }
-        if (tag?.id != null) {
-            readerSource.onTagIdDiscovered(tag.id)
-            return
+        val rawUid: String? = when {
+            tag?.id != null && tag.id.isNotEmpty() -> NfcTagEntry.formatUidBytes(tag.id)
+            else -> intent.getStringExtra(EXTRA_TEST_TAG_UID)
         }
-        val testUid = intent.getStringExtra(EXTRA_TEST_TAG_UID)
-        if (!testUid.isNullOrBlank()) {
-            readerSource.dispatchScannedUid(testUid)
+        if (!rawUid.isNullOrBlank()) {
+            if (readerSource.hasActiveRegistrationListener || readerSource.hasActiveScanCollectors) {
+                readerSource.dispatchScannedUid(rawUid)
+            } else {
+                container.processBackgroundNfcTagScan(rawUid)
+            }
         }
     }
 
