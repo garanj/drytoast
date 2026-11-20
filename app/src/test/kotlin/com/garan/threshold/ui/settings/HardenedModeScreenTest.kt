@@ -60,7 +60,7 @@ class HardenedModeScreenTest {
             .assertIsDisplayed()
             .performClick()
 
-        assertThat(openedUrls).containsExactly("https://threshold.app/hardened-mode")
+        assertThat(openedUrls).containsExactly("https://thresholdlauncher.com/hardened-mode")
     }
 
     @Test
