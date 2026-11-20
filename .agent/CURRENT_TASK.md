@@ -1,11 +1,9 @@
 # Current Task
 
-- **Active Issue**: [#134](https://github.com/garanj/threshold/issues/134) — `feat(site): add Hardened Mode console and automated Firebase Hosting release flow`
-- **Branch**: `feat/134-hardened-mode-console`
+- **Active Issue**: [#136](https://github.com/garanj/threshold/issues/136) — `fix(site): remove inaccurate Settings Lock alternative wording on Hardened Mode console`
+- **Branch**: `fix/136-hardening-console-copy`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Verify `*.apk` is ignored in `.gitignore`
-- [x] Add `site/provisioning-qr-payload.json` with `https://thresholdlauncher.com/downloads/threshold-release.apk`
-- [x] Add mode switcher / explainer to `site/console/index.html` and create `site/console/hardening/index.html` (with `/hardened-mode` redirect in `firebase.json`)
-- [x] Update `.github/workflows/release.yml` to stage `site/downloads/threshold-release.apk` and `site/provisioning-qr-payload.json` and deploy to Firebase Hosting
+- [x] Remove "On an already-configured daily phone, use Settings Lock instead." from `site/console/hardening/index.html`
+- [x] Deploy updated page to Firebase Hosting
