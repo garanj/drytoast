@@ -275,14 +275,14 @@
     for (let i = 0; i < 10; i++) fRem = (fRem << 1) ^ ((fRem >>> 9) * 0x537);
     const fBits = ((fData << 10) | fRem) ^ 0x5412;
 
-    for (let i = 0; i <= 5; i++) setFunctionModule(8, i, ((fBits >>> i) & 1) !== 0);
-    setFunctionModule(8, 7, ((fBits >>> 6) & 1) !== 0);
+    for (let i = 0; i <= 5; i++) setFunctionModule(i, 8, ((fBits >>> i) & 1) !== 0);
+    setFunctionModule(7, 8, ((fBits >>> 6) & 1) !== 0);
     setFunctionModule(8, 8, ((fBits >>> 7) & 1) !== 0);
-    setFunctionModule(7, 8, ((fBits >>> 8) & 1) !== 0);
-    for (let i = 9; i < 15; i++) setFunctionModule(14 - i, 8, ((fBits >>> i) & 1) !== 0);
+    setFunctionModule(8, 7, ((fBits >>> 8) & 1) !== 0);
+    for (let i = 9; i < 15; i++) setFunctionModule(8, 14 - i, ((fBits >>> i) & 1) !== 0);
 
-    for (let i = 0; i < 8; i++) setFunctionModule(size - 1 - i, 8, ((fBits >>> i) & 1) !== 0);
-    for (let i = 8; i < 15; i++) setFunctionModule(8, size - 15 + i, ((fBits >>> i) & 1) !== 0);
+    for (let i = 0; i < 8; i++) setFunctionModule(8, size - 1 - i, ((fBits >>> i) & 1) !== 0);
+    for (let i = 8; i < 15; i++) setFunctionModule(size - 15 + i, 8, ((fBits >>> i) & 1) !== 0);
 
     return { size, modules };
   }
