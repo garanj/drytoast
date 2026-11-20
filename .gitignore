@@ -33,6 +33,9 @@ local.properties
 
 # Google Services (Firebase / Cloud credentials if any)
 google-services.json
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
 
 # OS and Scratch files
 .DS_Store
