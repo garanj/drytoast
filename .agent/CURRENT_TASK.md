@@ -1,9 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#136](https://github.com/garanj/threshold/issues/136) — `fix(site): remove inaccurate Settings Lock alternative wording on Hardened Mode console`
-- **Branch**: `fix/136-hardening-console-copy`
+- **Active Issue**: [#138](https://github.com/garanj/threshold/issues/138) — `feat(site,release): add Expert Mode WebUSB Hardened Mode provisioner and testOnly release artifact`
+- **Branch**: `feat/138-expert-webusb-hardening`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Remove "On an already-configured daily phone, use Settings Lock instead." from `site/console/hardening/index.html`
-- [x] Deploy updated page to Firebase Hosting
+- [x] Add `THRESHOLD_TEST_ONLY` manifest placeholder support in `app/build.gradle.kts` and `app/src/main/AndroidManifest.xml`
+- [x] Update `.github/workflows/release.yml` to build & publish `threshold-testonly.apk`, verify `testOnly` flags, and stage `site/downloads/threshold-testonly.bin` & `site/downloads/threshold-release.bin`
+- [x] Bundle self-hosted Tango WebUSB ADB client (`site/console/webadb.bundle.js`)
+- [x] Add **ENABLE (EXPERT)** tab and 5-stage WebUSB Hardened Mode provisioner + on-device 90s watchdog + Emergency Restore/Repair controls to `site/console/hardening/index.html`
+- [x] Verify Gradle unit tests & Spotless pass (`./gradlew spotlessCheck test`)
