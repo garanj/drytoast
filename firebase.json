@@ -8,6 +8,18 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/hardened-mode",
+        "destination": "/console/hardening",
+        "type": 302
+      },
+      {
+        "source": "/downloads/threshold-release.apk",
+        "destination": "https://github.com/garanj/threshold/releases/latest/download/threshold-release.apk",
+        "type": 302
+      }
+    ],
     "headers": [
       {
         "source": "**/*.@(png|svg|ico)",
@@ -15,6 +27,24 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "/provisioning-qr-payload.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/console/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
           }
         ]
       }

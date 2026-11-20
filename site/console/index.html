@@ -42,6 +42,55 @@
       color: #8e8e8e;
       text-transform: uppercase;
     }
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 480px) {
+      .mode-switcher {
+        grid-template-columns: 1fr;
+      }
+    }
+    .mode-link {
+      display: block;
+      text-decoration: none;
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      border-radius: 2px;
+      padding: 12px 14px;
+      color: #b0b0b0;
+      transition: border-color 120ms ease;
+    }
+    .mode-link:hover {
+      border-color: #666666;
+      color: #ffffff;
+    }
+    .mode-link.active {
+      background: #141414;
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+    .mode-link-title {
+      display: block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      color: inherit;
+    }
+    .mode-link-desc {
+      display: block;
+      font-size: 0.8rem;
+      color: #888888;
+      line-height: 1.35;
+    }
+    .mode-link.active .mode-link-desc {
+      color: #b8b8b8;
+    }
     h1 {
       font-size: 1.6rem;
       font-weight: 700;
@@ -197,12 +246,24 @@
 </head>
 <body>
   <main>
-    <div class="header">
+    <div class="header" style="margin-bottom: 16px;">
       <svg class="caret" viewBox="29 36.5 50 33" aria-hidden="true">
         <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z" />
       </svg>
       <span class="eyebrow">Threshold Console</span>
     </div>
+
+    <nav class="mode-switcher" aria-label="Console mode selector">
+      <a class="mode-link active" href="/console" aria-current="page">
+        <span class="mode-link-title">01 · Settings Lock</span>
+        <span class="mode-link-desc">Stop changes to settings &amp; profiles within Threshold</span>
+      </a>
+      <a class="mode-link" href="/console/hardening">
+        <span class="mode-link-title">02 · Hardened Mode</span>
+        <span class="mode-link-desc">Stop disabling Threshold &amp; enforce OS-level app suspension</span>
+      </a>
+    </nav>
+
     <h1>Settings Lock &amp; Unlock</h1>
     <p class="subtitle">Lock Threshold Settings to prevent impulse changes, or unlock them when you need to edit your rules.</p>
 

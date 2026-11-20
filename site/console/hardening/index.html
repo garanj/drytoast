@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Hardened Mode — Threshold Console</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .caret {
+      width: 22px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .eyebrow {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+    }
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 480px) {
+      .mode-switcher {
+        grid-template-columns: 1fr;
+      }
+    }
+    .mode-link {
+      display: block;
+      text-decoration: none;
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      border-radius: 2px;
+      padding: 12px 14px;
+      color: #b0b0b0;
+      transition: border-color 120ms ease;
+    }
+    .mode-link:hover {
+      border-color: #666666;
+      color: #ffffff;
+    }
+    .mode-link.active {
+      background: #141414;
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+    .mode-link-title {
+      display: block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      color: inherit;
+    }
+    .mode-link-desc {
+      display: block;
+      font-size: 0.8rem;
+      color: #888888;
+      line-height: 1.35;
+    }
+    .mode-link.active .mode-link-desc {
+      color: #b8b8b8;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 4px 0 8px;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      color: #b0b0b0;
+      margin: 0 0 24px;
+      font-size: 0.95rem;
+    }
+    .action-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      margin-bottom: 24px;
+      background: #0c0c0c;
+    }
+    .action-tab {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      border-right: 1px solid #2e2e2e;
+      color: #8e8e8e;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 13px 12px;
+      cursor: pointer;
+    }
+    .action-tab:last-child {
+      border-right: 0;
+    }
+    .action-tab.active {
+      background: #ffffff;
+      color: #000000;
+    }
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+    .step-card {
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      border-radius: 2px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .step-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    .badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      background: #ffffff;
+      color: #000000;
+      border-radius: 2px;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    .step-desc {
+      color: #b8b8b8;
+      font-size: 0.92rem;
+      margin: 0 0 16px;
+    }
+    .steps-list {
+      margin: 0 0 22px;
+      padding-left: 20px;
+      color: #d0d0d0;
+      font-size: 0.92rem;
+    }
+    .steps-list li {
+      margin-bottom: 8px;
+    }
+    .qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .qr-box {
+      width: 240px;
+      height: 240px;
+    }
+    #provision-qr-box {
+      width: 420px;
+      height: 420px;
+      max-width: 100%;
+      padding: 12px;
+    }
+    .qr-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .qr-caption {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: #888888;
+      text-transform: uppercase;
+    }
+    .generator-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 480px) {
+      .generator-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .box-field {
+      background: #141414;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .box-field:focus-within {
+      border-color: #ffffff;
+    }
+    .field-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .challenge-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      padding: 0;
+    }
+    .challenge-input::placeholder {
+      color: #444444;
+    }
+    .response-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: #ffffff;
+      user-select: all;
+    }
+    .response-value.placeholder {
+      color: #444444;
+    }
+    .note {
+      font-size: 0.82rem;
+      color: #888888;
+      margin: 14px 0 0;
+    }
+    .note a, .step-desc a {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+    details {
+      margin-top: 24px;
+      border-top: 1px solid #1f1f1f;
+      padding-top: 16px;
+      color: #8e8e8e;
+      font-size: 0.85rem;
+    }
+    summary {
+      cursor: pointer;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9e9e9e;
+    }
+    pre {
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      padding: 12px;
+      overflow-x: auto;
+      color: #d8d8d8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      margin: 12px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="header">
+      <svg class="caret" viewBox="29 36.5 50 33" aria-hidden="true">
+        <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z" />
+      </svg>
+      <span class="eyebrow">Threshold Console</span>
+    </div>
+
+    <nav class="mode-switcher" aria-label="Console mode selector">
+      <a class="mode-link" href="/console">
+        <span class="mode-link-title">01 · Settings Lock</span>
+        <span class="mode-link-desc">Stop changes to settings &amp; profiles within Threshold</span>
+      </a>
+      <a class="mode-link active" href="/console/hardening" aria-current="page">
+        <span class="mode-link-title">02 · Hardened Mode</span>
+        <span class="mode-link-desc">Stop disabling Threshold &amp; enforce OS-level app suspension</span>
+      </a>
+    </nav>
+
+    <h1>Hardened Mode (Device Owner)</h1>
+    <p class="subtitle">Provision OS-level Device Owner protection on a fresh install, or deactivate Hardened Mode on an enrolled phone.</p>
+
+    <div class="action-tabs" role="tablist" aria-label="Hardened Mode action">
+      <button type="button" class="action-tab active" role="tab" aria-selected="true" data-tab-btn="enable">Enable (6-Tap Setup)</button>
+      <button type="button" class="action-tab" role="tab" aria-selected="false" data-tab-btn="disable">Disable Hardened Mode</button>
+    </div>
+
+    <!-- TAB 1: ENABLE HARDENED MODE (6-TAP QR) -->
+    <div class="tab-pane active" data-tab-pane="enable">
+      <section class="step-card">
+        <div class="step-header">
+          <p class="step-label">Fresh Install Setup</p>
+          <span class="badge">Recommended</span>
+        </div>
+        <h2>6-Tap Welcome Screen QR Setup</h2>
+        <p class="step-desc">
+          Hardened Mode should be enabled on a brand-new or freshly factory-reset phone <strong>before</strong> signing into Google accounts. On an already-configured daily phone, use <a href="/console">Settings Lock</a> instead.
+        </p>
+        <ol class="steps-list">
+          <li>Turn on a brand-new or freshly factory-reset Android phone.</li>
+          <li>On Android’s very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android’s built-in QR scanner.</li>
+          <li>Connect to Wi-Fi when prompted, then scan the QR code below.</li>
+          <li>Android will download the signed Threshold APK, verify its SHA-256 checksum, and set Threshold as Device Owner automatically.</li>
+        </ol>
+        <div class="qr-wrap">
+          <div id="provision-qr-box" class="qr-box" role="img" aria-label="6-Tap Welcome Screen Provisioning QR code">
+            
+          </div>
+          <span class="qr-caption">6-Tap Welcome Screen Setup QR</span>
+        </div>
+        <p class="note">
+          Once Hardened Mode is active, also enable <strong>Settings Lock</strong> (<a href="/console">/console</a>) or <strong>Require Reboot for Settings Changes</strong> inside Threshold Settings so rules cannot be weakened from within the app.
+        </p>
+      </section>
+
+      <details>
+        <summary>USB / ADB command alternative (fresh device with zero accounts)</summary>
+        <pre># If Threshold is already installed on a fresh device with no accounts added:
+adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver</pre>
+      </details>
+    </div>
+
+    <!-- TAB 2: DISABLE HARDENED MODE (QR + CHALLENGE) -->
+    <div class="tab-pane" data-tab-pane="disable">
+      <section class="step-card">
+        <p class="step-label">Step 01</p>
+        <h2>Scan with your phone</h2>
+        <p class="step-desc">Open your phone’s Camera or QR scanner and scan this code to open the hidden <strong>Disable Hardened Mode</strong> screen in Threshold.</p>
+        <div class="qr-wrap">
+          <div class="qr-box" role="img" aria-label="QR code for Threshold Disable Hardened Mode deep link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="264" height="264" viewBox="0 0 264 264" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="264" height="264" fill="#ffffff"/><path d="M32,32h56v8h-56zM96,32h8v8h-8zM144,32h24v8h-24zM176,32h56v8h-56zM32,40h8v8h-8zM80,40h8v8h-8zM96,40h8v8h-8zM120,40h16v8h-16zM160,40h8v8h-8zM176,40h8v8h-8zM224,40h8v8h-8zM32,48h8v8h-8zM48,48h24v8h-24zM80,48h8v8h-8zM96,48h16v8h-16zM128,48h8v8h-8zM152,48h8v8h-8zM176,48h8v8h-8zM192,48h24v8h-24zM224,48h8v8h-8zM32,56h8v8h-8zM48,56h24v8h-24zM80,56h8v8h-8zM96,56h24v8h-24zM136,56h32v8h-32zM176,56h8v8h-8zM192,56h24v8h-24zM224,56h8v8h-8zM32,64h8v8h-8zM48,64h24v8h-24zM80,64h8v8h-8zM104,64h16v8h-16zM128,64h40v8h-40zM176,64h8v8h-8zM192,64h24v8h-24zM224,64h8v8h-8zM32,72h8v8h-8zM80,72h8v8h-8zM96,72h24v8h-24zM136,72h8v8h-8zM176,72h8v8h-8zM224,72h8v8h-8zM32,80h56v8h-56zM96,80h8v8h-8zM112,80h8v8h-8zM128,80h8v8h-8zM144,80h8v8h-8zM160,80h8v8h-8zM176,80h56v8h-56zM112,88h24v8h-24zM144,88h16v8h-16zM32,96h16v8h-16zM64,96h24v8h-24zM112,96h8v8h-8zM128,96h8v8h-8zM184,96h8v8h-8zM200,96h32v8h-32zM40,104h16v8h-16zM64,104h16v8h-16zM96,104h8v8h-8zM120,104h8v8h-8zM136,104h40v8h-40zM184,104h16v8h-16zM216,104h8v8h-8zM32,112h16v8h-16zM56,112h8v8h-8zM80,112h8v8h-8zM96,112h32v8h-32zM144,112h40v8h-40zM200,112h8v8h-8zM32,120h8v8h-8zM48,120h16v8h-16zM96,120h16v8h-16zM120,120h16v8h-16zM160,120h32v8h-32zM208,120h16v8h-16zM32,128h8v8h-8zM48,128h8v8h-8zM64,128h8v8h-8zM80,128h16v8h-16zM120,128h16v8h-16zM144,128h8v8h-8zM160,128h8v8h-8zM176,128h16v8h-16zM208,128h8v8h-8zM32,136h48v8h-48zM88,136h8v8h-8zM112,136h16v8h-16zM144,136h24v8h-24zM192,136h16v8h-16zM64,144h8v8h-8zM80,144h8v8h-8zM96,144h8v8h-8zM112,144h16v8h-16zM136,144h24v8h-24zM176,144h8v8h-8zM208,144h8v8h-8zM48,152h16v8h-16zM96,152h8v8h-8zM144,152h24v8h-24zM176,152h24v8h-24zM208,152h16v8h-16zM32,160h56v8h-56zM104,160h16v8h-16zM128,160h8v8h-8zM160,160h72v8h-72zM96,168h8v8h-8zM120,168h8v8h-8zM136,168h16v8h-16zM160,168h8v8h-8zM192,168h8v8h-8zM216,168h8v8h-8zM32,176h56v8h-56zM104,176h8v8h-8zM120,176h16v8h-16zM144,176h8v8h-8zM160,176h8v8h-8zM176,176h8v8h-8zM192,176h8v8h-8zM32,184h8v8h-8zM80,184h8v8h-8zM96,184h8v8h-8zM120,184h8v8h-8zM160,184h8v8h-8zM192,184h8v8h-8zM208,184h16v8h-16zM32,192h8v8h-8zM48,192h24v8h-24zM80,192h8v8h-8zM96,192h24v8h-24zM128,192h8v8h-8zM160,192h40v8h-40zM208,192h16v8h-16zM32,200h8v8h-8zM48,200h24v8h-24zM80,200h8v8h-8zM104,200h8v8h-8zM120,200h8v8h-8zM144,200h8v8h-8zM176,200h16v8h-16zM208,200h24v8h-24zM32,208h8v8h-8zM48,208h24v8h-24zM80,208h8v8h-8zM104,208h32v8h-32zM152,208h8v8h-8zM168,208h24v8h-24zM200,208h24v8h-24zM32,216h8v8h-8zM80,216h8v8h-8zM96,216h8v8h-8zM112,216h8v8h-8zM144,216h16v8h-16zM176,216h24v8h-24zM208,216h16v8h-16zM32,224h56v8h-56zM96,224h16v8h-16zM152,224h8v8h-8zM168,224h8v8h-8zM208,224h24v8h-24z" fill="#000000"/></svg>
+          </div>
+          <span class="qr-caption">threshold://hardened/disable</span>
+        </div>
+      </section>
+
+      <section class="step-card">
+        <p class="step-label">Step 02</p>
+        <h2>Enter the 3-digit challenge</h2>
+        <p class="step-desc">Your phone displays a 3-digit challenge code. Type it below to get your 6-digit verification code, then enter that 6-digit code on your phone to unsuspend all apps and release Device Owner protection.</p>
+
+        <div class="generator-grid">
+          <label class="box-field" for="challenge-input">
+            <span class="field-label">Challenge (3 digits)</span>
+            <input
+              id="challenge-input"
+              class="challenge-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="3"
+              placeholder="000"
+              aria-label="3-digit challenge code from phone"
+            />
+          </label>
+
+          <div class="box-field">
+            <span class="field-label">6-Digit Code</span>
+            <div id="response-output" class="response-value placeholder" aria-live="polite">· · · · · ·</div>
+          </div>
+        </div>
+
+        <p class="note">Keep Threshold open on your phone while entering the code. Leaving the screen on your phone generates a new 3-digit challenge.</p>
+      </section>
+
+      <details>
+        <summary>USB / ADB command alternative</summary>
+        <pre># Deactivate Hardened Mode via ADB
+adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n com.garan.threshold/.settings.SettingsLockReceiver</pre>
+      </details>
+    </div>
+  </main>
+
+  <script src="/console/qrcode.js?v=2"></script>
+  <script>
+    (function () {
+      // Tab switching (Enable vs Disable)
+      const tabBtns = document.querySelectorAll("[data-tab-btn]");
+      const tabPanes = document.querySelectorAll("[data-tab-pane]");
+      function activateTab(name) {
+        tabBtns.forEach(function (btn) {
+          const isMatch = btn.getAttribute("data-tab-btn") === name;
+          btn.classList.toggle("active", isMatch);
+          btn.setAttribute("aria-selected", isMatch ? "true" : "false");
+        });
+        tabPanes.forEach(function (pane) {
+          pane.classList.toggle("active", pane.getAttribute("data-tab-pane") === name);
+        });
+      }
+      tabBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          activateTab(btn.getAttribute("data-tab-btn"));
+        });
+      });
+      if (window.location.hash === "#disable") {
+        activateTab("disable");
+      }
+
+      // Dynamically refresh 6-Tap QR from /provisioning-qr-payload.json so it always matches the latest release
+      const qrBox = document.getElementById("provision-qr-box");
+      if (qrBox && window.ThresholdQr) {
+        fetch("/provisioning-qr-payload.json", { cache: "no-store" })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (data) {
+            if (data) {
+              qrBox.innerHTML = window.ThresholdQr.renderQrSvg(JSON.stringify(data), 4);
+            }
+          })
+          .catch(function () {
+            // Keep pre-rendered SVG fallback if offline
+          });
+      }
+
+      // Challenge-Response HMAC-SHA256 generator for domain "hardened-disable"
+      const SECRET = "threshold-v1-shared-totp-key-9f4b2c8e1d7a6053c8b4e2f1a9d07635";
+      const DOMAIN = "hardened-disable";
+      const input = document.getElementById("challenge-input");
+      const output = document.getElementById("response-output");
+
+      async function computeUnlockCode(challenge, epochMillis) {
+        const bucket = Math.floor(epochMillis / 300000);
+        const msg = new TextEncoder().encode(bucket + ":" + DOMAIN + ":" + challenge);
+        const keyData = new TextEncoder().encode(SECRET);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          keyData,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign("HMAC", key, msg);
+        const uint31 = new DataView(sig).getUint32(0, false) & 0x7fffffff;
+        return String(uint31 % 1000000).padStart(6, "0");
+      }
+
+      async function updateCode() {
+        const cleaned = input.value.replace(/\D/g, "").slice(0, 3);
+        if (input.value !== cleaned) {
+          input.value = cleaned;
+        }
+        if (cleaned.length !== 3) {
+          output.textContent = "· · · · · ·";
+          output.classList.add("placeholder");
+          return;
+        }
+        const code = await computeUnlockCode(cleaned, Date.now());
+        output.textContent = code.split("").join(" ");
+        output.classList.remove("placeholder");
+      }
+
+      input.addEventListener("input", updateCode);
+      setInterval(updateCode, 15000);
+    })();
+  </script>
+</body>
+</html>

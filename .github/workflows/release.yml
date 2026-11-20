@@ -124,11 +124,12 @@ jobs:
           {
             "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver",
             "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "${DOWNLOAD_URL}",
-            "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "${QR_CHECKSUM}",
-            "android.app.extra.PROVISIONING_SKIP_ENCRYPTION": true
+            "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "${QR_CHECKSUM}"
           }
           EOF
           sed -i 's/^          //' release-dist/provisioning-qr-payload.json
+
+          cp "release-dist/provisioning-qr-payload.json" "site/provisioning-qr-payload.json"
 
           cat <<EOF > release-dist/RELEASE_NOTES.md
           ## Threshold ${TAG_NAME} (\`versionCode ${VERSION_CODE}\`)
@@ -184,6 +185,17 @@ jobs:
               --title "Threshold ${TAG_NAME}" \
               --notes-file release-dist/RELEASE_NOTES.md
           fi
+
+      - name: Deploy APK & Provisioning QR Payload to Firebase Hosting
+        if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_github_release == true)) && env.FIREBASE_SERVICE_ACCOUNT != ''
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: thresholdlauncher
 
       - name: Clean Up Keystore File
         if: always()
