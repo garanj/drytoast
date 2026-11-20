@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Settings Lock — Threshold Console</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .caret {
+      width: 22px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .eyebrow {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 4px 0 8px;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      color: #b0b0b0;
+      margin: 0 0 28px;
+      font-size: 0.95rem;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid #262626;
+      margin: 28px 0;
+    }
+    .step-card {
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      border-radius: 2px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .step-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    .step-desc {
+      color: #b8b8b8;
+      font-size: 0.92rem;
+      margin: 0 0 20px;
+    }
+    .qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .qr-box {
+      width: 220px;
+      height: 220px;
+      background: #ffffff;
+      padding: 8px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .generator-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 480px) {
+      .generator-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .box-field {
+      background: #141414;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .box-field:focus-within {
+      border-color: #ffffff;
+    }
+    .field-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      color: #8e8e8e;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .challenge-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      padding: 0;
+    }
+    .challenge-input::placeholder {
+      color: #444444;
+    }
+    .response-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: #ffffff;
+      user-select: all;
+    }
+    .response-value.placeholder {
+      color: #444444;
+    }
+    .note {
+      font-size: 0.82rem;
+      color: #888888;
+      margin: 14px 0 0;
+    }
+    details {
+      margin-top: 24px;
+      border-top: 1px solid #1f1f1f;
+      padding-top: 16px;
+      color: #8e8e8e;
+      font-size: 0.85rem;
+    }
+    summary {
+      cursor: pointer;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9e9e9e;
+    }
+    pre {
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      padding: 12px;
+      overflow-x: auto;
+      color: #d8d8d8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      margin: 12px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="header">
+      <svg class="caret" viewBox="29 36.5 50 33" aria-hidden="true">
+        <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z" />
+      </svg>
+      <span class="eyebrow">Threshold Console</span>
+    </div>
+    <h1>Settings Lock &amp; Unlock</h1>
+    <p class="subtitle">Lock Threshold Settings to prevent impulse changes, or unlock them when you need to edit your rules.</p>
+
+    <!-- STEP 1: QR CODE -->
+    <section class="step-card">
+      <p class="step-label">Step 01</p>
+      <h2>Scan with your phone</h2>
+      <p class="step-desc">Open your phone’s Camera or QR scanner on a separate screen and scan this code to open the Settings Lock screen in Threshold.</p>
+      <div class="qr-wrap">
+        <div class="qr-box" role="img" aria-label="QR code for Threshold Settings Lock deep link">
+          <svg viewBox="0 0 49 49" shape-rendering="crispEdges">
+            <rect width="49" height="49" fill="#ffffff" />
+            <path d="M4,4h1v1h-1zM5,4h1v1h-1zM6,4h1v1h-1zM7,4h1v1h-1zM8,4h1v1h-1zM9,4h1v1h-1zM10,4h1v1h-1zM15,4h1v1h-1zM17,4h1v1h-1zM18,4h1v1h-1zM22,4h1v1h-1zM23,4h1v1h-1zM24,4h1v1h-1zM26,4h1v1h-1zM27,4h1v1h-1zM28,4h1v1h-1zM32,4h1v1h-1zM33,4h1v1h-1zM35,4h1v1h-1zM38,4h1v1h-1zM39,4h1v1h-1zM40,4h1v1h-1zM41,4h1v1h-1zM42,4h1v1h-1zM43,4h1v1h-1zM44,4h1v1h-1zM4,5h1v1h-1zM10,5h1v1h-1zM13,5h1v1h-1zM15,5h1v1h-1zM18,5h1v1h-1zM22,5h1v1h-1zM24,5h1v1h-1zM26,5h1v1h-1zM28,5h1v1h-1zM29,5h1v1h-1zM31,5h1v1h-1zM34,5h1v1h-1zM38,5h1v1h-1zM44,5h1v1h-1zM4,6h1v1h-1zM6,6h1v1h-1zM7,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM13,6h1v1h-1zM15,6h1v1h-1zM17,6h1v1h-1zM18,6h1v1h-1zM19,6h1v1h-1zM23,6h1v1h-1zM27,6h1v1h-1zM28,6h1v1h-1zM30,6h1v1h-1zM34,6h1v1h-1zM38,6h1v1h-1zM40,6h1v1h-1zM41,6h1v1h-1zM42,6h1v1h-1zM44,6h1v1h-1zM4,7h1v1h-1zM6,7h1v1h-1zM7,7h1v1h-1zM8,7h1v1h-1zM10,7h1v1h-1zM12,7h1v1h-1zM13,7h1v1h-1zM15,7h1v1h-1zM16,7h1v1h-1zM17,7h1v1h-1zM18,7h1v1h-1zM20,7h1v1h-1zM22,7h1v1h-1zM24,7h1v1h-1zM25,7h1v1h-1zM26,7h1v1h-1zM31,7h1v1h-1zM33,7h1v1h-1zM36,7h1v1h-1zM38,7h1v1h-1zM40,7h1v1h-1zM41,7h1v1h-1zM42,7h1v1h-1zM44,7h1v1h-1zM4,8h1v1h-1zM6,8h1v1h-1zM7,8h1v1h-1zM8,8h1v1h-1zM10,8h1v1h-1zM12,8h1v1h-1zM13,8h1v1h-1zM14,8h1v1h-1zM17,8h1v1h-1zM20,8h1v1h-1zM23,8h1v1h-1zM25,8h1v1h-1zM27,8h1v1h-1zM28,8h1v1h-1zM32,8h1v1h-1zM34,8h1v1h-1zM35,8h1v1h-1zM38,8h1v1h-1zM40,8h1v1h-1zM41,8h1v1h-1zM42,8h1v1h-1zM44,8h1v1h-1zM4,9h1v1h-1zM10,9h1v1h-1zM12,9h1v1h-1zM15,9h1v1h-1zM16,9h1v1h-1zM17,9h1v1h-1zM18,9h1v1h-1zM21,9h1v1h-1zM22,9h1v1h-1zM24,9h1v1h-1zM26,9h1v1h-1zM28,9h1v1h-1zM30,9h1v1h-1zM31,9h1v1h-1zM32,9h1v1h-1zM36,9h1v1h-1zM38,9h1v1h-1zM44,9h1v1h-1zM4,10h1v1h-1zM5,10h1v1h-1zM6,10h1v1h-1zM7,10h1v1h-1zM8,10h1v1h-1zM9,10h1v1h-1zM10,10h1v1h-1zM12,10h1v1h-1zM14,10h1v1h-1zM16,10h1v1h-1zM18,10h1v1h-1zM20,10h1v1h-1zM22,10h1v1h-1zM24,10h1v1h-1zM26,10h1v1h-1zM28,10h1v1h-1zM30,10h1v1h-1zM32,10h1v1h-1zM34,10h1v1h-1zM36,10h1v1h-1zM38,10h1v1h-1zM39,10h1v1h-1zM40,10h1v1h-1zM41,10h1v1h-1zM42,10h1v1h-1zM43,10h1v1h-1zM44,10h1v1h-1zM12,11h1v1h-1zM13,11h1v1h-1zM14,11h1v1h-1zM19,11h1v1h-1zM25,11h1v1h-1zM26,11h1v1h-1zM27,11h1v1h-1zM30,11h1v1h-1zM32,11h1v1h-1zM34,11h1v1h-1zM4,12h1v1h-1zM6,12h1v1h-1zM7,12h1v1h-1zM8,12h1v1h-1zM9,12h1v1h-1zM10,12h1v1h-1zM15,12h1v1h-1zM16,12h1v1h-1zM19,12h1v1h-1zM20,12h1v1h-1zM21,12h1v1h-1zM23,12h1v1h-1zM26,12h1v1h-1zM28,12h1v1h-1zM29,12h1v1h-1zM30,12h1v1h-1zM31,12h1v1h-1zM33,12h1v1h-1zM34,12h1v1h-1zM35,12h1v1h-1zM38,12h1v1h-1zM39,12h1v1h-1zM40,12h1v1h-1zM41,12h1v1h-1zM42,12h1v1h-1zM4,13h1v1h-1zM6,13h1v1h-1zM8,13h1v1h-1zM9,13h1v1h-1zM11,13h1v1h-1zM15,13h1v1h-1zM18,13h1v1h-1zM21,13h1v1h-1zM22,13h1v1h-1zM23,13h1v1h-1zM24,13h1v1h-1zM25,13h1v1h-1zM26,13h1v1h-1zM27,13h1v1h-1zM30,13h1v1h-1zM32,13h1v1h-1zM35,13h1v1h-1zM36,13h1v1h-1zM38,13h1v1h-1zM40,13h1v1h-1zM41,13h1v1h-1zM43,13h1v1h-1zM44,13h1v1h-1zM4,14h1v1h-1zM6,14h1v1h-1zM9,14h1v1h-1zM10,14h1v1h-1zM11,14h1v1h-1zM14,14h1v1h-1zM15,14h1v1h-1zM18,14h1v1h-1zM22,14h1v1h-1zM24,14h1v1h-1zM25,14h1v1h-1zM26,14h1v1h-1zM28,14h1v1h-1zM30,14h1v1h-1zM31,14h1v1h-1zM32,14h1v1h-1zM34,14h1v1h-1zM39,14h1v1h-1zM40,14h1v1h-1zM7,15h1v1h-1zM8,15h1v1h-1zM13,15h1v1h-1zM16,15h1v1h-1zM19,15h1v1h-1zM20,15h1v1h-1zM22,15h1v1h-1zM23,15h1v1h-1zM24,15h1v1h-1zM25,15h1v1h-1zM26,15h1v1h-1zM27,15h1v1h-1zM36,15h1v1h-1zM37,15h1v1h-1zM40,15h1v1h-1zM41,15h1v1h-1zM4,16h1v1h-1zM6,16h1v1h-1zM8,16h1v1h-1zM10,16h1v1h-1zM11,16h1v1h-1zM14,16h1v1h-1zM15,16h1v1h-1zM16,16h1v1h-1zM17,16h1v1h-1zM19,16h1v1h-1zM21,16h1v1h-1zM23,16h1v1h-1zM26,16h1v1h-1zM27,16h1v1h-1zM29,16h1v1h-1zM31,16h1v1h-1zM33,16h1v1h-1zM35,16h1v1h-1zM36,16h1v1h-1zM42,16h1v1h-1zM43,16h1v1h-1zM44,16h1v1h-1zM4,17h1v1h-1zM6,17h1v1h-1zM7,17h1v1h-1zM13,17h1v1h-1zM14,17h1v1h-1zM15,17h1v1h-1zM22,17h1v1h-1zM24,17h1v1h-1zM25,17h1v1h-1zM28,17h1v1h-1zM30,17h1v1h-1zM32,17h1v1h-1zM33,17h1v1h-1zM34,17h1v1h-1zM35,17h1v1h-1zM37,17h1v1h-1zM38,17h1v1h-1zM39,17h1v1h-1zM40,17h1v1h-1zM41,17h1v1h-1zM44,17h1v1h-1zM7,18h1v1h-1zM9,18h1v1h-1zM10,18h1v1h-1zM11,18h1v1h-1zM15,18h1v1h-1zM16,18h1v1h-1zM19,18h1v1h-1zM21,18h1v1h-1zM23,18h1v1h-1zM26,18h1v1h-1zM29,18h1v1h-1zM31,18h1v1h-1zM32,18h1v1h-1zM34,18h1v1h-1zM37,18h1v1h-1zM40,18h1v1h-1zM41,18h1v1h-1zM43,18h1v1h-1zM4,19h1v1h-1zM5,19h1v1h-1zM7,19h1v1h-1zM11,19h1v1h-1zM13,19h1v1h-1zM14,19h1v1h-1zM16,19h1v1h-1zM17,19h1v1h-1zM19,19h1v1h-1zM22,19h1v1h-1zM23,19h1v1h-1zM24,19h1v1h-1zM25,19h1v1h-1zM26,19h1v1h-1zM28,19h1v1h-1zM30,19h1v1h-1zM31,19h1v1h-1zM36,19h1v1h-1zM38,19h1v1h-1zM41,19h1v1h-1zM44,19h1v1h-1zM5,20h1v1h-1zM6,20h1v1h-1zM7,20h1v1h-1zM10,20h1v1h-1zM13,20h1v1h-1zM14,20h1v1h-1zM16,20h1v1h-1zM17,20h1v1h-1zM20,20h1v1h-1zM21,20h1v1h-1zM22,20h1v1h-1zM23,20h1v1h-1zM24,20h1v1h-1zM26,20h1v1h-1zM28,20h1v1h-1zM29,20h1v1h-1zM31,20h1v1h-1zM32,20h1v1h-1zM33,20h1v1h-1zM36,20h1v1h-1zM39,20h1v1h-1zM41,20h1v1h-1zM42,20h1v1h-1zM43,20h1v1h-1zM8,21h1v1h-1zM12,21h1v1h-1zM14,21h1v1h-1zM17,21h1v1h-1zM19,21h1v1h-1zM21,21h1v1h-1zM23,21h1v1h-1zM25,21h1v1h-1zM27,21h1v1h-1zM29,21h1v1h-1zM30,21h1v1h-1zM34,21h1v1h-1zM35,21h1v1h-1zM37,21h1v1h-1zM38,21h1v1h-1zM39,21h1v1h-1zM40,21h1v1h-1zM41,21h1v1h-1zM43,21h1v1h-1zM44,21h1v1h-1zM4,22h1v1h-1zM6,22h1v1h-1zM9,22h1v1h-1zM10,22h1v1h-1zM13,22h1v1h-1zM18,22h1v1h-1zM21,22h1v1h-1zM24,22h1v1h-1zM25,22h1v1h-1zM28,22h1v1h-1zM29,22h1v1h-1zM30,22h1v1h-1zM31,22h1v1h-1zM33,22h1v1h-1zM36,22h1v1h-1zM37,22h1v1h-1zM39,22h1v1h-1zM40,22h1v1h-1zM41,22h1v1h-1zM42,22h1v1h-1zM4,23h1v1h-1zM6,23h1v1h-1zM8,23h1v1h-1zM9,23h1v1h-1zM11,23h1v1h-1zM15,23h1v1h-1zM16,23h1v1h-1zM19,23h1v1h-1zM20,23h1v1h-1zM21,23h1v1h-1zM22,23h1v1h-1zM24,23h1v1h-1zM25,23h1v1h-1zM26,23h1v1h-1zM29,23h1v1h-1zM32,23h1v1h-1zM34,23h1v1h-1zM36,23h1v1h-1zM37,23h1v1h-1zM38,23h1v1h-1zM39,23h1v1h-1zM40,23h1v1h-1zM41,23h1v1h-1zM44,23h1v1h-1zM4,24h1v1h-1zM7,24h1v1h-1zM10,24h1v1h-1zM15,24h1v1h-1zM17,24h1v1h-1zM18,24h1v1h-1zM20,24h1v1h-1zM24,24h1v1h-1zM25,24h1v1h-1zM30,24h1v1h-1zM31,24h1v1h-1zM32,24h1v1h-1zM33,24h1v1h-1zM34,24h1v1h-1zM36,24h1v1h-1zM37,24h1v1h-1zM39,24h1v1h-1zM42,24h1v1h-1zM43,24h1v1h-1zM44,24h1v1h-1zM5,25h1v1h-1zM7,25h1v1h-1zM11,25h1v1h-1zM14,25h1v1h-1zM15,25h1v1h-1zM16,25h1v1h-1zM18,25h1v1h-1zM19,25h1v1h-1zM20,25h1v1h-1zM21,25h1v1h-1zM22,25h1v1h-1zM23,25h1v1h-1zM25,25h1v1h-1zM26,25h1v1h-1zM27,25h1v1h-1zM28,25h1v1h-1zM33,25h1v1h-1zM35,25h1v1h-1zM38,25h1v1h-1zM40,25h1v1h-1zM44,25h1v1h-1zM4,26h1v1h-1zM10,26h1v1h-1zM11,26h1v1h-1zM19,26h1v1h-1zM21,26h1v1h-1zM22,26h1v1h-1zM30,26h1v1h-1zM31,26h1v1h-1zM32,26h1v1h-1zM33,26h1v1h-1zM34,26h1v1h-1zM37,26h1v1h-1zM39,26h1v1h-1zM40,26h1v1h-1zM41,26h1v1h-1zM42,26h1v1h-1zM7,27h1v1h-1zM11,27h1v1h-1zM12,27h1v1h-1zM14,27h1v1h-1zM16,27h1v1h-1zM17,27h1v1h-1zM20,27h1v1h-1zM23,27h1v1h-1zM25,27h1v1h-1zM26,27h1v1h-1zM28,27h1v1h-1zM31,27h1v1h-1zM32,27h1v1h-1zM34,27h1v1h-1zM35,27h1v1h-1zM36,27h1v1h-1zM39,27h1v1h-1zM40,27h1v1h-1zM43,27h1v1h-1zM44,27h1v1h-1zM5,28h1v1h-1zM6,28h1v1h-1zM10,28h1v1h-1zM13,28h1v1h-1zM14,28h1v1h-1zM15,28h1v1h-1zM16,28h1v1h-1zM17,28h1v1h-1zM19,28h1v1h-1zM21,28h1v1h-1zM22,28h1v1h-1zM28,28h1v1h-1zM29,28h1v1h-1zM30,28h1v1h-1zM31,28h1v1h-1zM32,28h1v1h-1zM33,28h1v1h-1zM34,28h1v1h-1zM41,28h1v1h-1zM42,28h1v1h-1zM44,28h1v1h-1zM5,29h1v1h-1zM8,29h1v1h-1zM9,29h1v1h-1zM11,29h1v1h-1zM14,29h1v1h-1zM15,29h1v1h-1zM16,29h1v1h-1zM17,29h1v1h-1zM20,29h1v1h-1zM23,29h1v1h-1zM24,29h1v1h-1zM25,29h1v1h-1zM27,29h1v1h-1zM30,29h1v1h-1zM32,29h1v1h-1zM34,29h1v1h-1zM35,29h1v1h-1zM36,29h1v1h-1zM37,29h1v1h-1zM38,29h1v1h-1zM39,29h1v1h-1zM40,29h1v1h-1zM42,29h1v1h-1zM44,29h1v1h-1zM5,30h1v1h-1zM7,30h1v1h-1zM8,30h1v1h-1zM9,30h1v1h-1zM10,30h1v1h-1zM11,30h1v1h-1zM12,30h1v1h-1zM13,30h1v1h-1zM15,30h1v1h-1zM17,30h1v1h-1zM26,30h1v1h-1zM31,30h1v1h-1zM32,30h1v1h-1zM33,30h1v1h-1zM34,30h1v1h-1zM36,30h1v1h-1zM37,30h1v1h-1zM39,30h1v1h-1zM43,30h1v1h-1zM4,31h1v1h-1zM6,31h1v1h-1zM9,31h1v1h-1zM11,31h1v1h-1zM12,31h1v1h-1zM13,31h1v1h-1zM15,31h1v1h-1zM19,31h1v1h-1zM24,31h1v1h-1zM25,31h1v1h-1zM28,31h1v1h-1zM32,31h1v1h-1zM35,31h1v1h-1zM36,31h1v1h-1zM37,31h1v1h-1zM38,31h1v1h-1zM40,31h1v1h-1zM41,31h1v1h-1zM4,32h1v1h-1zM9,32h1v1h-1zM10,32h1v1h-1zM12,32h1v1h-1zM15,32h1v1h-1zM16,32h1v1h-1zM17,32h1v1h-1zM18,32h1v1h-1zM21,32h1v1h-1zM22,32h1v1h-1zM23,32h1v1h-1zM24,32h1v1h-1zM27,32h1v1h-1zM28,32h1v1h-1zM29,32h1v1h-1zM32,32h1v1h-1zM33,32h1v1h-1zM34,32h1v1h-1zM35,32h1v1h-1zM37,32h1v1h-1zM39,32h1v1h-1zM41,32h1v1h-1zM42,32h1v1h-1zM43,32h1v1h-1zM4,33h1v1h-1zM5,33h1v1h-1zM6,33h1v1h-1zM9,33h1v1h-1zM12,33h1v1h-1zM13,33h1v1h-1zM15,33h1v1h-1zM16,33h1v1h-1zM19,33h1v1h-1zM20,33h1v1h-1zM25,33h1v1h-1zM26,33h1v1h-1zM29,33h1v1h-1zM30,33h1v1h-1zM35,33h1v1h-1zM36,33h1v1h-1zM38,33h1v1h-1zM40,33h1v1h-1zM42,33h1v1h-1zM43,33h1v1h-1zM44,33h1v1h-1zM4,34h1v1h-1zM6,34h1v1h-1zM9,34h1v1h-1zM10,34h1v1h-1zM11,34h1v1h-1zM13,34h1v1h-1zM14,34h1v1h-1zM16,34h1v1h-1zM24,34h1v1h-1zM25,34h1v1h-1zM26,34h1v1h-1zM27,34h1v1h-1zM28,34h1v1h-1zM31,34h1v1h-1zM32,34h1v1h-1zM37,34h1v1h-1zM38,34h1v1h-1zM39,34h1v1h-1zM40,34h1v1h-1zM41,34h1v1h-1zM4,35h1v1h-1zM8,35h1v1h-1zM9,35h1v1h-1zM11,35h1v1h-1zM12,35h1v1h-1zM13,35h1v1h-1zM14,35h1v1h-1zM15,35h1v1h-1zM16,35h1v1h-1zM17,35h1v1h-1zM18,35h1v1h-1zM25,35h1v1h-1zM27,35h1v1h-1zM31,35h1v1h-1zM35,35h1v1h-1zM36,35h1v1h-1zM37,35h1v1h-1zM39,35h1v1h-1zM43,35h1v1h-1zM4,36h1v1h-1zM6,36h1v1h-1zM10,36h1v1h-1zM14,36h1v1h-1zM16,36h1v1h-1zM17,36h1v1h-1zM18,36h1v1h-1zM20,36h1v1h-1zM21,36h1v1h-1zM27,36h1v1h-1zM29,36h1v1h-1zM30,36h1v1h-1zM31,36h1v1h-1zM33,36h1v1h-1zM34,36h1v1h-1zM36,36h1v1h-1zM37,36h1v1h-1zM38,36h1v1h-1zM39,36h1v1h-1zM40,36h1v1h-1zM41,36h1v1h-1zM42,36h1v1h-1zM12,37h1v1h-1zM17,37h1v1h-1zM19,37h1v1h-1zM22,37h1v1h-1zM23,37h1v1h-1zM24,37h1v1h-1zM26,37h1v1h-1zM27,37h1v1h-1zM28,37h1v1h-1zM32,37h1v1h-1zM35,37h1v1h-1zM36,37h1v1h-1zM40,37h1v1h-1zM43,37h1v1h-1zM44,37h1v1h-1zM4,38h1v1h-1zM5,38h1v1h-1zM6,38h1v1h-1zM7,38h1v1h-1zM8,38h1v1h-1zM9,38h1v1h-1zM10,38h1v1h-1zM14,38h1v1h-1zM15,38h1v1h-1zM16,38h1v1h-1zM19,38h1v1h-1zM22,38h1v1h-1zM24,38h1v1h-1zM26,38h1v1h-1zM31,38h1v1h-1zM34,38h1v1h-1zM35,38h1v1h-1zM36,38h1v1h-1zM38,38h1v1h-1zM40,38h1v1h-1zM42,38h1v1h-1zM4,39h1v1h-1zM10,39h1v1h-1zM12,39h1v1h-1zM14,39h1v1h-1zM18,39h1v1h-1zM20,39h1v1h-1zM28,39h1v1h-1zM30,39h1v1h-1zM32,39h1v1h-1zM34,39h1v1h-1zM36,39h1v1h-1zM40,39h1v1h-1zM44,39h1v1h-1zM4,40h1v1h-1zM6,40h1v1h-1zM7,40h1v1h-1zM8,40h1v1h-1zM10,40h1v1h-1zM12,40h1v1h-1zM15,40h1v1h-1zM16,40h1v1h-1zM17,40h1v1h-1zM19,40h1v1h-1zM20,40h1v1h-1zM22,40h1v1h-1zM24,40h1v1h-1zM25,40h1v1h-1zM26,40h1v1h-1zM28,40h1v1h-1zM31,40h1v1h-1zM33,40h1v1h-1zM36,40h1v1h-1zM37,40h1v1h-1zM38,40h1v1h-1zM39,40h1v1h-1zM40,40h1v1h-1zM41,40h1v1h-1zM42,40h1v1h-1zM44,40h1v1h-1zM4,41h1v1h-1zM6,41h1v1h-1zM7,41h1v1h-1zM8,41h1v1h-1zM10,41h1v1h-1zM12,41h1v1h-1zM14,41h1v1h-1zM15,41h1v1h-1zM16,41h1v1h-1zM17,41h1v1h-1zM18,41h1v1h-1zM19,41h1v1h-1zM21,41h1v1h-1zM23,41h1v1h-1zM27,41h1v1h-1zM30,41h1v1h-1zM32,41h1v1h-1zM33,41h1v1h-1zM34,41h1v1h-1zM4,42h1v1h-1zM6,42h1v1h-1zM7,42h1v1h-1zM8,42h1v1h-1zM10,42h1v1h-1zM12,42h1v1h-1zM14,42h1v1h-1zM15,42h1v1h-1zM17,42h1v1h-1zM18,42h1v1h-1zM24,42h1v1h-1zM26,42h1v1h-1zM30,42h1v1h-1zM31,42h1v1h-1zM33,42h1v1h-1zM35,42h1v1h-1zM37,42h1v1h-1zM38,42h1v1h-1zM39,42h1v1h-1zM40,42h1v1h-1zM42,42h1v1h-1zM4,43h1v1h-1zM10,43h1v1h-1zM15,43h1v1h-1zM18,43h1v1h-1zM21,43h1v1h-1zM22,43h1v1h-1zM25,43h1v1h-1zM26,43h1v1h-1zM27,43h1v1h-1zM28,43h1v1h-1zM31,43h1v1h-1zM32,43h1v1h-1zM36,43h1v1h-1zM37,43h1v1h-1zM41,43h1v1h-1zM43,43h1v1h-1zM4,44h1v1h-1zM5,44h1v1h-1zM6,44h1v1h-1zM7,44h1v1h-1zM8,44h1v1h-1zM9,44h1v1h-1zM10,44h1v1h-1zM12,44h1v1h-1zM13,44h1v1h-1zM14,44h1v1h-1zM15,44h1v1h-1zM19,44h1v1h-1zM20,44h1v1h-1zM21,44h1v1h-1zM26,44h1v1h-1zM28,44h1v1h-1zM29,44h1v1h-1zM30,44h1v1h-1zM31,44h1v1h-1zM33,44h1v1h-1zM34,44h1v1h-1zM35,44h1v1h-1zM37,44h1v1h-1zM38,44h1v1h-1zM40,44h1v1h-1zM42,44h1v1h-1z" fill="#000000" />
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: CHALLENGE -> 6-DIGIT CODE -->
+    <section class="step-card">
+      <p class="step-label">Step 02</p>
+      <h2>Enter the 3-digit challenge</h2>
+      <p class="step-desc">Your phone displays a 3-digit challenge code. Type it below to get your 6-digit verification code, then enter that 6-digit code on your phone.</p>
+
+      <div class="generator-grid">
+        <label class="box-field" for="challenge-input">
+          <span class="field-label">Challenge (3 digits)</span>
+          <input
+            id="challenge-input"
+            class="challenge-input"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength="3"
+            placeholder="000"
+            aria-label="3-digit challenge code from phone"
+          />
+        </label>
+
+        <div class="box-field">
+          <span class="field-label">6-Digit Code</span>
+          <div id="response-output" class="response-value placeholder" aria-live="polite">· · · · · ·</div>
+        </div>
+      </div>
+
+      <p class="note">Keep Threshold open on your phone while entering the code. Leaving the screen on your phone generates a new 3-digit challenge.</p>
+    </section>
+
+    <details>
+      <summary>USB / ADB command alternative</summary>
+      <pre># Lock Threshold Settings
+adb shell am broadcast -a com.garan.threshold.action.LOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver
+
+# Unlock Threshold Settings
+adb shell am broadcast -a com.garan.threshold.action.UNLOCK_SETTINGS -n com.garan.threshold/.settings.SettingsLockReceiver</pre>
+    </details>
+  </main>
+
+  <script>
+    (function () {
+      const SECRET = "threshold-v1-shared-totp-key-9f4b2c8e1d7a6053c8b4e2f1a9d07635";
+      const DOMAIN = "settings-lock";
+      const input = document.getElementById("challenge-input");
+      const output = document.getElementById("response-output");
+
+      async function computeUnlockCode(challenge, epochMillis) {
+        const bucket = Math.floor(epochMillis / 300000);
+        const msg = new TextEncoder().encode(bucket + ":" + DOMAIN + ":" + challenge);
+        const keyData = new TextEncoder().encode(SECRET);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          keyData,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign("HMAC", key, msg);
+        const uint31 = new DataView(sig).getUint32(0, false) & 0x7fffffff;
+        return String(uint31 % 1000000).padStart(6, "0");
+      }
+
+      async function updateCode() {
+        const cleaned = input.value.replace(/\D/g, "").slice(0, 3);
+        if (input.value !== cleaned) {
+          input.value = cleaned;
+        }
+        if (cleaned.length !== 3) {
+          output.textContent = "· · · · · ·";
+          output.classList.add("placeholder");
+          return;
+        }
+        const code = await computeUnlockCode(cleaned, Date.now());
+        output.textContent = code.split("").join(" ");
+        output.classList.remove("placeholder");
+      }
+
+      input.addEventListener("input", updateCode);
+      // Re-evaluate every 15 seconds in case a 5-minute UTC window rolls over while viewing
+      setInterval(updateCode, 15000);
+    })();
+  </script>
+</body>
+</html>

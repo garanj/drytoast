@@ -1,10 +1,10 @@
 # Current Task
 
-- **Active Issue**: [#128](https://github.com/garanj/threshold/issues/128) — `chore(settings): update Hardened Mode setup guide URL to thresholdlauncher.com`
-- **Branch**: `fix/128-update-hardened-mode-url`
+- **Active Issue**: [#131](https://github.com/garanj/threshold/issues/131) — `feat(site): add static website, privacy policy, and Settings Lock console for Firebase Hosting`
+- **Branch**: `feat/131-site-console-hosting`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] `:app`: Update `R.string.hardened_mode_website_url` to `https://thresholdlauncher.com/hardened-mode`
-- [x] `:app`: Update `HardenedModeScreenTest` to assert `https://thresholdlauncher.com/hardened-mode`
-- [x] Run `./gradlew spotlessApply spotlessCheck test` and open PR assigned to `garanj`
+- [x] Add `.firebase/`, `firebase-debug.log`, and `firebase-debug.*.log` to `.gitignore`
+- [x] Commit `firebase.json`, `.firebaserc`, `site/index.html`, `site/privacy-policy.html`, and `site/console/index.html`
+- [x] Open PR assigned to `garanj`

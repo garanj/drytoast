@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Threshold Launcher</title>
+  <meta name="description" content="Privacy Policy for Threshold Launcher (com.garan.threshold). Zero data collection, zero internet permission, 100% offline.">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .updated {
+      color: #a0a0a0;
+      font-size: 0.9rem;
+      margin: 0 0 36px;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 10px;
+    }
+    p, ul {
+      margin: 0 0 16px;
+      color: #e8e8e8;
+    }
+    ul {
+      padding-left: 22px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+      background: #141414;
+      padding: 2px 5px;
+      border: 1px solid #2a2a2a;
+    }
+    a {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Application: Threshold Launcher (<code>com.garan.threshold</code>)<br>Last updated: November 19, 2026</p>
+
+    <h2>Summary</h2>
+    <p>
+      Threshold Launcher does not collect, store, transmit, or share any personal data, usage analytics, telemetry, or crash reports.
+    </p>
+    <p>
+      Threshold Launcher does not request or possess the Android internet permission (<code>android.permission.INTERNET</code>). It is technically impossible for the application to transmit information off your device.
+    </p>
+
+    <h2>1. Information We Collect</h2>
+    <p>
+      <strong>None.</strong> We do not collect any personal information, device identifiers, location history, installed application lists, or usage telemetry. There are no user accounts, cloud servers, advertising SDKs, or analytics frameworks inside Threshold Launcher.
+    </p>
+
+    <h2>2. Local-Only Data Storage</h2>
+    <p>
+      All configuration data you create in Threshold Launcher—such as your pinned apps, focus profiles, schedules, local anti-metrics counters, and preferences—is stored exclusively on your device inside Android’s private application storage (with <code>android:allowBackup="false"</code>). Uninstalling the application permanently deletes all locally stored preferences.
+    </p>
+
+    <h2>3. Device Permissions &amp; How They Are Used On-Device</h2>
+    <p>
+      Threshold Launcher uses the following Android permissions strictly locally on your device to function as a home screen replacement:
+    </p>
+    <ul>
+      <li><strong>Installed Applications (<code>QUERY_ALL_PACKAGES</code>):</strong> Required so the home screen and search drawer can list and launch the applications installed on your device. Your list of installed apps never leaves your device.</li>
+      <li><strong>Location (<code>ACCESS_COARSE_LOCATION</code> / <code>ACCESS_FINE_LOCATION</code> — Optional):</strong> Requested only if you explicitly create a location-based profile rule or a sunrise/sunset schedule. Coordinates are evaluated locally on your device and are never transmitted or logged.</li>
+      <li><strong>NFC (<code>NFC</code> — Optional):</strong> Used only if you pair a physical NFC tag to toggle a focus profile. Only the tag payload is matched locally on your device.</li>
+      <li><strong>Alarms &amp; Boot Scheduling (<code>SCHEDULE_EXACT_ALARM</code>, <code>RECEIVE_BOOT_COMPLETED</code>):</strong> Used locally to trigger scheduled focus profile transitions on time and restore active schedules after a device restart.</li>
+      <li><strong>Wallpaper &amp; Haptics (<code>SET_WALLPAPER</code>, <code>VIBRATE</code>):</strong> Used locally to apply optional focus wallpapers and tactile feedback.</li>
+      <li><strong>Device Administrator / Device Owner (<code>BIND_DEVICE_ADMIN</code> — Optional):</strong> Used only if you explicitly provision Hardened Mode to enforce OS-level app suspension for blocked and guarded apps during focus sessions.</li>
+    </ul>
+
+    <h2>4. Third-Party Services</h2>
+    <p>
+      Threshold Launcher integrates zero third-party analytics, advertising, tracking, or cloud SDKs.
+    </p>
+
+    <h2>5. Changes to This Policy</h2>
+    <p>
+      If this Privacy Policy is updated, the revised text and updated date will be posted at this URL.
+    </p>
+
+    <h2>6. Contact</h2>
+    <p>
+      If you have questions about this Privacy Policy, please open an issue at <a href="https://github.com/garanj/threshold">https://github.com/garanj/threshold</a>.
+    </p>
+  </main>
+</body>
+</html>
