@@ -287,24 +287,37 @@
     return { size, modules };
   }
 
-  function renderQrSvg(text, margin = 3) {
+  function renderQrSvg(text, margin = 4) {
     const bytes = new TextEncoder().encode(text);
     const { version, dataCapacity } = selectVersion(bytes.length);
     const dataCw = buildDataCodewords(bytes, version, dataCapacity);
     const allCw = interleaveBlocks(dataCw, version);
     const { size, modules } = createMatrix(version, allCw);
-    const total = size + margin * 2;
+    const scale = 8;
+    const total = (size + margin * 2) * scale;
 
+    // Merge contiguous horizontal dark modules into single rectangles to eliminate sub-pixel seams
     let path = "";
     for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
+      let c = 0;
+      while (c < size) {
         if (modules[r][c]) {
-          path += `M${c + margin},${r + margin}h1v1h-1z`;
+          let run = 1;
+          while (c + run < size && modules[r][c + run]) {
+            run++;
+          }
+          const x = (c + margin) * scale;
+          const y = (r + margin) * scale;
+          const w = run * scale;
+          path += `M${x},${y}h${w}v${scale}h-${w}z`;
+          c += run;
+        } else {
+          c++;
         }
       }
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="${total}" height="${total}" fill="#ffffff"/><path d="${path}" fill="#000000"/></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="${total}" height="${total}" fill="#ffffff"/><path d="${path}" fill="#000000"/></svg>`;
   }
 
   global.ThresholdQr = { renderQrSvg };

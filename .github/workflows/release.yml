@@ -124,8 +124,7 @@ jobs:
           {
             "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver",
             "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "${DOWNLOAD_URL}",
-            "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "${QR_CHECKSUM}",
-            "android.app.extra.PROVISIONING_SKIP_ENCRYPTION": true
+            "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "${QR_CHECKSUM}"
           }
           EOF
           sed -i 's/^          //' release-dist/provisioning-qr-payload.json
