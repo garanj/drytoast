@@ -17,6 +17,7 @@
     <application
         android:name=".ThresholdApplication"
         android:allowBackup="false"
+        android:testOnly="${testOnlyFlag}"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

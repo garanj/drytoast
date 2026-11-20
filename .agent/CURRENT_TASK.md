@@ -1,11 +1,12 @@
 # Current Task
 
-- **Active Issue**: [#134](https://github.com/garanj/threshold/issues/134) — `feat(site): add Hardened Mode console and automated Firebase Hosting release flow`
-- **Branch**: `feat/134-hardened-mode-console`
+- **Active Issue**: [#138](https://github.com/garanj/threshold/issues/138) — `feat(site,release): add Expert Mode WebUSB Hardened Mode provisioner and testOnly release artifact`
+- **Branch**: `feat/138-expert-webusb-hardening`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Verify `*.apk` is ignored in `.gitignore`
-- [x] Add `site/provisioning-qr-payload.json` with `https://thresholdlauncher.com/downloads/threshold-release.apk`
-- [x] Add mode switcher / explainer to `site/console/index.html` and create `site/console/hardening/index.html` (with `/hardened-mode` redirect in `firebase.json`)
-- [x] Update `.github/workflows/release.yml` to stage `site/downloads/threshold-release.apk` and `site/provisioning-qr-payload.json` and deploy to Firebase Hosting
+- [x] Add `THRESHOLD_TEST_ONLY` manifest placeholder support in `app/build.gradle.kts` and `app/src/main/AndroidManifest.xml`
+- [x] Update `.github/workflows/release.yml` to build & publish `threshold-testonly.apk`, verify `testOnly` flags, and stage `site/downloads/threshold-testonly.bin` & `site/downloads/threshold-release.bin`
+- [x] Bundle self-hosted Tango WebUSB ADB client (`site/console/webadb.bundle.js`)
+- [x] Add **ENABLE (EXPERT)** tab and 5-stage WebUSB Hardened Mode provisioner + on-device 90s watchdog + Emergency Restore/Repair controls to `site/console/hardening/index.html`
+- [x] Verify Gradle unit tests & Spotless pass (`./gradlew spotlessCheck test`)
