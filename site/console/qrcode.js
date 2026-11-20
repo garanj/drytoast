@@ -260,8 +260,8 @@
               dark = ((codewords[bitIdx >>> 3] >>> (7 - (bitIdx & 7))) & 1) !== 0;
               bitIdx++;
             }
-            // Mask 0: (r + c) % 2 === 0
-            if ((r + c) % 2 === 0) dark = !dark;
+            // Mask 4: (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0
+            if ((Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0) dark = !dark;
             modules[r][c] = dark ? 1 : 0;
           }
         }
@@ -269,8 +269,8 @@
       upward = !upward;
     }
 
-    // Write Format Info for ECC Level L (01) and Mask 0 (000) -> data = 0b01000
-    let fData = 0b01000;
+    // Write Format Info for ECC Level L (01) and Mask 4 (100) -> data = 0b01100
+    let fData = 0b01100;
     let fRem = fData;
     for (let i = 0; i < 10; i++) fRem = (fRem << 1) ^ ((fRem >>> 9) * 0x537);
     const fBits = ((fData << 10) | fRem) ^ 0x5412;
