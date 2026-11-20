@@ -135,7 +135,7 @@
     <string name="hardened_mode_section_setup">Setup &amp; Removal</string>
     <string name="hardened_mode_setup_intro">Hardened Mode cannot be toggled from inside Threshold\'s normal menus. You can enable or disable it either by scanning the QR codes on the Threshold website or via USB debugging (ADB) from a computer.</string>
     <string name="action_open_hardened_mode_website">Open Hardened Mode Setup Guide</string>
-    <string name="hardened_mode_website_url" translatable="false">https://threshold.app/hardened-mode</string>
+    <string name="hardened_mode_website_url" translatable="false">https://thresholdlauncher.com/hardened-mode</string>
     <string name="disable_hardened_mode_title">Disable Hardened Mode</string>
     <string name="disable_hardened_mode_headline">Release Device Owner Protection?</string>
     <string name="disable_hardened_mode_body">Disabling Hardened Mode will immediately:\n\n• Unsuspend all Blocked apps in the Android OS\n• Unlock Default Home App selection, Force Stop, Clear Storage, and Uninstall for Threshold\n• Permanently release Device Owner privileges (re-enabling Hardened Mode later requires a freshly reset device)</string>
