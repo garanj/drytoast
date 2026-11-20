@@ -3,8 +3,20 @@ name: CI Quality Gate
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'site/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.agent/**'
+      - '*.md'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'site/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.agent/**'
+      - '*.md'
 
 concurrency:
   group: ci-${{ github.ref }}
