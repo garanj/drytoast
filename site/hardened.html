@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hardened Mode — Threshold</title>
+  <meta name="description" content="Optional Android Device Owner protection for Threshold: OS-level app suspension, launcher persistence, and uninstall protection with zero Accessibility Services.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="logo-link">
+      <svg class="logo-caret" viewBox="29 36.5 50 33" aria-hidden="true">
+        <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z"/>
+      </svg>
+      <span>Threshold</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="/features">Features</a>
+      <a href="/configuration">Configuration</a>
+      <a href="/hardened" class="active" aria-current="page">Hardened Mode</a>
+      <a href="/console">Console</a>
+      <a href="https://play.google.com/store/apps/details?id=com.garan.threshold" class="nav-cta">Get it on Play</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Hardened Mode</h1>
+    <p>
+      In standard mode, Threshold is a gentle gatekeeper on your home screen. When you want Android itself to enforce your boundaries, optional <strong>Hardened Mode</strong> uses Android’s built-in <strong>Device Owner</strong> capability—never invasive Accessibility Service screen-scraping.
+    </p>
+
+    <div class="split-row">
+      <div class="item-list" style="margin-top: 0;">
+        <section class="item">
+          <h2>OS-Level App Suspension</h2>
+          <p><strong>Blocked</strong> apps and resting <strong>Guarded</strong> apps are suspended directly by the Android OS. They cannot be opened from Recent Apps, notifications, deep links, or Play Store shortcuts until your rules allow them—while your default Phone dialer stays permanently exempt.</p>
+        </section>
+
+        <section class="item">
+          <h2>Guarded Session Leases</h2>
+          <p>When you complete a friction checkpoint for a Guarded app in Hardened Mode, Threshold temporarily unsuspends it for a configurable grace period (0–30 minutes) and automatically re-suspends it once the session ends.</p>
+        </section>
+
+        <section class="item">
+          <h2>Tamper Resistance</h2>
+          <p>Locks Threshold as your persistent default home screen and prevents impulse force-stopping, storage clearing, or uninstalling Threshold while Hardened Mode is active.</p>
+        </section>
+
+        <section class="item">
+          <h2>Setup &amp; Removal</h2>
+          <p>Hardened Mode is provisioned via a 6-Tap QR code on a fresh or factory-reset Android phone (or via our Expert WebUSB tool on an existing phone) and can be deactivated cleanly anytime from the Console.</p>
+        </section>
+      </div>
+
+      <img src="/images/hardened.png" alt="Threshold Hardened Mode settings screen" loading="lazy">
+    </div>
+
+    <div class="cta-group" style="margin-top: 2.5rem;">
+      <a href="/console/hardening" class="cta-primary">Open Hardened Mode Console &rarr;</a>
+    </div>
+  </main>
+
+  <footer>
+    <span>Threshold</span>
+    <div>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="https://github.com/garanj/threshold">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

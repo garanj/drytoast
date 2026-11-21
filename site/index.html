@@ -3,29 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Threshold</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #000000;
-      color: #ffffff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    h1 {
-      font-size: 1rem;
-      font-weight: 500;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      margin: 0;
-    }
-  </style>
+  <title>Threshold — Use your phone on purpose.</title>
+  <meta name="description" content="A quiet, text-only Android launcher with intentional friction, focus profiles, and zero internet permission.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <h1>THRESHOLD</h1>
+  <header>
+    <a href="/" class="logo-link">
+      <svg class="logo-caret" viewBox="29 36.5 50 33" aria-hidden="true">
+        <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z"/>
+      </svg>
+      <span>Threshold</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="/features">Features</a>
+      <a href="/configuration">Configuration</a>
+      <a href="/hardened">Hardened Mode</a>
+      <a href="/console">Console</a>
+      <a href="https://play.google.com/store/apps/details?id=com.garan.threshold" class="nav-cta">Get it on Play</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Use your phone on purpose.</h1>
+    <p>
+      Threshold is a quiet, text-only Android launcher. It strips away icons, badges, and feeds—leaving only the tools you chose to put in front of you.
+    </p>
+    <p>
+      Add brief friction to distracting apps, switch rules automatically by time, location, or NFC tag, and lock everything down when you want zero escape hatches. Completely offline, with zero internet permission.
+    </p>
+
+    <div class="cta-group">
+      <a href="https://play.google.com/store/apps/details?id=com.garan.threshold" class="cta-primary">Download on Google Play &rarr;</a>
+      <a href="https://github.com/garanj/threshold/releases/latest" class="cta-secondary">Direct APK &amp; source on GitHub</a>
+    </div>
+
+    <div class="shots-grid">
+      <figure class="shot-card">
+        <img src="/images/home.png" alt="Threshold typographic home screen" loading="lazy">
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="/images/search.png" alt="Threshold instant fuzzy search" loading="lazy">
+        <figcaption>Search</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="/images/friction.png" alt="Threshold friction checkpoint" loading="lazy">
+        <figcaption>Friction</figcaption>
+      </figure>
+    </div>
+  </main>
+
+  <footer>
+    <span>Threshold</span>
+    <div>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="https://github.com/garanj/threshold">GitHub</a>
+    </div>
+  </footer>
 </body>
 </html>
