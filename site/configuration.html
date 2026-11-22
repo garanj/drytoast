@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration | Threshold</title>
+  <meta name="description" content="Configure Allow, Guard, and Block rules, cascading focus profiles, schedules, location triggers, NFC tags, and Settings Lock.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="logo-link">
+      <svg class="logo-caret" viewBox="29 36.5 50 33" aria-hidden="true">
+        <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z"/>
+      </svg>
+      <span>Threshold</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="/features">Features</a>
+      <a href="/configuration" class="active" aria-current="page">Configuration</a>
+      <a href="/hardened">Hardened Mode</a>
+      <a href="/console">Console</a>
+      <a href="https://play.google.com/store/apps/details?id=com.garan.threshold" class="nav-cta">Get it on Play</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Configuration</h1>
+    <p>Press and hold on the home screen for three seconds (or type <code>:settings</code> in search) to configure your rules, profiles, and triggers.</p>
+
+    <div class="split-row">
+      <div class="item-list" style="margin-top: 0;">
+        <section class="item">
+          <h2>App Rules (Allow, Guard, Block)</h2>
+          <p>Every installed app sits in one of three states: <strong>Allowed</strong> (opens normally), <strong>Guarded</strong> (requires a friction checkpoint first), or <strong>Blocked</strong> (hidden from your home screen and search). Your default Phone dialer is always allowed.</p>
+        </section>
+
+        <section class="item">
+          <h2>Profiles &amp; Cascading Rules</h2>
+          <p>Set your baseline rules once, then create focused profiles such as <em>Work</em>, <em>Evening</em>, or <em>Weekend</em>. Multiple profiles can be active at the same time and are evaluated in priority order: the first active profile that defines a rule for an app takes effect, while any app left unspecified falls through to the next active profile or your base settings. This lets you combine profiles cleanly without duplicating your entire app list.</p>
+        </section>
+
+        <section class="item">
+          <h2>Schedules, Location &amp; NFC Triggers</h2>
+          <p>Switch profiles automatically on a time schedule, when arriving at a place, or by tapping a physical NFC card on your desk or nightstand.</p>
+        </section>
+
+        <section class="item">
+          <h2>Settings Lock &amp; Reboot-to-Apply</h2>
+          <p>To prevent weakening your rules on impulse, turn on <strong>Require Reboot for Settings Changes</strong> so edits only take effect after a restart, or lock Threshold Settings completely using the <a href="/console">Settings Lock Console</a>.</p>
+        </section>
+      </div>
+
+      <img src="/images/profiles.png" alt="Threshold Profiles and Triggers configuration screen" loading="lazy">
+    </div>
+
+    <p style="margin-top: 2.5rem;">
+      Next: <a href="/hardened">Hardened Mode (OS-level enforcement) &rarr;</a>
+    </p>
+  </main>
+
+  <footer>
+    <span>Threshold</span>
+    <div>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="https://github.com/garanj/threshold">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

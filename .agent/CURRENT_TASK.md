@@ -1,12 +1,11 @@
 # Current Task
 
-- **Active Issue**: [#138](https://github.com/garanj/threshold/issues/138) — `feat(site,release): add Expert Mode WebUSB Hardened Mode provisioner and testOnly release artifact`
-- **Branch**: `feat/138-expert-webusb-hardening`
+- **Active Issue**: [#140](https://github.com/garanj/threshold/issues/140) — `feat(site): build minimalist Threshold website (Home, Features, Configuration, Hardened Mode)`
+- **Branch**: `feat/140-minimalist-website`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Add `THRESHOLD_TEST_ONLY` manifest placeholder support in `app/build.gradle.kts` and `app/src/main/AndroidManifest.xml`
-- [x] Update `.github/workflows/release.yml` to build & publish `threshold-testonly.apk`, verify `testOnly` flags, and stage `site/downloads/threshold-testonly.bin` & `site/downloads/threshold-release.bin`
-- [x] Bundle self-hosted Tango WebUSB ADB client (`site/console/webadb.bundle.js`)
-- [x] Add **ENABLE (EXPERT)** tab and 5-stage WebUSB Hardened Mode provisioner + on-device 90s watchdog + Emergency Restore/Repair controls to `site/console/hardening/index.html`
-- [x] Verify Gradle unit tests & Spotless pass (`./gradlew spotlessCheck test`)
+- [x] Copy real Threshold screenshots into `site/images/`
+- [x] Add `site/favicon.svg` and shared minimalist `site/style.css`
+- [x] Build `site/index.html`, `site/features.html`, `site/configuration.html`, and `site/hardened.html`
+- [x] Preview locally via Firebase Hosting emulator and deploy live to `thresholdlauncher.com`
