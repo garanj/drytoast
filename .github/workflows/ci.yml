@@ -3,28 +3,65 @@ name: CI Quality Gate
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'site/**'
-      - 'firebase.json'
-      - '.firebaserc'
-      - '.agent/**'
-      - '*.md'
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - 'site/**'
-      - 'firebase.json'
-      - '.firebaserc'
-      - '.agent/**'
-      - '*.md'
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for Android / Build Changes
+        id: filter
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          ANDROID_CHANGED="false"
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            case "$file" in
+              site/*|firebase.json|.firebaserc|.agent/*|*.md|.github/workflows/ci.yml)
+                ;;
+              *)
+                ANDROID_CHANGED="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED"
+
+          echo "android=${ANDROID_CHANGED}" >> "$GITHUB_OUTPUT"
+          echo "Requires Android CI: ${ANDROID_CHANGED}"
+
   host-jvm-gate:
     name: Fast Host JVM Gate (Lint, Spotless, Unit & Screenshot Tests)
+    needs: [detect-changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -34,28 +71,39 @@ jobs:
       screenshots: ${{ steps.test-metrics.outputs.screenshots }}
 
     steps:
+      - name: Skip Android Host Gate (Website / Docs-Only Change)
+        if: needs.detect-changes.outputs.android != 'true'
+        run: echo "No Android source or build files changed. Passing Fast Host JVM Gate."
+
       - name: Checkout Repository
+        if: needs.detect-changes.outputs.android == 'true'
         uses: actions/checkout@v7
 
       - name: Set up JDK 17
+        if: needs.detect-changes.outputs.android == 'true'
         uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Gradle
+        if: needs.detect-changes.outputs.android == 'true'
         uses: gradle/actions/setup-gradle@v6
 
       - name: Run Spotless Code Formatting Check
+        if: needs.detect-changes.outputs.android == 'true'
         run: ./gradlew spotlessCheck
 
       - name: Run Host JVM Unit & Screenshot Tests
+        if: needs.detect-changes.outputs.android == 'true'
         run: ./gradlew test
 
       - name: Validate Minified Release Build (R8 / ProGuard)
+        if: needs.detect-changes.outputs.android == 'true'
         run: ./gradlew :app:assembleRelease
 
       - name: Upload Release APK Artifact
+        if: needs.detect-changes.outputs.android == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-apk
@@ -63,7 +111,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Screenshot Artifacts (on failure or inspection)
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: roborazzi-screenshots
@@ -71,14 +119,14 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish Host JVM Test Summary
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         uses: test-summary/action@v2
         with:
           paths: "**/build/test-results/**/TEST-*.xml"
 
       - name: Extract Host Test Metrics
         id: test-metrics
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         run: |
           python3 -c '
           import xml.etree.ElementTree as ET, glob, os
@@ -103,6 +151,7 @@ jobs:
 
   emulator-smoke-gate:
     name: Headless Emulator Gate (Functional & Smoke Tests)
+    needs: [detect-changes]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
@@ -111,19 +160,27 @@ jobs:
       instrumented_failed: ${{ steps.emulator-metrics.outputs.instrumented_failed }}
 
     steps:
+      - name: Skip Android Emulator Gate (Website / Docs-Only Change)
+        if: needs.detect-changes.outputs.android != 'true'
+        run: echo "No Android source or build files changed. Passing Headless Emulator Gate."
+
       - name: Checkout Repository
+        if: needs.detect-changes.outputs.android == 'true'
         uses: actions/checkout@v7
 
       - name: Set up JDK 17
+        if: needs.detect-changes.outputs.android == 'true'
         uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Gradle
+        if: needs.detect-changes.outputs.android == 'true'
         uses: gradle/actions/setup-gradle@v6
 
       - name: Free Disk Space
+        if: needs.detect-changes.outputs.android == 'true'
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
@@ -131,15 +188,18 @@ jobs:
           df -h
 
       - name: Enable KVM Hardware Virtualization
+        if: needs.detect-changes.outputs.android == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
       - name: Pre-assemble APKs before booting AVD
+        if: needs.detect-changes.outputs.android == 'true'
         run: ./gradlew :fixtures:dummy-app:assembleDebug :data:assembleDebugAndroidTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
 
       - name: Run Emulator Tests in AVD
+        if: needs.detect-changes.outputs.android == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -157,7 +217,7 @@ jobs:
             ./scripts/test-emulator-smoke.sh
 
       - name: Upload Instrumented Test Results
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: android-test-results
@@ -165,14 +225,14 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish Emulator Test Summary
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         uses: test-summary/action@v2
         with:
           paths: "**/build/outputs/androidTest-results/**/TEST-*.xml"
 
       - name: Extract Emulator Metrics
         id: emulator-metrics
-        if: always()
+        if: always() && needs.detect-changes.outputs.android == 'true'
         run: |
           TOTAL_PSS=$(cat build/total_pss.txt 2>/dev/null || echo "N/A")
           echo "total_pss=$TOTAL_PSS" >> "$GITHUB_OUTPUT"
@@ -194,8 +254,8 @@ jobs:
 
   pr-comment:
     name: Post PR CI Scorecard
-    needs: [host-jvm-gate, emulator-smoke-gate]
-    if: always() && github.event_name == 'pull_request'
+    needs: [detect-changes, host-jvm-gate, emulator-smoke-gate]
+    if: always() && github.event_name == 'pull_request' && needs.detect-changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
