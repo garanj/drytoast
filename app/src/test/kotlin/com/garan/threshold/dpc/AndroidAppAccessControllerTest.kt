@@ -140,6 +140,7 @@ class AndroidAppAccessControllerTest {
         assertThat(recordingBridge.uninstallBlockedCalls).isEmpty()
         assertThat(recordingBridge.userControlDisabledCalls).isEmpty()
         assertThat(recordingBridge.persistentHomeAddedCalls).isEqualTo(0)
+        assertThat(recordingBridge.backupServiceEnabledCalls).isEmpty()
     }
 
     @Test
@@ -155,8 +156,14 @@ class AndroidAppAccessControllerTest {
         assertThat(recordingBridge.addedUserRestrictions).containsExactly(
             UserManager.DISALLOW_SAFE_BOOT,
             UserManager.DISALLOW_ADD_USER,
+            UserManager.DISALLOW_CONFIG_DATE_TIME,
         )
         assertThat(recordingBridge.persistentHomeAddedCalls).isEqualTo(1)
+        assertThat(recordingBridge.backupServiceEnabledCalls).containsExactly(true)
+        assertThat(recordingBridge.organizationNameCalls)
+            .containsExactly(AndroidAppAccessController.HARDENED_ORGANIZATION_NAME)
+        assertThat(recordingBridge.shortSupportMessageCalls)
+            .containsExactly(AndroidAppAccessController.HARDENED_SHORT_SUPPORT_MESSAGE)
     }
 
     @Test
@@ -339,7 +346,10 @@ class AndroidAppAccessControllerTest {
         assertThat(recordingBridge.clearedUserRestrictions).containsExactly(
             UserManager.DISALLOW_SAFE_BOOT,
             UserManager.DISALLOW_ADD_USER,
+            UserManager.DISALLOW_CONFIG_DATE_TIME,
         )
+        assertThat(recordingBridge.organizationNameCalls.last()).isNull()
+        assertThat(recordingBridge.shortSupportMessageCalls.last()).isNull()
         assertThat(recordingBridge.userControlDisabledCalls.last()).isEmpty()
         assertThat(recordingBridge.uninstallBlockedCalls.last()).isEqualTo("com.garan.threshold" to false)
         assertThat(recordingBridge.clearedDeviceOwnerPackages).containsExactly("com.garan.threshold")
@@ -673,6 +683,9 @@ class AndroidAppAccessControllerTest {
         val clearedUserRestrictions = mutableListOf<String>()
         var persistentHomeAddedCalls = 0
         val persistentHomeClearedPackages = mutableListOf<String>()
+        val backupServiceEnabledCalls = mutableListOf<Boolean>()
+        val organizationNameCalls = mutableListOf<CharSequence?>()
+        val shortSupportMessageCalls = mutableListOf<CharSequence?>()
         val clearedDeviceOwnerPackages = mutableListOf<String>()
 
         override fun isDeviceOwnerApp(packageName: String): Boolean = isDeviceOwner
@@ -716,6 +729,18 @@ class AndroidAppAccessControllerTest {
 
         override fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String) {
             persistentHomeClearedPackages.add(packageName)
+        }
+
+        override fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean) {
+            backupServiceEnabledCalls.add(enabled)
+        }
+
+        override fun setOrganizationName(admin: ComponentName, title: CharSequence?) {
+            organizationNameCalls.add(title)
+        }
+
+        override fun setShortSupportMessage(admin: ComponentName, message: CharSequence?) {
+            shortSupportMessageCalls.add(message)
         }
 
         override fun clearDeviceOwnerApp(packageName: String) {

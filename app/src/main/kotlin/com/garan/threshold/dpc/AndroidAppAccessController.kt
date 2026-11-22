@@ -30,6 +30,9 @@ interface DpcPolicyBridge {
     fun clearUserRestriction(admin: ComponentName, key: String)
     fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName)
     fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String)
+    fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean)
+    fun setOrganizationName(admin: ComponentName, title: CharSequence?)
+    fun setShortSupportMessage(admin: ComponentName, message: CharSequence?)
     fun clearDeviceOwnerApp(packageName: String)
 }
 
@@ -71,6 +74,18 @@ internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyB
 
     override fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String) {
         runCatching { dpm?.clearPackagePersistentPreferredActivities(admin, packageName) }
+    }
+
+    override fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean) {
+        runCatching { dpm?.setBackupServiceEnabled(admin, enabled) }
+    }
+
+    override fun setOrganizationName(admin: ComponentName, title: CharSequence?) {
+        runCatching { dpm?.setOrganizationName(admin, title) }
+    }
+
+    override fun setShortSupportMessage(admin: ComponentName, message: CharSequence?) {
+        runCatching { dpm?.setShortSupportMessage(admin, message) }
     }
 
     @Suppress("DEPRECATION")
@@ -162,6 +177,11 @@ class AndroidAppAccessController(
             addCategory(Intent.CATEGORY_DEFAULT)
         }
         bridge.addPersistentPreferredActivity(adminComponent, homeFilter, homeActivityComponent)
+        // Android disables the system Backup Service by default on Device Owner devices; explicitly
+        // re-enable it so ongoing Google Backup continues working normally in Hardened Mode.
+        bridge.setBackupServiceEnabled(adminComponent, true)
+        bridge.setOrganizationName(adminComponent, HARDENED_ORGANIZATION_NAME)
+        bridge.setShortSupportMessage(adminComponent, HARDENED_SHORT_SUPPORT_MESSAGE)
         isSelfProtectionApplied = true
     }
 
@@ -361,6 +381,8 @@ class AndroidAppAccessController(
             bridge.clearPackagePersistentPreferredActivities(adminComponent, selfPackageName)
             bridge.setUserControlDisabledPackages(adminComponent, emptyList())
             bridge.setUninstallBlocked(adminComponent, selfPackageName, false)
+            bridge.setShortSupportMessage(adminComponent, null)
+            bridge.setOrganizationName(adminComponent, null)
             bridge.clearDeviceOwnerApp(selfPackageName)
         }
 
@@ -395,9 +417,14 @@ class AndroidAppAccessController(
          */
         const val MIN_LAUNCH_HANDOVER_GRACE_MS = 5_000L
 
+        const val HARDENED_ORGANIZATION_NAME = "Threshold"
+        const val HARDENED_SHORT_SUPPORT_MESSAGE =
+            "Hardened Mode is active in Threshold (thresholdlauncher.com)"
+
         val HARDENED_USER_RESTRICTIONS = listOf(
             UserManager.DISALLOW_SAFE_BOOT,
             UserManager.DISALLOW_ADD_USER,
+            UserManager.DISALLOW_CONFIG_DATE_TIME,
         )
 
         val PROTECTED_SYSTEM_PACKAGES = setOf(
