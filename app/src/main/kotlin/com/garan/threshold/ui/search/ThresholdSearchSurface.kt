@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.garan.threshold.R
@@ -231,8 +232,8 @@ fun ThresholdSearchSurface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                    .padding(top = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 quickActions.forEach { item ->
                     QuickActionRow(
@@ -401,14 +402,17 @@ fun QuickActionRow(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "$slotFormatted   ${item.label}",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineMedium,
             color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
 
         if (isGuarded) {

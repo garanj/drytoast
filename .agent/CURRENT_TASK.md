@@ -1,10 +1,11 @@
 # Current Task
 
-- **Active Issue**: [#144](https://github.com/garanj/threshold/issues/144) — `fix(home): exit search mode and restore dialer icon when IME is dismissed with empty query`
-- **Branch**: `fix/144-ime-dismiss-exit-search`
+- **Active Issue**: [#130](https://github.com/garanj/threshold/issues/130) — `feat(ui): experiment with larger Quick Action label typography and vertical touch spacing`
+- **Branch**: `feat/130-quick-action-typography`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Observe `WindowInsets.isImeVisible` in `ThresholdHomeScreen` to auto-dismiss empty search when IME closes
-- [x] Add deterministic Compose unit tests in `ThresholdHomeScreenTest` for empty vs non-empty query IME dismissal
-- [x] Verify `./gradlew spotlessCheck test :app:installDebug` passes and installed on Pixel 9a
+- [x] Upgrade `QuickActionRow` typography (`titleLarge` 20sp → `headlineMedium` 24sp), vertical touch padding (`10.dp` → `14.dp`, 56dp target height), row spacing (`2.dp` → `4.dp`), and ellipsis safety
+- [x] Update `home_canvas_quick_actions.png` Roborazzi golden screenshot
+- [x] Verify `./gradlew spotlessCheck test` passes and deploy to Pixel 9a for tactile feel check
+- [x] Open PR assigned to `garanj`
