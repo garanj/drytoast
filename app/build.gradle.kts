@@ -29,9 +29,6 @@ android {
         targetSdk = 37
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0"
-        manifestPlaceholders["testOnlyFlag"] =
-            (project.findProperty("thresholdTestOnly")?.toString() ?: System.getenv("THRESHOLD_TEST_ONLY"))
-                ?.equals("true", ignoreCase = true) ?: false
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

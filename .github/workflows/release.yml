@@ -93,45 +93,19 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease :app:bundleRelease -PthresholdTestOnly=false
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
 
-      - name: Stage Production Artifacts & Assemble Signed testOnly Bridge APK
+      - name: Stage Production Artifacts
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          VERSION_CODE: ${{ steps.version.outputs.version_code }}
-          SIGNING_KEYSTORE_PATH: ${{ steps.keystore.outputs.keystore_path }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          mkdir -p release-dist site/downloads
+          mkdir -p release-dist
           cp "app/build/outputs/apk/release/app-release.apk" "release-dist/threshold-release.apk"
           cp "app/build/outputs/apk/release/app-release.apk" "release-dist/threshold-v${VERSION_NAME}.apk"
           cp "app/build/outputs/bundle/release/app-release.aab" "release-dist/threshold-v${VERSION_NAME}.aab"
           if [[ -f "app/build/outputs/mapping/release/mapping.txt" ]]; then
             cp "app/build/outputs/mapping/release/mapping.txt" "release-dist/mapping-v${VERSION_NAME}.txt"
           fi
-
-          # Rebuild signed release APK with android:testOnly="true" (same versionCode & signing key)
-          ./gradlew :app:assembleRelease -PthresholdTestOnly=true
-          cp "app/build/outputs/apk/release/app-release.apk" "release-dist/threshold-testonly.apk"
-
-          # Verify testOnly flags via aapt2
-          AAPT2=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -name aapt2 | sort -V | tail -n 1)
-          if [[ -n "$AAPT2" ]]; then
-            if "$AAPT2" dump xmltree "release-dist/threshold-release.apk" --file AndroidManifest.xml | grep -Eq "testOnly.*=(true|0xffffffff)"; then
-              echo "::error::threshold-release.apk must NOT have testOnly=true"
-              exit 1
-            fi
-            if ! "$AAPT2" dump xmltree "release-dist/threshold-testonly.apk" --file AndroidManifest.xml | grep -Eq "testOnly.*=(true|0xffffffff)"; then
-              echo "::error::threshold-testonly.apk MUST have testOnly=true"
-              exit 1
-            fi
-            echo "Verified testOnly flags: release=false, testonly=true"
-          fi
-
-          cp "release-dist/threshold-release.apk" "site/downloads/threshold-release.bin"
-          cp "release-dist/threshold-testonly.apk" "site/downloads/threshold-testonly.bin"
 
       - name: Prepare Release Artifacts & Compute 6-Tap QR Checksum
         id: artifacts
@@ -162,7 +136,6 @@ jobs:
 
           ### Artifacts
           - **\`threshold-release.apk\` / \`threshold-v${VERSION_NAME}.apk\`**: Signed universal Android APK (for direct installation & 6-tap QR provisioning)
-          - **\`threshold-testonly.apk\`**: Signed \`android:testOnly="true"\` bridge APK (for Expert Mode in-place WebUSB provisioning)
           - **\`threshold-v${VERSION_NAME}.aab\`**: Signed Android App Bundle (for Google Play Console upload)
           - **\`mapping-v${VERSION_NAME}.txt\`**: R8 obfuscation mapping file
 
@@ -196,7 +169,6 @@ jobs:
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" \
               release-dist/threshold-release.apk \
-              release-dist/threshold-testonly.apk \
               release-dist/threshold-v*.apk \
               release-dist/threshold-v*.aab \
               release-dist/mapping-v*.txt \
@@ -206,7 +178,6 @@ jobs:
           else
             gh release create "$TAG_NAME" \
               release-dist/threshold-release.apk \
-              release-dist/threshold-testonly.apk \
               release-dist/threshold-v*.apk \
               release-dist/threshold-v*.aab \
               release-dist/mapping-v*.txt \
@@ -215,7 +186,7 @@ jobs:
               --notes-file release-dist/RELEASE_NOTES.md
           fi
 
-      - name: Deploy APK & Provisioning QR Payload to Firebase Hosting
+      - name: Deploy Provisioning QR Payload to Firebase Hosting
         if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_github_release == true)) && env.FIREBASE_SERVICE_ACCOUNT != ''
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
