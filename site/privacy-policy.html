@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy — Threshold Launcher</title>
+  <title>Privacy Policy | Threshold Launcher</title>
   <meta name="description" content="Privacy Policy for Threshold Launcher (com.garan.threshold). Zero data collection, zero internet permission, 100% offline.">
   <style>
     * {
@@ -83,7 +83,7 @@
 
     <h2>2. Local-Only Data Storage</h2>
     <p>
-      All configuration data you create in Threshold Launcher—such as your pinned apps, focus profiles, schedules, local anti-metrics counters, and preferences—is stored exclusively on your device inside Android’s private application storage (with <code>android:allowBackup="false"</code>). Uninstalling the application permanently deletes all locally stored preferences.
+      All configuration data you create in Threshold Launcher (such as your pinned apps, focus profiles, schedules, local counters, and preferences) is stored exclusively on your device inside Android’s private application storage (with <code>android:allowBackup="false"</code>). Uninstalling the application permanently deletes all locally stored preferences.
     </p>
 
     <h2>3. Device Permissions &amp; How They Are Used On-Device</h2>
@@ -92,11 +92,11 @@
     </p>
     <ul>
       <li><strong>Installed Applications (<code>QUERY_ALL_PACKAGES</code>):</strong> Required so the home screen and search drawer can list and launch the applications installed on your device. Your list of installed apps never leaves your device.</li>
-      <li><strong>Location (<code>ACCESS_COARSE_LOCATION</code> / <code>ACCESS_FINE_LOCATION</code> — Optional):</strong> Requested only if you explicitly create a location-based profile rule or a sunrise/sunset schedule. Coordinates are evaluated locally on your device and are never transmitted or logged.</li>
-      <li><strong>NFC (<code>NFC</code> — Optional):</strong> Used only if you pair a physical NFC tag to toggle a focus profile. Only the tag payload is matched locally on your device.</li>
+      <li><strong>Location (<code>ACCESS_COARSE_LOCATION</code> / <code>ACCESS_FINE_LOCATION</code>, Optional):</strong> Requested only if you explicitly create a location-based profile rule. Coordinates are evaluated locally on your device and are never transmitted or logged.</li>
+      <li><strong>NFC (<code>NFC</code>, Optional):</strong> Used only if you pair a physical NFC tag to toggle a focus profile. Only the tag payload is matched locally on your device.</li>
       <li><strong>Alarms &amp; Boot Scheduling (<code>SCHEDULE_EXACT_ALARM</code>, <code>RECEIVE_BOOT_COMPLETED</code>):</strong> Used locally to trigger scheduled focus profile transitions on time and restore active schedules after a device restart.</li>
       <li><strong>Wallpaper &amp; Haptics (<code>SET_WALLPAPER</code>, <code>VIBRATE</code>):</strong> Used locally to apply optional focus wallpapers and tactile feedback.</li>
-      <li><strong>Device Administrator / Device Owner (<code>BIND_DEVICE_ADMIN</code> — Optional):</strong> Used only if you explicitly provision Hardened Mode to enforce OS-level app suspension for blocked and guarded apps during focus sessions.</li>
+      <li><strong>Device Administrator / Device Owner (<code>BIND_DEVICE_ADMIN</code>, Optional):</strong> Used only if you explicitly provision Hardened Mode to enforce OS-level app suspension for blocked and guarded apps during focus sessions.</li>
     </ul>
 
     <h2>4. Third-Party Services</h2>

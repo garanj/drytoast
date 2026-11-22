@@ -1,5 +1,5 @@
 /**
- * Threshold Expert Mode — Staged WebUSB Hardened Mode (Device Owner) Provisioner.
+ * Threshold Expert Mode: Staged WebUSB Hardened Mode (Device Owner) Provisioner.
  *
  * Stages:
  *  1. Connect & Authorize Device (WebUSB via self-hosted Tango ADB bundle)
@@ -337,7 +337,7 @@
 
     if (blockers.length > 0) {
       els.auditBlockers.style.display = "block";
-      els.auditBlockers.innerHTML = "<strong>Cannot proceed — hard OS blocker detected:</strong><ul>" +
+      els.auditBlockers.innerHTML = "<strong>Cannot proceed: hard OS blocker detected.</strong><ul>" +
         blockers.map(function (b) { return "<li>" + b + "</li>"; }).join("") +
         "</ul>";
       setStageState(2, "error", "Blocked by OS preflight check");
@@ -484,7 +484,7 @@
         throw new Error("dpm set-device-owner failed: " + dpmRes.output);
       }
 
-      setStageState(4, "active", "Device Owner active — pausing before production upgrade...");
+      setStageState(4, "active", "Device Owner active. Pausing before production upgrade...");
       setProgress(62, "Pausing 2s before upgrading to production APK...");
       await sleep(2000);
 
