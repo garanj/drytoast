@@ -162,288 +162,47 @@
       background: #ffffff;
       color: #000000;
     }
-    .danger-banner {
-      border: 1px solid #d9534f;
-      background: rgba(217, 83, 79, 0.08);
-      border-radius: 2px;
-      padding: 18px 20px;
-      margin-bottom: 20px;
-    }
-    .danger-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #f2b8b5;
-      margin: 0 0 8px;
-    }
-    .badge-danger {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      background: #f2b8b5;
-      color: #000000;
-      border-radius: 2px;
-    }
-    .danger-banner p, .danger-banner ul {
-      margin: 0 0 8px;
-      color: #d6c5c4;
-      font-size: 0.88rem;
-    }
-    .danger-banner ul {
-      padding-left: 18px;
-      margin-bottom: 0;
-    }
-    .danger-banner li {
-      margin-bottom: 5px;
-    }
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-top: 14px;
-    }
-    .btn-primary {
-      appearance: none;
-      background: #ffffff;
-      color: #000000;
-      border: 1px solid #ffffff;
-      border-radius: 2px;
-      padding: 10px 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: #dcdcdc;
-    }
-    .btn-primary:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-    .btn-secondary {
-      appearance: none;
-      background: #141414;
-      color: #ffffff;
-      border: 1px solid #3a3a3a;
-      border-radius: 2px;
-      padding: 10px 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-    .btn-secondary:hover:not(:disabled) {
-      border-color: #ffffff;
-    }
-    .btn-secondary:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-    .btn-danger {
-      appearance: none;
-      background: #f2b8b5;
-      color: #000000;
-      border: 1px solid #f2b8b5;
-      border-radius: 2px;
-      padding: 11px 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-    .btn-danger:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-    .device-summary {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.8rem;
-      color: #b8b8b8;
-    }
-    .stage-list {
+    .backup-checklist {
       list-style: none;
-      margin: 16px 0 0;
+      margin: 14px 0 0;
       padding: 0;
-      border-top: 1px solid #262626;
+      border-top: 1px solid #222222;
     }
-    .stage-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 0;
+    .backup-checklist li {
       border-bottom: 1px solid #1e1e1e;
-    }
-    .stage-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #ffffff;
-    }
-    .stage-detail {
-      font-size: 0.8rem;
-      color: #888888;
-      margin-top: 2px;
-    }
-    .stage-state {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      padding: 2px 7px;
-      border-radius: 2px;
-      border: 1px solid #333333;
-      color: #888888;
-      flex-shrink: 0;
-    }
-    .stage-item[data-state="active"] .stage-state {
-      border-color: #ffffff;
-      color: #ffffff;
-    }
-    .stage-item[data-state="ok"] .stage-state {
-      background: #ffffff;
-      border-color: #ffffff;
-      color: #000000;
-    }
-    .stage-item[data-state="error"] .stage-state {
-      background: #f2b8b5;
-      border-color: #f2b8b5;
-      color: #000000;
-    }
-    .audit-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
       padding: 10px 0;
-      border-bottom: 1px solid #1e1e1e;
-      font-size: 0.88rem;
     }
-    .audit-row:last-child {
-      border-bottom: 0;
-    }
-    .audit-val {
-      font-size: 0.8rem;
-      color: #a8a8a8;
-      margin-top: 2px;
-    }
-    .audit-pill {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      padding: 2px 7px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-    .audit-pill.ok {
-      background: #ffffff;
-      color: #000000;
-    }
-    .audit-pill.warn {
-      border: 1px solid #f0ad4e;
-      color: #f0ad4e;
-    }
-    .audit-pill.fail {
-      background: #f2b8b5;
-      color: #000000;
-    }
-    .audit-blockers {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border: 1px solid #d9534f;
-      background: rgba(217, 83, 79, 0.08);
-      font-size: 0.85rem;
-      color: #f2b8b5;
-    }
-    .audit-blockers ul {
-      margin: 8px 0 0;
-      padding-left: 18px;
-    }
-    .ack-label {
+    .backup-check-label {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      font-size: 0.86rem;
-      color: #d0d0d0;
       cursor: pointer;
-      margin-top: 16px;
-    }
-    .ack-label input {
-      margin-top: 3px;
-      accent-color: #ffffff;
-    }
-    .progress-wrap {
-      margin-top: 16px;
-      display: none;
-    }
-    .progress-track {
-      width: 100%;
-      height: 4px;
-      background: #262626;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: #ffffff;
-      transition: width 150ms ease;
-    }
-    .progress-text {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.74rem;
-      color: #a8a8a8;
-      margin-top: 6px;
-    }
-    .expert-log {
-      background: #060606;
-      border: 1px solid #262626;
-      padding: 12px;
-      height: 180px;
-      overflow-y: auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.74rem;
+      font-size: 0.88rem;
+      color: #d4d4d4;
       line-height: 1.45;
-      color: #c8c8c8;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin-top: 14px;
     }
-    .override-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 10px;
+    .backup-check-label input {
+      margin-top: 4px;
+      accent-color: #ffffff;
+      flex-shrink: 0;
     }
-    @media (max-width: 540px) {
-      .override-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .override-field {
-      font-size: 0.78rem;
+    .expect-box {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px solid #262626;
+      background: #080808;
+      font-size: 0.82rem;
       color: #a8a8a8;
+      line-height: 1.5;
     }
-    .override-field input {
-      margin-top: 6px;
-      width: 100%;
-      color: #d0d0d0;
-      font-size: 0.75rem;
+    .expect-box strong {
+      color: #ffffff;
+    }
+    .expect-box p {
+      margin: 0 0 8px;
+    }
+    .expect-box p:last-child {
+      margin-bottom: 0;
     }
     .tab-pane {
       display: none;
@@ -650,12 +409,11 @@
     <p class="subtitle">Provision OS-level Device Owner protection on a fresh install, or deactivate Hardened Mode on an enrolled phone.</p>
 
     <div class="mobile-second-device-note" role="note">
-      <strong>Viewing on your phone?</strong> Open <code>thresholdlauncher.com/hardened-mode</code> on a computer or second screen so you can scan the QR code or connect via USB.
+      <strong>Viewing on your phone?</strong> Open <code>thresholdlauncher.com/hardened-mode</code> on a computer or second screen so you can scan the QR code.
     </div>
 
     <div class="action-tabs" role="tablist" aria-label="Hardened Mode action">
-      <button type="button" class="action-tab active" role="tab" aria-selected="true" data-tab-btn="enable">Enable (6-Tap Setup)</button>
-      <button type="button" class="action-tab" role="tab" aria-selected="false" data-tab-btn="expert">Enable (Expert)</button>
+      <button type="button" class="action-tab active" role="tab" aria-selected="true" data-tab-btn="enable">Enable Hardened Mode</button>
       <button type="button" class="action-tab" role="tab" aria-selected="false" data-tab-btn="disable">Disable Hardened Mode</button>
     </div>
 
@@ -663,16 +421,57 @@
     <div class="tab-pane active" data-tab-pane="enable">
       <section class="step-card">
         <div class="step-header">
-          <p class="step-label">Fresh Install Setup</p>
-          <span class="badge">Recommended</span>
+          <p class="step-label">Step 01 · Pre-Reset Checklist</p>
         </div>
-        <h2>6-Tap Welcome Screen QR Setup</h2>
+        <h2>Back up your phone before resetting</h2>
         <p class="step-desc">
-          Hardened Mode should be enabled on a brand-new or freshly factory-reset phone <strong>before</strong> signing into Google accounts.
+          If you are setting up Hardened Mode on an existing phone, you will factory reset it first. Take two minutes to confirm these backups before wiping:
+        </p>
+        <ul class="backup-checklist">
+          <li>
+            <label class="backup-check-label">
+              <input type="checkbox" />
+              <span><strong>Photos &amp; Local Files:</strong> Confirm Google Photos (or a USB copy to your computer) has finished backing up <code>DCIM/</code> and <code>Downloads/</code>.</span>
+            </label>
+          </li>
+          <li>
+            <label class="backup-check-label">
+              <input type="checkbox" />
+              <span><strong>2FA Authenticators &amp; Passkeys:</strong> Confirm Google Authenticator, 1Password, Bitwarden, or Aegis is synced or recovery codes are saved.</span>
+            </label>
+          </li>
+          <li>
+            <label class="backup-check-label">
+              <input type="checkbox" />
+              <span><strong>Messaging Backups:</strong> Trigger a fresh backup in WhatsApp (<em>Settings → Chats → Chat backup</em>) or Signal (<em>Settings → Chats → Chat backups</em>).</span>
+            </label>
+          </li>
+          <li>
+            <label class="backup-check-label">
+              <input type="checkbox" />
+              <span><strong>SMS &amp; Call History (Optional):</strong> Android's 6-Tap managed setup skips the consumer "Copy apps &amp; data" restore screen. Back up texts/calls with an app like <em>SMS Backup &amp; Restore</em> if you want to keep old history.</span>
+            </label>
+          </li>
+        </ul>
+
+        <div class="expect-box">
+          <p><strong>What comes back automatically:</strong> After setup finishes and you sign into Google Play, your Contacts, Calendar, Gmail, Photos, Chrome, Play Store app library, and app-native cloud backups (WhatsApp, 2FA, password manager) sync right back.</p>
+          <p><strong>What to expect in Device Owner mode:</strong> Android displays a small "Managed by Threshold" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate Hardened Mode cleanly anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
+        </div>
+      </section>
+
+      <section class="step-card">
+        <div class="step-header">
+          <p class="step-label">Step 02 · Fresh Install Setup</p>
+          <span class="badge">6-Tap QR</span>
+        </div>
+        <h2>Scan on Android's Welcome screen</h2>
+        <p class="step-desc">
+          Hardened Mode is provisioned on a brand-new or freshly factory-reset phone <strong>before</strong> signing into Google accounts.
         </p>
         <ol class="steps-list">
           <li>Turn on a brand-new or freshly factory-reset Android phone.</li>
-          <li>On Android’s very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android’s built-in QR scanner.</li>
+          <li>On Android's very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android's built-in QR scanner.</li>
           <li>Connect to Wi-Fi when prompted, then scan the QR code below.</li>
           <li>Android will download the signed Threshold APK, verify its SHA-256 checksum, and set Threshold as Device Owner automatically.</li>
         </ol>
@@ -691,131 +490,7 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
       </details>
     </div>
 
-    <!-- TAB 2: ENABLE HARDENED MODE (EXPERT / WEBUSB) -->
-    <div class="tab-pane" data-tab-pane="expert">
-      <div class="danger-banner">
-        <div class="danger-title">
-          <span class="badge-danger">DANGER</span>
-          <span>Expert In-Place Provisioning (Existing Phone via WebUSB)</span>
-        </div>
-        <p>
-          This flow activates Device Owner on an already-configured phone without a factory reset. Use the <strong>6-Tap Setup</strong> tab instead whenever possible.
-        </p>
-        <ul>
-          <li><strong>No secondary users allowed:</strong> Android blocks Device Owner if a Work Profile, Private Space, Samsung Secure Folder, Dual Apps profile, or Guest User exists.</li>
-          <li><strong>Temporary 3rd-party account pause:</strong> Third-party <code>AccountAuthenticator</code> service components (e.g. WhatsApp, Signal, Outlook) are disabled for ~15 seconds while promoting Threshold. An on-device 90-second self-healing watchdog automatically re-enables them even if the USB cable is unplugged.</li>
-          <li><strong>Bridge + Production swap:</strong> Installs a signed <code>testOnly</code> bridge build, runs <code>dpm set-device-owner</code>, then immediately replaces it in-place with the production release build so Play updates continue to work.</li>
-        </ul>
-      </div>
-
-      <div id="expert-browser-warn" class="danger-banner" style="display: none;">
-        <div class="danger-title"><span class="badge-danger">UNSUPPORTED BROWSER</span></div>
-        <p>WebUSB is only supported in desktop <strong>Chrome, Edge, Brave, or Opera</strong>. Open this page in a Chromium-based desktop browser to use Expert Mode.</p>
-      </div>
-
-      <section class="step-card">
-        <div class="step-header">
-          <p class="step-label">Gate 01 · Connect &amp; Audit (Read-Only)</p>
-        </div>
-        <h2>Connect your phone via USB Debugging</h2>
-        <p class="step-desc">
-          Enable <strong>Developer Options → USB Debugging</strong> on your phone, connect a data USB cable, and close any desktop <code>adb</code> server (e.g. Android Studio) before clicking Connect.
-        </p>
-        <div class="btn-row">
-          <button type="button" id="btn-expert-connect" class="btn-primary">Connect Phone via USB</button>
-          <button type="button" id="btn-expert-disconnect" class="btn-secondary" style="display: none;">Disconnect</button>
-          <span id="expert-device-summary" class="device-summary"></span>
-        </div>
-      </section>
-
-      <section id="expert-audit-card" class="step-card" style="display: none;">
-        <p class="step-label">Gate 02 · Suitability Check &amp; Execution</p>
-        <h2>Device Preflight Audit</h2>
-        <div id="expert-audit-list"></div>
-        <div id="expert-audit-blockers" class="audit-blockers" style="display: none;"></div>
-
-        <div id="expert-ack-wrap" style="display: none;">
-          <label class="ack-label" for="expert-ack-checkbox">
-            <input type="checkbox" id="expert-ack-checkbox" />
-            <span>I understand the risks, have backed up important data, and will keep the USB cable connected until all 5 stages finish.</span>
-          </label>
-          <div class="btn-row">
-            <button type="button" id="btn-expert-run" class="btn-danger" disabled>Run Expert Provisioning</button>
-          </div>
-        </div>
-
-        <div id="expert-progress-wrap" class="progress-wrap">
-          <div class="progress-track"><div id="expert-progress-bar" class="progress-bar"></div></div>
-          <div id="expert-progress-text" class="progress-text"></div>
-        </div>
-      </section>
-
-      <section class="step-card">
-        <p class="step-label">Live Stage Progress</p>
-        <h2>5-Stage Provisioning Pipeline</h2>
-        <ul id="expert-stage-list" class="stage-list">
-          <li class="stage-item" data-stage="1" data-state="idle">
-            <div>
-              <div class="stage-title">1. Connect &amp; Authorize Device</div>
-              <div class="stage-detail">WebUSB ADB handshake &amp; device approval</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-          <li class="stage-item" data-stage="2" data-state="idle">
-            <div>
-              <div class="stage-title">2. Suitability &amp; Preflight Audit</div>
-              <div class="stage-detail">Check multi-user / Work Profile / Private Space &amp; 3P authenticators</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-          <li class="stage-item" data-stage="3" data-state="idle">
-            <div>
-              <div class="stage-title">3. Pause 3rd-Party Authenticators (90s Watchdog)</div>
-              <div class="stage-detail">Arm on-device auto-rollback timer, pause 3P services, wait for OS settle</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-          <li class="stage-item" data-stage="4" data-state="idle">
-            <div>
-              <div class="stage-title">4. testOnly Bridge → Device Owner → Production APK</div>
-              <div class="stage-detail">Install bridge APK, run dpm set-device-owner, pause, upgrade to production APK</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-          <li class="stage-item" data-stage="5" data-state="idle">
-            <div>
-              <div class="stage-title">5. Restore All Accounts &amp; Verify</div>
-              <div class="stage-detail">Re-enable all 3P authenticators &amp; verify active Device Owner</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-        </ul>
-
-        <pre id="expert-log" class="expert-log" aria-live="polite">Ready. Click "Connect Phone via USB" to begin.</pre>
-
-        <div class="btn-row" style="margin-top: 16px;">
-          <button type="button" id="btn-expert-restore" class="btn-secondary" disabled>Emergency Restore Accounts</button>
-          <button type="button" id="btn-expert-repair-apk" class="btn-secondary" disabled>Finish / Repair Production APK</button>
-        </div>
-      </section>
-
-      <details>
-        <summary>Advanced: Local APK Overrides (for local testing before release)</summary>
-        <p style="margin: 10px 0 6px;">By default, Expert Mode fetches the signed payloads hosted at <code>/downloads/threshold-testonly.bin</code> and <code>/downloads/threshold-release.bin</code>. You can optionally select local APKs here instead:</p>
-        <div class="override-grid">
-          <label class="override-field">
-            <span>testOnly Bridge APK (optional)</span>
-            <input type="file" id="expert-file-testonly" accept=".apk,.bin" />
-          </label>
-          <label class="override-field">
-            <span>Production Release APK (optional)</span>
-            <input type="file" id="expert-file-release" accept=".apk,.bin" />
-          </label>
-        </div>
-      </details>
-    </div>
-
-    <!-- TAB 3: DISABLE HARDENED MODE (QR + CHALLENGE) -->
+    <!-- TAB 2: DISABLE HARDENED MODE (QR + CHALLENGE) -->
     <div class="tab-pane" data-tab-pane="disable">
       <section class="step-card">
         <p class="step-label">Step 01</p>
@@ -889,8 +564,6 @@ adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n co
       });
       if (window.location.hash === "#disable") {
         activateTab("disable");
-      } else if (window.location.hash === "#expert") {
-        activateTab("expert");
       }
 
       // Dynamically refresh 6-Tap QR from /provisioning-qr-payload.json so it always matches the latest release
@@ -949,7 +622,5 @@ adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n co
       setInterval(updateCode, 15000);
     })();
   </script>
-  <script src="/console/webadb.bundle.js"></script>
-  <script src="/console/expert-hardening.js"></script>
 </body>
 </html>
