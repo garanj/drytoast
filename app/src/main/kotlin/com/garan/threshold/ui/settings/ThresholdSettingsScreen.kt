@@ -437,34 +437,36 @@ fun ThresholdSettingsScreen(
                 )
             }
 
-            item(key = "setting_guarded_grace_period") {
-                val graceMinutes = uiState.general.guardedSessionGraceMinutes
-                val summary = formatGuardedGraceOptionLabel(graceMinutes)
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            text = stringResource(R.string.setting_guarded_grace_period),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text = summary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    },
-                    trailingContent = {
-                        Icon(
-                            imageVector = ThresholdIcons.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW)
-                        .clickable { showGuardedGraceSheet = true },
-                )
+            if (uiState.isHardenedModeActive) {
+                item(key = "setting_guarded_grace_period") {
+                    val graceMinutes = uiState.general.guardedSessionGraceMinutes
+                    val summary = formatGuardedGraceOptionLabel(graceMinutes)
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.setting_guarded_grace_period),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = summary,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                imageVector = ThresholdIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW)
+                            .clickable { showGuardedGraceSheet = true },
+                    )
+                }
             }
 
             item(key = "action_set_black_wallpaper") {
@@ -621,7 +623,7 @@ fun ThresholdSettingsScreen(
         }
     }
 
-    if (showGuardedGraceSheet) {
+    if (showGuardedGraceSheet && uiState.isHardenedModeActive) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val currentMinutes = uiState.general.guardedSessionGraceMinutes
 

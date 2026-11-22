@@ -296,6 +296,34 @@ class ThresholdSettingsScreenTest {
     }
 
     @Test
+    fun guardedGracePeriodRow_hiddenWhenHardenedModeInactive() {
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(
+                        general = GeneralSettings(guardedSessionGraceMinutes = 5),
+                        isHardenedModeActive = false,
+                        isLoading = false,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.NAV_HARDENED_MODE))
+        composeRule.onNodeWithTag(SettingsTestTags.GUARDED_GRACE_PERIOD_ROW)
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun guardedGracePeriodRow_opensBottomSheetAndUpdatesGraceMinutes() {
         var selectedMinutes: Int? = null
 
@@ -304,6 +332,7 @@ class ThresholdSettingsScreenTest {
                 ThresholdSettingsScreen(
                     uiState = SettingsUiState(
                         general = GeneralSettings(guardedSessionGraceMinutes = 5),
+                        isHardenedModeActive = true,
                         isLoading = false,
                     ),
                     onBack = {},
