@@ -3,6 +3,9 @@ package com.garan.threshold.ui.home
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -867,6 +870,68 @@ class ThresholdHomeScreenTest {
         composeTestRule.waitForIdle()
 
         assertThat(viewModel.uiState.value.isSearching).isFalse()
+    }
+
+    @Test
+    fun searchActive_imeDismissedWithEmptyQuery_exitsSearchAndRestoresDialerIcon() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+        var imeVisible by mutableStateOf(false)
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                    isImeVisible = imeVisible,
+                )
+            }
+        }
+
+        // Swipe up to open search; IME then appears
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput { swipeUp() }
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.isSearching).isTrue()
+
+        imeVisible = true
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.isSearching).isTrue()
+
+        // User dismisses IME without typing a query -> search exits automatically
+        imeVisible = false
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.isSearching).isFalse()
+    }
+
+    @Test
+    fun searchActive_imeDismissedWithNonEmptyQuery_keepsSearchResultsVisible() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+        var imeVisible by mutableStateOf(false)
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                    isImeVisible = imeVisible,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput { swipeUp() }
+        composeTestRule.waitForIdle()
+        imeVisible = true
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNode(hasSetTextAction()).performTextInput("cam")
+        composeTestRule.waitForIdle()
+
+        // Dismissing IME while results are displayed keeps search active
+        imeVisible = false
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.query).isEqualTo("cam")
+        composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
     }
 
     private class FakeSoftwareKeyboardController : SoftwareKeyboardController {
