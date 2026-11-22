@@ -30,6 +30,7 @@ interface DpcPolicyBridge {
     fun clearUserRestriction(admin: ComponentName, key: String)
     fun addPersistentPreferredActivity(admin: ComponentName, filter: IntentFilter, activity: ComponentName)
     fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String)
+    fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean)
     fun clearDeviceOwnerApp(packageName: String)
 }
 
@@ -71,6 +72,10 @@ internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyB
 
     override fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String) {
         runCatching { dpm?.clearPackagePersistentPreferredActivities(admin, packageName) }
+    }
+
+    override fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean) {
+        runCatching { dpm?.setBackupServiceEnabled(admin, enabled) }
     }
 
     @Suppress("DEPRECATION")
@@ -162,6 +167,9 @@ class AndroidAppAccessController(
             addCategory(Intent.CATEGORY_DEFAULT)
         }
         bridge.addPersistentPreferredActivity(adminComponent, homeFilter, homeActivityComponent)
+        // Android disables the system Backup Service by default on Device Owner devices; explicitly
+        // re-enable it so ongoing Google Backup continues working normally in Hardened Mode.
+        bridge.setBackupServiceEnabled(adminComponent, true)
         isSelfProtectionApplied = true
     }
 

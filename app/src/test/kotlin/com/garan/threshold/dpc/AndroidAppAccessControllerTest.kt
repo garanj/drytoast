@@ -140,6 +140,7 @@ class AndroidAppAccessControllerTest {
         assertThat(recordingBridge.uninstallBlockedCalls).isEmpty()
         assertThat(recordingBridge.userControlDisabledCalls).isEmpty()
         assertThat(recordingBridge.persistentHomeAddedCalls).isEqualTo(0)
+        assertThat(recordingBridge.backupServiceEnabledCalls).isEmpty()
     }
 
     @Test
@@ -157,6 +158,7 @@ class AndroidAppAccessControllerTest {
             UserManager.DISALLOW_ADD_USER,
         )
         assertThat(recordingBridge.persistentHomeAddedCalls).isEqualTo(1)
+        assertThat(recordingBridge.backupServiceEnabledCalls).containsExactly(true)
     }
 
     @Test
@@ -673,6 +675,7 @@ class AndroidAppAccessControllerTest {
         val clearedUserRestrictions = mutableListOf<String>()
         var persistentHomeAddedCalls = 0
         val persistentHomeClearedPackages = mutableListOf<String>()
+        val backupServiceEnabledCalls = mutableListOf<Boolean>()
         val clearedDeviceOwnerPackages = mutableListOf<String>()
 
         override fun isDeviceOwnerApp(packageName: String): Boolean = isDeviceOwner
@@ -716,6 +719,10 @@ class AndroidAppAccessControllerTest {
 
         override fun clearPackagePersistentPreferredActivities(admin: ComponentName, packageName: String) {
             persistentHomeClearedPackages.add(packageName)
+        }
+
+        override fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean) {
+            backupServiceEnabledCalls.add(enabled)
         }
 
         override fun clearDeviceOwnerApp(packageName: String) {
