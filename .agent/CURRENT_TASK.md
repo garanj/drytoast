@@ -1,11 +1,13 @@
 # Current Task
 
-- **Active Issue**: [#133](https://github.com/garanj/threshold/issues/133) — `refactor(settings): hide or relocate 'Guarded app grace period' when Hardened Mode is inactive`
-- **Branch**: `refactor/133-hide-guarded-grace-when-not-hardened`
+- **Active Issue**: [#147](https://github.com/garanj/threshold/issues/147) — `feat(ui): audit and improve in-app links to thresholdlauncher.com documentation and console`
+- **Branch**: `feat/147-in-app-docs-and-console-links`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Hide `setting_guarded_grace_period` row (and sheet) in `ThresholdSettingsScreen` when `uiState.isHardenedModeActive` is `false`
-- [x] Add unit test verifying hidden state when Hardened Mode is inactive and update existing test to pass `isHardenedModeActive = true`
-- [x] Verify `./gradlew spotlessCheck test` passes
+- [x] Create reusable `SecondDeviceLinkBottomSheet` (large monospace URL + Share link + Copy link + Open on this phone)
+- [x] Add **Documentation & Guides** and **Settings Lock Console** rows in `ThresholdSettingsScreen`
+- [x] Wire `HardenedModeScreen` **Open Hardened Mode Setup Guide** and **Settings Lock Console** companion row to `SecondDeviceLinkBottomSheet`
+- [x] Add subtle mobile-only second-device banner to `site/console/index.html` and `site/console/hardening/index.html`
+- [x] Add Compose unit tests and verify `./gradlew spotlessCheck test` passes
 - [x] Open PR assigned to `garanj`

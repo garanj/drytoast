@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -108,6 +109,7 @@ object HardenedModeDeepLink {
 object HardenedModeTestTags {
     const val SCREEN_LIST = "hardened_mode_list"
     const val STATUS_CARD = "hardened_mode_status_card"
+    const val COMPANION_CONSOLE_ROW = "hardened_mode_companion_console_row"
     const val OPEN_WEBSITE_BUTTON = "hardened_mode_open_website_button"
     const val DISABLE_SCREEN_ROOT = "disable_hardened_mode_screen"
     const val CONFIRM_DISABLE_BUTTON = "disable_hardened_mode_confirm_button"
@@ -137,6 +139,7 @@ fun HardenedModeScreen(
 
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
 
     val openWebsiteHandler: (String) -> Unit = onOpenWebsite ?: { url ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -287,9 +290,32 @@ fun HardenedModeScreen(
             }
 
             item(key = "companion_adb") {
-                HardenedFeatureRow(
-                    title = stringResource(R.string.hardened_mode_companion_adb_title),
-                    body = stringResource(R.string.hardened_mode_companion_adb_body),
+                val consoleUrl = stringResource(R.string.console_website_url)
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.hardened_mode_companion_adb_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.hardened_mode_companion_adb_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(HardenedModeTestTags.COMPANION_CONSOLE_ROW)
+                        .clickable { pendingSecondDeviceUrl = consoleUrl },
                 )
             }
 
@@ -318,7 +344,7 @@ fun HardenedModeScreen(
             item(key = "open_website_button") {
                 val websiteUrl = stringResource(R.string.hardened_mode_website_url)
                 OutlinedButton(
-                    onClick = { openWebsiteHandler(websiteUrl) },
+                    onClick = { pendingSecondDeviceUrl = websiteUrl },
                     shape = RoundedCornerShape(2.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -337,6 +363,14 @@ fun HardenedModeScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+
+    pendingSecondDeviceUrl?.let { targetUrl ->
+        SecondDeviceLinkBottomSheet(
+            url = targetUrl,
+            onOpenHere = openWebsiteHandler,
+            onDismiss = { pendingSecondDeviceUrl = null },
+        )
     }
 }
 

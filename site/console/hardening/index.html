@@ -102,6 +102,25 @@
       margin: 0 0 24px;
       font-size: 0.95rem;
     }
+    .mobile-second-device-note {
+      display: none;
+      background: #141414;
+      border: 1px solid #3a3a3a;
+      border-radius: 2px;
+      padding: 12px 14px;
+      margin: 0 0 20px;
+      font-size: 0.86rem;
+      color: #d8d8d8;
+    }
+    .mobile-second-device-note code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #ffffff;
+    }
+    @media (max-width: 600px) {
+      .mobile-second-device-note {
+        display: block;
+      }
+    }
     .action-tabs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -629,6 +648,10 @@
 
     <h1>Hardened Mode (Device Owner)</h1>
     <p class="subtitle">Provision OS-level Device Owner protection on a fresh install, or deactivate Hardened Mode on an enrolled phone.</p>
+
+    <div class="mobile-second-device-note" role="note">
+      <strong>Viewing on your phone?</strong> Open <code>thresholdlauncher.com/hardened-mode</code> on a computer or second screen so you can scan the QR code or connect via USB.
+    </div>
 
     <div class="action-tabs" role="tablist" aria-label="Hardened Mode action">
       <button type="button" class="action-tab active" role="tab" aria-selected="true" data-tab-btn="enable">Enable (6-Tap Setup)</button>
