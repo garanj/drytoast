@@ -1,23 +1,18 @@
 /**
- * Threshold Expert Mode: 2-Phase WebUSB Hardened Mode (Device Owner) Provisioner.
+ * Threshold Expert Mode: Guided WebUSB Hardened Mode (Device Owner) Provisioner.
  *
- * Why 2 phases when non-Google accounts exist?
- * Android's DevicePolicyManagerService caches `mHasIncompatibleAccounts` and only recalculates it
- * on BOOT_COMPLETED or LOGIN_ACCOUNTS_CHANGED (which is not sent when apps are disabled without
- * deleting accounts).
- *
- * Phase 1 (only if non-Google accounts exist):
- *   - Discover active non-com.google account packages via `dumpsys account`
- *   - Save package list to localStorage, run `pm disable-user --user 0 <pkg>` (FLAG_INSTALLED stays
- *     set so AccountManagerService preserves all accounts in AccountsDb), and reboot the phone.
- * Phase 2 (after reboot, or single-pass if 0 non-Google accounts):
- *   - Install testOnly bridge APK -> `dpm set-device-owner` -> pause 2s -> upgrade in-place to
- *     production release APK -> restore all paused packages via `pm enable <pkg>` -> verify.
+ * 4-Stage Pipeline:
+ *   1. Connect & Authorize Device (WebUSB ADB)
+ *   2. Suitability & Accounts Audit (`pm list users`, `dpm list-owners`, `dumpsys account`)
+ *      - If third-party (non-com.google) accounts exist, lists them with a one-tap shortcut to
+ *        open Android Accounts Settings (`am start -a android.settings.SYNC_SETTINGS`) and a live
+ *        Re-check button while reminding the user to leave their personal Google account intact.
+ *   3. testOnly Bridge -> `dpm set-device-owner` -> pause 2s -> in-place Production APK upgrade
+ *   4. Verify active Device Owner (`dpm list-owners`) & clean up `/data/local/tmp/*.apk`
  */
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "threshold_expert_paused_packages";
   const ADMIN_COMPONENT = "com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver";
   const TESTONLY_URL = "/downloads/threshold-testonly.bin";
   const RELEASE_URL = "/downloads/threshold-release.bin";
@@ -34,6 +29,7 @@
     auditCard: document.getElementById("expert-audit-card"),
     auditList: document.getElementById("expert-audit-list"),
     auditBlockers: document.getElementById("expert-audit-blockers"),
+    accountsGuide: document.getElementById("expert-accounts-guide"),
     ackWrap: document.getElementById("expert-ack-wrap"),
     ackCheckbox: document.getElementById("expert-ack-checkbox"),
     btnRun: document.getElementById("btn-expert-run"),
@@ -42,13 +38,21 @@
     progressBar: document.getElementById("expert-progress-bar"),
     progressText: document.getElementById("expert-progress-text"),
     logEl: document.getElementById("expert-log"),
-    btnRestore: document.getElementById("btn-expert-restore"),
+    btnOpenAccounts: document.getElementById("btn-expert-open-accounts"),
     btnRepairApk: document.getElementById("btn-expert-repair-apk"),
     overrideTestonly: document.getElementById("expert-file-testonly"),
     overrideRelease: document.getElementById("expert-file-release"),
   };
 
   if (!els.btnConnect) return;
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
   function log(msg, level) {
     const ts = new Date().toTimeString().slice(0, 8);
@@ -77,7 +81,7 @@
         idle: "PENDING",
         active: "RUNNING",
         ok: "DONE",
-        warn: "WAITING",
+        warn: "ACTION NEEDED",
         error: "FAILED",
       };
       badge.textContent = labels[state] || state.toUpperCase();
@@ -90,25 +94,6 @@
 
   function shellQuote(arg) {
     return "'" + String(arg).replace(/'/g, "'\\''") + "'";
-  }
-
-  function savePausedPackages(packages) {
-    try {
-      if (packages && packages.length > 0) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(packages));
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (_) {}
-  }
-
-  function loadPausedPackages() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (_) {
-      return [];
-    }
   }
 
   function sleep(ms) {
@@ -127,42 +112,42 @@
     return users;
   }
 
-  function parsePackagesList(pmListOutput) {
-    const pkgs = [];
-    pmListOutput.split(/\r?\n/).forEach(function (line) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("package:")) {
-        pkgs.push(trimmed.slice("package:".length).trim());
-      }
-    });
-    return pkgs;
-  }
-
-  function parseIncompatibleAccountPackagesFromDumpsys(dumpsysAccountOutput) {
-    const activeTypes = new Set();
-    const acctRegex = /Account\s*\{[^}]*\btype=([^,}\s]+)/g;
+  function parseAccountsFromDumpsys(dumpsysAccountOutput) {
+    const googleAccounts = [];
+    const nonGoogleAccounts = [];
+    const seen = new Set();
+    const acctRegex = /Account\s*\{name=([^,}]+),\s*type=([^}\s]+)\}/g;
     let m;
     while ((m = acctRegex.exec(dumpsysAccountOutput)) !== null) {
-      const type = m[1].trim();
-      if (type && type !== "com.google") {
-        activeTypes.add(type);
+      const name = m[1].trim();
+      const type = m[2].trim();
+      const key = type + "::" + name;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (type === "com.google") {
+        googleAccounts.push({ name: name, type: type });
+      } else {
+        nonGoogleAccounts.push({ name: name, type: type });
       }
     }
+    return {
+      googleAccounts: googleAccounts,
+      nonGoogleAccounts: nonGoogleAccounts,
+    };
+  }
 
-    const typeToPackage = new Map();
-    const svcRegex = /AuthenticatorDescription\s*\{type=([^}\s]+)\},\s*ComponentInfo\{([a-zA-Z0-9_.]+)\//g;
-    while ((m = svcRegex.exec(dumpsysAccountOutput)) !== null) {
-      typeToPackage.set(m[1].trim(), m[2].trim());
+  async function openAccountsSettingsOnPhone() {
+    if (!session) return;
+    try {
+      log("Opening Android Accounts Settings on phone...");
+      const res = await window.ThresholdWebAdb.runShell(
+        session.adb,
+        "am start -a android.settings.SYNC_SETTINGS"
+      );
+      log("Launched SYNC_SETTINGS: " + (res.output || "OK"), "ok");
+    } catch (err) {
+      log("Could not open Accounts Settings: " + (err.message || String(err)), "error");
     }
-
-    const packages = new Set();
-    for (const type of activeTypes) {
-      const pkg = typeToPackage.get(type);
-      if (pkg && pkg !== "com.google.android.gms" && pkg !== "com.garan.threshold") {
-        packages.add(pkg);
-      }
-    }
-    return Array.from(packages).sort();
   }
 
   async function fetchBinaryPayload(url, fileInput, label) {
@@ -192,11 +177,12 @@
       auditResult &&
       auditResult.suitable &&
       !auditResult.alreadyOwner &&
+      auditResult.nonGoogleAccounts.length === 0 &&
       els.ackCheckbox.checked &&
       !isRunning
     );
     els.btnRun.disabled = !canRun;
-    els.btnRestore.disabled = !session || isRunning;
+    els.btnOpenAccounts.disabled = !session || isRunning;
     els.btnRepairApk.disabled = !session || isRunning;
   }
 
@@ -206,20 +192,77 @@
     els.auditList.innerHTML = "";
     els.auditBlockers.style.display = "none";
     els.auditBlockers.innerHTML = "";
+    els.accountsGuide.style.display = "none";
+    els.accountsGuide.innerHTML = "";
     els.ackWrap.style.display = "none";
     els.ackCheckbox.checked = false;
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 4; i++) {
       setStageState(i, "idle", undefined);
     }
     hideProgress();
     updateRunButtonState();
   }
 
+  function renderAccountsGuide(googleAccounts, nonGoogleAccounts, requireAllAccounts) {
+    const listToShow = requireAllAccounts
+      ? nonGoogleAccounts.concat(googleAccounts)
+      : nonGoogleAccounts;
+
+    if (listToShow.length === 0) {
+      els.accountsGuide.style.display = "none";
+      els.accountsGuide.innerHTML = "";
+      return;
+    }
+
+    const googleNames = googleAccounts.map(function (a) { return escapeHtml(a.name); }).join(", ");
+    const safeBanner = !requireAllAccounts && googleAccounts.length > 0
+      ? '<div class="accounts-guide-safe"><strong>Keep your Google account signed in:</strong> ' +
+        googleNames +
+        '. Only remove the third-party accounts listed below.</div>'
+      : requireAllAccounts
+        ? '<div class="accounts-guide-safe"><strong>All remaining accounts must be temporarily removed:</strong> Android flagged the remaining Google account as incompatible (common on Google Workspace, supervised, or restricted accounts). Remove it temporarily, complete provisioning, then sign back in.</div>'
+        : "";
+
+    const itemsHtml = listToShow.map(function (acct) {
+      return (
+        '<li>' +
+        '<span><strong>' + escapeHtml(acct.name) + '</strong></span>' +
+        '<span class="accounts-guide-type">' + escapeHtml(acct.type) + '</span>' +
+        '</li>'
+      );
+    }).join("");
+
+    els.accountsGuide.innerHTML =
+      safeBanner +
+      '<div><strong>Remove these ' + listToShow.length + ' account(s) on your phone before continuing:</strong></div>' +
+      '<ul class="accounts-guide-list">' + itemsHtml + '</ul>' +
+      '<p class="accounts-guide-note">For messaging apps like WhatsApp, Signal, and Telegram, removing the entry in Android Settings only removes the Contacts sync account (not your chats); the app recreates it when opened.</p>' +
+      '<div class="btn-row">' +
+      '<button type="button" id="btn-guide-open-accounts" class="btn-primary">Open Accounts Settings on Phone</button>' +
+      '<button type="button" id="btn-guide-recheck" class="btn-secondary">Re-check Accounts</button>' +
+      '</div>';
+
+    els.accountsGuide.style.display = "block";
+
+    const btnOpen = document.getElementById("btn-guide-open-accounts");
+    const btnRecheck = document.getElementById("btn-guide-recheck");
+    if (btnOpen) {
+      btnOpen.addEventListener("click", openAccountsSettingsOnPhone);
+    }
+    if (btnRecheck) {
+      btnRecheck.addEventListener("click", function () {
+        if (!isRunning && session) {
+          runPreflightAudit();
+        }
+      });
+    }
+  }
+
   async function runPreflightAudit() {
     setStageState(2, "active", "Inspecting users, Device Owner state, and active accounts...");
     log("Stage 2: Running read-only suitability audit...");
 
-    const [manufacturerRes, modelRes, releaseRes, sdkRes, usersRes, ownersRes, accountsRes, disabledRes] = await Promise.all([
+    const [manufacturerRes, modelRes, releaseRes, sdkRes, usersRes, ownersRes, accountsRes] = await Promise.all([
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.product.manufacturer"),
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.product.model"),
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.build.version.release"),
@@ -227,7 +270,6 @@
       window.ThresholdWebAdb.runShell(session.adb, "pm list users"),
       window.ThresholdWebAdb.runShell(session.adb, "dpm list-owners"),
       window.ThresholdWebAdb.runShell(session.adb, "dumpsys account"),
-      window.ThresholdWebAdb.runShell(session.adb, "pm list packages -d"),
     ]);
 
     const manufacturer = manufacturerRes.output.trim();
@@ -236,9 +278,9 @@
     const sdkInt = parseInt(sdkRes.output.trim(), 10) || 0;
     const users = parseUsers(usersRes.output);
     const ownersText = ownersRes.output.trim();
-    const activeNonGooglePkgs = parseIncompatibleAccountPackagesFromDumpsys(accountsRes.output);
-    const disabledSet = new Set(parsePackagesList(disabledRes.output));
-    const savedPaused = loadPausedPackages().filter(function (p) { return disabledSet.has(p); });
+    const parsedAccounts = parseAccountsFromDumpsys(accountsRes.output);
+    const googleAccounts = parsedAccounts.googleAccounts;
+    const nonGoogleAccounts = parsedAccounts.nonGoogleAccounts;
 
     const alreadyOwner = ownersText.includes("com.garan.threshold");
     const otherOwner = !alreadyOwner && /Device Owner|deviceOwner/i.test(ownersText) && !/No device owner/i.test(ownersText) && ownersText.length > 0 && !ownersText.includes("null");
@@ -260,8 +302,6 @@
       blockers.push("Another Device Owner is already active on this phone: " + ownersText);
     }
 
-    const needsPhase1Reboot = activeNonGooglePkgs.length > 0;
-    const isPhase2Resume = !needsPhase1Reboot && savedPaused.length > 0;
     const suitable = blockers.length === 0;
 
     auditResult = {
@@ -272,10 +312,8 @@
       secondaryUsers: secondaryUsers,
       alreadyOwner: alreadyOwner,
       otherOwner: otherOwner,
-      activeNonGooglePkgs: activeNonGooglePkgs,
-      savedPaused: savedPaused,
-      needsPhase1Reboot: needsPhase1Reboot,
-      isPhase2Resume: isPhase2Resume,
+      googleAccounts: googleAccounts,
+      nonGoogleAccounts: nonGoogleAccounts,
       suitable: suitable,
       blockers: blockers,
     };
@@ -283,11 +321,11 @@
     els.deviceSummary.textContent = auditResult.deviceName + " · Android " + androidRelease + " (API " + sdkInt + ")";
     els.auditCard.style.display = "block";
 
-    const accountSummary = isPhase2Resume
-      ? "Phase 1 complete: " + savedPaused.length + " app(s) paused across reboot (" + savedPaused.join(", ") + "). Ready to activate & restore!"
-      : activeNonGooglePkgs.length === 0
-        ? "0 active non-Google accounts (single-pass activation ready)"
-        : activeNonGooglePkgs.length + " app(s) will be paused + phone rebooted before activation: " + activeNonGooglePkgs.join(", ");
+    const accountSummary = nonGoogleAccounts.length === 0
+      ? (googleAccounts.length > 0
+          ? "0 blocking third-party accounts (" + googleAccounts.length + " Google account kept)"
+          : "0 accounts on device (ready)")
+      : nonGoogleAccounts.length + " third-party account(s) must be temporarily removed in Settings";
 
     const rows = [
       {
@@ -312,84 +350,53 @@
         status: alreadyOwner ? "ACTIVE" : otherOwner ? "BLOCKER" : "PASS",
       },
       {
-        label: "Non-Google Accounts",
+        label: "Blocking Accounts",
         value: accountSummary,
-        status: isPhase2Resume ? "PHASE 2" : activeNonGooglePkgs.length === 0 ? "PASS" : "PHASE 1",
+        status: nonGoogleAccounts.length === 0 ? "PASS" : "ACTION",
       },
     ];
 
     els.auditList.innerHTML = rows.map(function (row) {
       const cls = row.status === "BLOCKER" || row.status === "FAIL"
         ? "audit-pill fail"
-        : row.status === "PHASE 1"
+        : row.status === "ACTION"
           ? "audit-pill warn"
           : "audit-pill ok";
       return (
         '<div class="audit-row">' +
-        '<div><strong>' + row.label + '</strong><div class="audit-val">' + row.value + '</div></div>' +
-        '<span class="' + cls + '">' + row.status + '</span>' +
+        '<div><strong>' + escapeHtml(row.label) + '</strong><div class="audit-val">' + escapeHtml(row.value) + '</div></div>' +
+        '<span class="' + cls + '">' + escapeHtml(row.status) + '</span>' +
         '</div>'
       );
     }).join("");
 
+    els.auditBlockers.style.display = "none";
+    els.auditBlockers.innerHTML = "";
+    els.accountsGuide.style.display = "none";
+    els.accountsGuide.innerHTML = "";
+    els.ackWrap.style.display = "none";
+
     if (blockers.length > 0) {
       els.auditBlockers.style.display = "block";
       els.auditBlockers.innerHTML = "<strong>Cannot proceed: hard OS blocker detected.</strong><ul>" +
-        blockers.map(function (b) { return "<li>" + b + "</li>"; }).join("") +
+        blockers.map(function (b) { return "<li>" + escapeHtml(b) + "</li>"; }).join("") +
         "</ul>";
       setStageState(2, "error", "Blocked by OS preflight check");
       log("Preflight audit found " + blockers.length + " blocker(s).", "error");
     } else if (alreadyOwner) {
       setStageState(2, "ok", "Threshold is already Device Owner on this device");
       log("Threshold is already Device Owner on this phone.", "ok");
-      if (savedPaused.length > 0) {
-        log("Restoring " + savedPaused.length + " previously paused app(s)...", "warn");
-        await restorePackages(savedPaused);
-      }
+    } else if (nonGoogleAccounts.length > 0) {
+      renderAccountsGuide(googleAccounts, nonGoogleAccounts, false);
+      setStageState(2, "warn", "Remove " + nonGoogleAccounts.length + " third-party account(s) in Settings, then click Re-check");
+      log("Found " + nonGoogleAccounts.length + " blocking third-party account(s). Use 'Open Accounts Settings on Phone' to remove them, then click 'Re-check Accounts'.", "warn");
     } else {
-      setStageState(2, "ok", isPhase2Resume
-        ? "Ready for Phase 2 (activate Device Owner & restore " + savedPaused.length + " app(s))"
-        : needsPhase1Reboot
-          ? "Phase 1 required: pause " + activeNonGooglePkgs.length + " app(s) and reboot"
-          : "Ready for single-pass activation");
-
-      if (isPhase2Resume) {
-        setStageState(3, "ok", "Completed before reboot (" + savedPaused.length + " app(s) paused)");
-        els.btnRun.textContent = "Phase 2: Activate Hardened Mode & Restore Apps";
-      } else if (needsPhase1Reboot) {
-        els.btnRun.textContent = "Phase 1: Pause Accounts & Reboot Phone";
-      } else {
-        els.btnRun.textContent = "Run Expert Provisioning";
-      }
-
+      setStageState(2, "ok", "Preflight passed. Ready for 1-click provisioning.");
       els.ackWrap.style.display = "block";
-      log("Preflight audit passed.", "ok");
+      log("Preflight audit passed! Ready to activate Hardened Mode.", "ok");
     }
 
     updateRunButtonState();
-  }
-
-  async function restorePackages(packages) {
-    const list = packages && packages.length > 0 ? packages : loadPausedPackages();
-    if (!list || list.length === 0) {
-      log("No paused packages cached to restore.", "ok");
-      return;
-    }
-    log("Restoring " + list.length + " paused package(s)...");
-    let allOk = true;
-    for (const pkg of list) {
-      try {
-        const res = await window.ThresholdWebAdb.runShell(session.adb, "pm enable " + shellQuote(pkg));
-        log("pm enable " + pkg + " -> " + (res.output || "enabled"));
-      } catch (err) {
-        allOk = false;
-        log("Failed to re-enable " + pkg + ": " + err.message, "error");
-      }
-    }
-    if (allOk) {
-      savePausedPackages([]);
-      log("All paused apps and accounts restored.", "ok");
-    }
   }
 
   async function pushAndInstallApk(bytes, remotePath, flags, label, startPct, endPct) {
@@ -415,71 +422,22 @@
     setProgress(endPct, label + " installed.");
   }
 
-  async function runPhase1PauseAndReboot() {
-    const pkgs = auditResult.activeNonGooglePkgs;
-    const pausedSoFar = [];
-    setStageState(3, "active", "Pausing " + pkgs.length + " non-Google account app(s)...");
-    setProgress(15, "Pausing non-Google account apps...");
-
-    try {
-      for (const pkg of pkgs) {
-        const res = await window.ThresholdWebAdb.runShell(
-          session.adb,
-          "pm disable-user --user 0 " + shellQuote(pkg)
-        );
-        log("Paused " + pkg + " -> " + (res.output || "disabled-user"));
-        if (/Exception|SecurityException|Error/i.test(res.output)) {
-          throw new Error("Could not pause " + pkg + ": " + res.output);
-        }
-        pausedSoFar.push(pkg);
-      }
-
-      // Persist all paused packages so Phase 2 (or Emergency Restore) knows what to re-enable
-      const merged = Array.from(new Set(loadPausedPackages().concat(pausedSoFar))).sort();
-      savePausedPackages(merged);
-
-      setProgress(50, "Rebooting phone to refresh Android account state...");
-      setStageState(3, "warn", "Rebooting phone. Unlock and click Connect Phone via USB for Phase 2.");
-      log("All " + pausedSoFar.length + " app(s) paused cleanly. Rebooting phone now...", "ok");
-
-      // Trigger clean OS reboot (connection will drop as phone restarts)
-      try {
-        await window.ThresholdWebAdb.runShell(session.adb, "svc power reboot || reboot");
-      } catch (_) {
-        // Expected when USB drops during reboot
-      }
-
-      await window.ThresholdWebAdb.disconnectDevice(session);
-      session = null;
-      els.btnConnect.style.display = "inline-block";
-      els.btnDisconnect.style.display = "none";
-      els.auditCard.style.display = "none";
-      els.deviceSummary.textContent = "Rebooting... unlock phone, then click Connect Phone via USB for Phase 2.";
-      log("Phase 1 complete! Wait for your phone to finish booting, unlock it, and click 'Connect Phone via USB' to run Phase 2.", "ok");
-    } catch (err) {
-      log(err.message || String(err), "error");
-      if (pausedSoFar.length > 0) {
-        log("Rolling back Phase 1: re-enabling paused apps...", "warn");
-        await restorePackages(pausedSoFar);
-      }
-      setStageState(3, "error", err.message || "Phase 1 failed");
+  async function runExpertProvisioning() {
+    if (!session || !auditResult || !auditResult.suitable || auditResult.nonGoogleAccounts.length > 0 || isRunning) {
+      return;
     }
-  }
+    isRunning = true;
+    updateRunButtonState();
 
-  async function runPhase2ActivateAndRestore() {
-    const pausedToRestore = auditResult.savedPaused || [];
     try {
+      setStageState(3, "active", "Downloading Threshold bridge & production APKs...");
       setProgress(5, "Downloading Threshold bridge & production APKs...");
       const testOnlyBytes = await fetchBinaryPayload(TESTONLY_URL, els.overrideTestonly, "testOnly bridge APK");
       const releaseBytes = await fetchBinaryPayload(RELEASE_URL, els.overrideRelease, "production release APK");
       log("Both APK payloads downloaded and verified in memory.", "ok");
 
-      if (pausedToRestore.length === 0) {
-        setStageState(3, "ok", "No non-Google accounts needed pausing");
-      }
-
-      // STAGE 4: testOnly bridge -> dpm set-device-owner -> pause -> production APK
-      setStageState(4, "active", "Installing testOnly bridge APK...");
+      // STAGE 3: testOnly bridge -> dpm set-device-owner -> pause -> production APK
+      setStageState(3, "active", "Installing testOnly bridge APK...");
       await pushAndInstallApk(
         testOnlyBytes,
         "/data/local/tmp/threshold-testonly.apk",
@@ -489,7 +447,7 @@
         45
       );
 
-      setStageState(4, "active", "Activating Device Owner...");
+      setStageState(3, "active", "Activating Device Owner...");
       setProgress(52, "Running dpm set-device-owner...");
       const dpmRes = await window.ThresholdWebAdb.runShell(
         session.adb,
@@ -497,14 +455,18 @@
       );
       log("dpm set-device-owner -> " + dpmRes.output);
       if (!dpmRes.output.includes("Success")) {
+        if (/already some accounts/i.test(dpmRes.output) && auditResult.googleAccounts.length > 0) {
+          log("Android rejected the remaining Google account as incompatible. Temporarily remove it in Accounts Settings, then click Re-check Accounts.", "warn");
+          renderAccountsGuide(auditResult.googleAccounts, [], true);
+        }
         throw new Error("dpm set-device-owner failed: " + dpmRes.output);
       }
 
-      setStageState(4, "active", "Device Owner active. Pausing before production upgrade...");
+      setStageState(3, "active", "Device Owner active. Pausing before production upgrade...");
       setProgress(60, "Pausing 2s before upgrading to production APK...");
       await sleep(2000);
 
-      setStageState(4, "active", "Upgrading in-place to production APK (clearing testOnly flag)...");
+      setStageState(3, "active", "Upgrading in-place to production APK (clearing testOnly flag)...");
       await pushAndInstallApk(
         releaseBytes,
         "/data/local/tmp/threshold-release.apk",
@@ -518,15 +480,11 @@
         session.adb,
         "rm -f /data/local/tmp/threshold-testonly.apk /data/local/tmp/threshold-release.apk"
       );
-      setStageState(4, "ok", "Device Owner active & upgraded to production APK");
+      setStageState(3, "ok", "Device Owner active & upgraded to production APK");
 
-      // STAGE 5: Restore paused packages & verify
-      setStageState(5, "active", "Restoring paused apps & verifying Device Owner...");
-      setProgress(95, "Restoring paused apps...");
-      if (pausedToRestore.length > 0) {
-        await restorePackages(pausedToRestore);
-      }
-
+      // STAGE 4: Verify active Device Owner
+      setStageState(4, "active", "Verifying active Device Owner...");
+      setProgress(96, "Verifying Device Owner...");
       const verifyRes = await window.ThresholdWebAdb.runShell(session.adb, "dpm list-owners");
       log("Final verification (dpm list-owners): " + verifyRes.output);
       if (!verifyRes.output.includes("com.garan.threshold")) {
@@ -534,30 +492,13 @@
       }
 
       setProgress(100, "Hardened Mode provisioned successfully!");
-      setStageState(5, "ok", "All apps restored & Hardened Mode active");
-      log("Expert provisioning complete! You may safely unplug your phone.", "ok");
+      setStageState(4, "ok", "Hardened Mode active and verified");
+      log("Expert provisioning complete! You may safely unplug your phone and re-open your apps.", "ok");
     } catch (err) {
       log(err.message || String(err), "error");
-      if (pausedToRestore.length > 0) {
-        log("Restoring paused apps after failure...", "warn");
-        await restorePackages(pausedToRestore);
-      }
       const activeStage = els.stageList.querySelector('[data-state="active"]');
       if (activeStage) {
         setStageState(activeStage.getAttribute("data-stage"), "error", err.message || "Failed");
-      }
-    }
-  }
-
-  async function runExpertProvisioning() {
-    if (!session || !auditResult || !auditResult.suitable || isRunning) return;
-    isRunning = true;
-    updateRunButtonState();
-    try {
-      if (auditResult.needsPhase1Reboot) {
-        await runPhase1PauseAndReboot();
-      } else {
-        await runPhase2ActivateAndRestore();
       }
     } finally {
       isRunning = false;
@@ -570,12 +511,6 @@
     els.browserWarn.style.display = "block";
     els.btnConnect.disabled = true;
     return;
-  }
-
-  // Show resume banner in log if Phase 1 packages are waiting in localStorage
-  const pendingResume = loadPausedPackages();
-  if (pendingResume.length > 0) {
-    els.logEl.textContent = "Phase 1 paused " + pendingResume.length + " app(s) before reboot. Unlock your phone and click 'Connect Phone via USB' to run Phase 2.\n";
   }
 
   els.btnConnect.addEventListener("click", async function () {
@@ -628,30 +563,7 @@
 
   els.ackCheckbox.addEventListener("change", updateRunButtonState);
   els.btnRun.addEventListener("click", runExpertProvisioning);
-
-  els.btnRestore.addEventListener("click", async function () {
-    if (!session || isRunning) return;
-    isRunning = true;
-    updateRunButtonState();
-    try {
-      const saved = loadPausedPackages();
-      if (saved.length > 0) {
-        await restorePackages(saved);
-      } else {
-        log("No packages cached in browser storage; scanning phone for disabled packages...");
-        const res = await window.ThresholdWebAdb.runShell(session.adb, "pm list packages -d -3");
-        const disabledPkgs = parsePackagesList(res.output);
-        if (disabledPkgs.length === 0) {
-          log("No disabled 3rd-party packages found on device.", "ok");
-        } else {
-          await restorePackages(disabledPkgs);
-        }
-      }
-    } finally {
-      isRunning = false;
-      updateRunButtonState();
-    }
-  });
+  els.btnOpenAccounts.addEventListener("click", openAccountsSettingsOnPhone);
 
   els.btnRepairApk.addEventListener("click", async function () {
     if (!session || isRunning) return;

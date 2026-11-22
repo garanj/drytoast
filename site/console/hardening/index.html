@@ -375,6 +375,47 @@
       margin: 8px 0 0;
       padding-left: 18px;
     }
+    .accounts-guide {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px solid #3a3a3a;
+      background: #0d0d0d;
+      font-size: 0.85rem;
+      color: #d8d8d8;
+    }
+    .accounts-guide-safe {
+      padding: 8px 10px;
+      border-left: 2px solid #ffffff;
+      background: #161616;
+      color: #ffffff;
+      font-size: 0.82rem;
+      margin-bottom: 12px;
+    }
+    .accounts-guide-list {
+      list-style: none;
+      margin: 8px 0 12px;
+      padding: 0;
+      border-top: 1px solid #242424;
+    }
+    .accounts-guide-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid #1e1e1e;
+      font-size: 0.82rem;
+    }
+    .accounts-guide-type {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      color: #888888;
+    }
+    .accounts-guide-note {
+      font-size: 0.78rem;
+      color: #999999;
+      margin: 8px 0 12px;
+    }
     .ack-label {
       display: flex;
       align-items: flex-start;
@@ -703,7 +744,7 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
         </p>
         <ul>
           <li><strong>No secondary users allowed:</strong> Android blocks Device Owner if a Work Profile, Private Space, Samsung Secure Folder, Dual Apps profile, or Guest User exists.</li>
-          <li><strong>Temporary non-Google account pause + reboot:</strong> If non-Google accounts (such as WhatsApp, Signal, Telegram, or Google Meet) are active, Phase 1 pauses those app packages (preserving all logins and data) and reboots your phone so Android refreshes its account cache. After unlocking, reconnect to complete Phase 2 and restore every app.</li>
+          <li><strong>Temporary non-Google account removal:</strong> Android blocks Device Owner while third-party sync accounts (such as WhatsApp, Signal, Telegram, Reddit, or Garmin) are present. Expert Mode lists those exact accounts, opens Android's Accounts Settings screen on your phone, and lets you keep your personal Google account signed in.</li>
           <li><strong>Bridge + Production swap:</strong> Installs a signed <code>testOnly</code> bridge build, runs <code>dpm set-device-owner</code>, then immediately replaces it in-place with the production release build so Play updates continue to work.</li>
         </ul>
       </div>
@@ -733,11 +774,12 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
         <h2>Device Preflight Audit</h2>
         <div id="expert-audit-list"></div>
         <div id="expert-audit-blockers" class="audit-blockers" style="display: none;"></div>
+        <div id="expert-accounts-guide" class="accounts-guide" style="display: none;"></div>
 
         <div id="expert-ack-wrap" style="display: none;">
           <label class="ack-label" for="expert-ack-checkbox">
             <input type="checkbox" id="expert-ack-checkbox" />
-            <span>I understand the risks, have backed up important data, and will keep the USB cable connected until all 5 stages finish.</span>
+            <span>I understand the risks, have backed up important data, and will keep the USB cable connected until all 4 stages finish.</span>
           </label>
           <div class="btn-row">
             <button type="button" id="btn-expert-run" class="btn-danger" disabled>Run Expert Provisioning</button>
@@ -752,7 +794,7 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
 
       <section class="step-card">
         <p class="step-label">Live Stage Progress</p>
-        <h2>5-Stage Provisioning Pipeline</h2>
+        <h2>4-Stage Provisioning Pipeline</h2>
         <ul id="expert-stage-list" class="stage-list">
           <li class="stage-item" data-stage="1" data-state="idle">
             <div>
@@ -763,29 +805,22 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
           </li>
           <li class="stage-item" data-stage="2" data-state="idle">
             <div>
-              <div class="stage-title">2. Suitability &amp; Preflight Audit</div>
-              <div class="stage-detail">Check multi-user / Work Profile / Private Space &amp; 3P authenticators</div>
+              <div class="stage-title">2. Suitability &amp; Accounts Audit</div>
+              <div class="stage-detail">Check multi-user / Work Profile / Private Space &amp; blocking accounts</div>
             </div>
             <span class="stage-state">PENDING</span>
           </li>
           <li class="stage-item" data-stage="3" data-state="idle">
             <div>
-              <div class="stage-title">3. Pause Non-Google Account Apps &amp; Reboot (Phase 1)</div>
-              <div class="stage-detail">Pause active non-Google account packages and reboot so Android refreshes account state</div>
+              <div class="stage-title">3. testOnly Bridge → Device Owner → Production APK</div>
+              <div class="stage-detail">Install bridge APK, run dpm set-device-owner, pause, upgrade to production APK</div>
             </div>
             <span class="stage-state">PENDING</span>
           </li>
           <li class="stage-item" data-stage="4" data-state="idle">
             <div>
-              <div class="stage-title">4. testOnly Bridge → Device Owner → Production APK</div>
-              <div class="stage-detail">Install bridge APK, run dpm set-device-owner, pause, upgrade to production APK</div>
-            </div>
-            <span class="stage-state">PENDING</span>
-          </li>
-          <li class="stage-item" data-stage="5" data-state="idle">
-            <div>
-              <div class="stage-title">5. Restore All Accounts &amp; Verify</div>
-              <div class="stage-detail">Re-enable all 3P authenticators &amp; verify active Device Owner</div>
+              <div class="stage-title">4. Verify Active Device Owner</div>
+              <div class="stage-detail">Confirm Threshold is active as Device Owner &amp; clean up temp files</div>
             </div>
             <span class="stage-state">PENDING</span>
           </li>
@@ -794,7 +829,7 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
         <pre id="expert-log" class="expert-log" aria-live="polite">Ready. Click "Connect Phone via USB" to begin.</pre>
 
         <div class="btn-row" style="margin-top: 16px;">
-          <button type="button" id="btn-expert-restore" class="btn-secondary" disabled>Emergency Restore Accounts</button>
+          <button type="button" id="btn-expert-open-accounts" class="btn-secondary" disabled>Open Accounts Settings on Phone</button>
           <button type="button" id="btn-expert-repair-apk" class="btn-secondary" disabled>Finish / Repair Production APK</button>
         </div>
       </section>
