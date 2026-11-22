@@ -9,12 +9,14 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -89,6 +91,7 @@ const val HOME_CANVAS_TEST_TAG = "home_canvas_root"
  * 3. When in ambient home mode, back navigation is consumed cleanly as a no-op so the OS
  *    never finishes or restarts the root launcher activity window.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThresholdHomeScreen(
     viewModel: SearchViewModel,
@@ -103,6 +106,7 @@ fun ThresholdHomeScreen(
     onResolveCapabilityIssue: (ProfileCapability) -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
     onSendFeedback: () -> Unit = {},
+    isImeVisible: Boolean = WindowInsets.isImeVisible,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -152,6 +156,20 @@ fun ThresholdHomeScreen(
     fun resetSearchAndHideIme() {
         viewModel.dismissSearch()
         hideImeAndClearFocus()
+    }
+
+    // When the user dismisses the soft keyboard with an empty query (via the IME dismiss button or
+    // the first back-swipe consumed by the IME), exit search mode immediately so the dialer icon
+    // reappears and the swipe-up gesture is re-armed without requiring a second back-swipe.
+    var imeWasVisibleDuringSearch by remember(inSearch) { mutableStateOf(false) }
+    LaunchedEffect(inSearch, isImeVisible, uiState.query) {
+        if (!inSearch) {
+            imeWasVisibleDuringSearch = false
+        } else if (isImeVisible) {
+            imeWasVisibleDuringSearch = true
+        } else if (imeWasVisibleDuringSearch && uiState.query.isEmpty()) {
+            resetSearchAndHideIme()
+        }
     }
 
     fun confirmGuardedOpen(component: com.garan.threshold.core.model.ComponentKey) {
