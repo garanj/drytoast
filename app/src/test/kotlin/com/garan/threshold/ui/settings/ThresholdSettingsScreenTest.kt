@@ -361,4 +361,67 @@ class ThresholdSettingsScreenTest {
 
         assertThat(selectedMinutes).isEqualTo(15)
     }
+
+    @Test
+    fun docsLinkRow_opensConfigurationWebsite() {
+        val openedUrls = mutableListOf<String>()
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(isLoading = false),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                    onOpenWebsite = { openedUrls.add(it) },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.DOCS_LINK_ROW))
+        composeRule.onNodeWithTag(SettingsTestTags.DOCS_LINK_ROW)
+            .performClick()
+
+        assertThat(openedUrls).containsExactly("https://thresholdlauncher.com/configuration")
+    }
+
+    @Test
+    fun consoleLinkRow_opensSecondDeviceBottomSheetWithConsoleUrl() {
+        val openedUrls = mutableListOf<String>()
+
+        composeRule.setContent {
+            ThresholdTheme {
+                ThresholdSettingsScreen(
+                    uiState = SettingsUiState(isLoading = false),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                    onOpenWebsite = { openedUrls.add(it) },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(SettingsTestTags.CONSOLE_LINK_ROW))
+        composeRule.onNodeWithTag(SettingsTestTags.CONSOLE_LINK_ROW)
+            .performClick()
+
+        composeRule.onNodeWithTag(SecondDeviceSheetTestTags.SHEET).assertIsDisplayed()
+        composeRule.onNodeWithText("thresholdlauncher.com/console").assertIsDisplayed()
+        composeRule.onNodeWithTag(SecondDeviceSheetTestTags.OPEN_HERE_BUTTON)
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(openedUrls).containsExactly("https://thresholdlauncher.com/console")
+    }
 }

@@ -1,5 +1,7 @@
 package com.garan.threshold.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -42,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -77,6 +80,8 @@ object SettingsTestTags {
     const val CONFIRM_BLACK_WALLPAPER_DIALOG = "settings_confirm_black_wallpaper_dialog"
     const val CONFIRM_BLACK_WALLPAPER_BUTTON = "settings_confirm_black_wallpaper_button"
     const val CANCEL_BLACK_WALLPAPER_BUTTON = "settings_cancel_black_wallpaper_button"
+    const val DOCS_LINK_ROW = "settings_docs_link_row"
+    const val CONSOLE_LINK_ROW = "settings_console_link_row"
     const val FEEDBACK_BUTTON = "settings_feedback_button"
 
     fun guardedGraceOptionTag(minutes: Int): String = "settings_guarded_grace_option_$minutes"
@@ -103,13 +108,23 @@ fun ThresholdSettingsScreen(
     onDiscardPendingChanges: () -> Unit = {},
     onApplyPureBlackWallpaper: () -> Unit = {},
     onSendFeedback: () -> Unit = {},
+    onOpenWebsite: ((String) -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
+
+    val context = LocalContext.current
+    val openWebsiteHandler: (String) -> Unit = onOpenWebsite ?: { url ->
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { context.startActivity(intent) }
+    }
 
     var showAddQuickActionSheet by remember { mutableStateOf(false) }
     var showGuardedGraceSheet by remember { mutableStateOf(false) }
     var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
     var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
+    var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val guardedCount = uiState.baseProfile.appAssignments.values.count { it is AppAssignment.Guarded }
@@ -544,6 +559,69 @@ fun ThresholdSettingsScreen(
                 )
             }
 
+            // SECTION 5: GUIDE & CONSOLE
+            item(key = "header_guide_and_console") {
+                SettingsSectionHeader(title = stringResource(R.string.section_guide_and_console))
+            }
+
+            item(key = "link_docs") {
+                val docsUrl = stringResource(R.string.docs_website_url)
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_docs_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.setting_docs_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.DOCS_LINK_ROW)
+                        .clickable { openWebsiteHandler(docsUrl) },
+                )
+            }
+
+            item(key = "link_console") {
+                val consoleUrl = stringResource(R.string.console_website_url)
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_console_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.setting_console_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = ThresholdIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.CONSOLE_LINK_ROW)
+                        .clickable { pendingSecondDeviceUrl = consoleUrl },
+                )
+            }
+
             item(key = "action_feedback") {
                 OutlinedButton(
                     onClick = onSendFeedback,
@@ -667,6 +745,14 @@ fun ThresholdSettingsScreen(
                 }
             }
         }
+    }
+
+    pendingSecondDeviceUrl?.let { targetUrl ->
+        SecondDeviceLinkBottomSheet(
+            url = targetUrl,
+            onOpenHere = openWebsiteHandler,
+            onDismiss = { pendingSecondDeviceUrl = null },
+        )
     }
 
     if (showConfirmRequireRebootDialog) {

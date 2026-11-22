@@ -3,6 +3,7 @@ package com.garan.threshold.ui.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -59,6 +61,12 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON)
             .assertIsDisplayed()
             .performClick()
+
+        composeRule.onNodeWithTag(SecondDeviceSheetTestTags.SHEET).assertIsDisplayed()
+        composeRule.onNodeWithTag(SecondDeviceSheetTestTags.URL_TEXT)
+            .assertTextEquals("thresholdlauncher.com/hardened-mode")
+        composeRule.onNodeWithTag(SecondDeviceSheetTestTags.OPEN_HERE_BUTTON)
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         assertThat(openedUrls).containsExactly("https://thresholdlauncher.com/hardened-mode")
     }

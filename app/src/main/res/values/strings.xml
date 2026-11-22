@@ -130,12 +130,25 @@
     <string name="hardened_mode_companion_intro">Hardened Mode closes Android OS escape hatches. Pair it with Threshold\'s Settings locks so rules cannot be weakened from inside Threshold:</string>
     <string name="hardened_mode_companion_reboot_title">Require Reboot for Settings Changes</string>
     <string name="hardened_mode_companion_reboot_body">Stages any edits to app rules, profiles, or triggers in Settings until you restart your phone.</string>
-    <string name="hardened_mode_companion_adb_title">ADB Settings Lock</string>
-    <string name="hardened_mode_companion_adb_body">Completely locks Threshold Settings from being opened on the phone until unlocked from a computer.</string>
+    <string name="hardened_mode_companion_adb_title">Settings Lock Console</string>
+    <string name="hardened_mode_companion_adb_body">Completely locks Threshold Settings from being opened on the phone until unlocked from another device at thresholdlauncher.com/console.</string>
     <string name="hardened_mode_section_setup">Setup &amp; Removal</string>
     <string name="hardened_mode_setup_intro">Hardened Mode cannot be toggled from inside Threshold\'s normal menus. You can enable or disable it either by scanning the QR codes on the Threshold website or via USB debugging (ADB) from a computer.</string>
     <string name="action_open_hardened_mode_website">Open Hardened Mode Setup Guide</string>
     <string name="hardened_mode_website_url" translatable="false">https://thresholdlauncher.com/hardened-mode</string>
+    <string name="docs_website_url" translatable="false">https://thresholdlauncher.com/configuration</string>
+    <string name="console_website_url" translatable="false">https://thresholdlauncher.com/console</string>
+    <string name="section_guide_and_console">GUIDE &amp; CONSOLE</string>
+    <string name="setting_docs_title">Documentation &amp; Guides</string>
+    <string name="setting_docs_summary">Profiles, triggers, Settings Lock &amp; Hardened Mode</string>
+    <string name="setting_console_title">Settings Lock Console</string>
+    <string name="setting_console_summary">Open thresholdlauncher.com/console on a computer or second device</string>
+    <string name="second_device_sheet_title">Open on another device</string>
+    <string name="second_device_sheet_body">This console uses QR codes (or USB from a computer) so you can scan them with this phone. Open this address on a laptop, desktop, or second screen:</string>
+    <string name="action_share_link">Share link</string>
+    <string name="action_copy_link">Copy link</string>
+    <string name="action_open_on_this_phone">Open on this phone</string>
+    <string name="toast_link_copied">Link copied</string>
     <string name="disable_hardened_mode_title">Disable Hardened Mode</string>
     <string name="disable_hardened_mode_headline">Release Device Owner Protection?</string>
     <string name="disable_hardened_mode_body">Disabling Hardened Mode will immediately:\n\n• Unsuspend all Blocked apps in the Android OS\n• Unlock Default Home App selection, Force Stop, Clear Storage, and Uninstall for Threshold\n• Permanently release Device Owner privileges (re-enabling Hardened Mode later requires a freshly reset device)</string>
