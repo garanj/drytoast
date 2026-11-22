@@ -1,5 +1,5 @@
 {
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://github.com/garanj/threshold/releases/download/v0.1.1/threshold-release.apk",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "qKJ9vZGI9uKSPHBGKD-twB1V1-ebSZJmx38l-R50BNM"
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://github.com/garanj/threshold/releases/download/v0.1.2/threshold-release.apk",
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "fYQvmRvjQ6Lu6W4CBtMFfTHeIIkz2ewovawLU-OJB1U"
 }

@@ -135,7 +135,11 @@
   }
 
   function parseAuthenticatorComponents(queryOutput, thirdPartyPackages) {
-    const components = new Set();
+    // Android PackageManagerService forbids ADB shell (UID 2000) from changing individual
+    // component states inside another app (SecurityException), so we collect unique package
+    // names and use package-level `pm disable-user --user 0 <pkg>` / `pm enable <pkg>`.
+    // FLAG_INSTALLED remains set, so AccountManagerService preserves all accounts in AccountsDb.
+    const packages = new Set();
     const lines = queryOutput.split(/\r?\n/);
 
     // Format 1: --components output (one "com.pkg/com.pkg.AuthService" per line)
@@ -144,30 +148,25 @@
       if (/^[a-zA-Z0-9_.]+\/[a-zA-Z0-9_.$]+$/.test(line)) {
         const pkg = line.split("/")[0];
         if (thirdPartyPackages.has(pkg) && pkg !== "com.garan.threshold") {
-          components.add(line);
+          packages.add(pkg);
         }
       }
     }
 
-    // Format 2: full ResolveInfo dump fallback (packageName=... / name=...)
-    if (components.size === 0) {
-      let currentPkg = null;
+    // Format 2: full ResolveInfo dump fallback (packageName=...)
+    if (packages.size === 0) {
       for (const raw of lines) {
         const pkgMatch = raw.match(/packageName=([a-zA-Z0-9_.]+)/);
         if (pkgMatch) {
-          currentPkg = pkgMatch[1];
-        }
-        const nameMatch = raw.match(/\bname=([a-zA-Z0-9_.$]+)/);
-        if (nameMatch && currentPkg && thirdPartyPackages.has(currentPkg) && currentPkg !== "com.garan.threshold") {
-          const svc = nameMatch[1];
-          if (svc.includes(".") && svc !== "android.accounts.AccountAuthenticator") {
-            components.add(currentPkg + "/" + svc);
+          const pkg = pkgMatch[1];
+          if (thirdPartyPackages.has(pkg) && pkg !== "com.garan.threshold") {
+            packages.add(pkg);
           }
         }
       }
     }
 
-    return Array.from(components).sort();
+    return Array.from(packages).sort();
   }
 
   async function fetchBinaryPayload(url, fileInput, label) {
@@ -431,8 +430,11 @@
             "pm disable-user --user 0 " + shellQuote(comp)
           );
           log("Paused " + comp + " -> " + (res.output || "disabled"));
+          if (/Exception|SecurityException|Error/i.test(res.output)) {
+            throw new Error("Could not pause " + comp + ": " + res.output);
+          }
+          pausedAny = true;
         }
-        pausedAny = true;
 
         // Wait for AccountManagerService -> LOGIN_ACCOUNTS_CHANGED -> DevicePolicyManagerService recalc
         setStageState(3, "active", "Waiting for Android AccountManager to settle...");
