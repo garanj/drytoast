@@ -134,38 +134,34 @@
     return pkgs;
   }
 
-  function parseAuthenticatorComponents(queryOutput, thirdPartyPackages) {
-    // Android PackageManagerService forbids ADB shell (UID 2000) from changing individual
-    // component states inside another app (SecurityException), so we collect unique package
-    // names and use package-level `pm disable-user --user 0 <pkg>` / `pm enable <pkg>`.
-    // FLAG_INSTALLED remains set, so AccountManagerService preserves all accounts in AccountsDb.
+  function parseIncompatibleAccountPackagesFromDumpsys(dumpsysAccountOutput) {
+    // Parse active account types: "Account {name=..., type=com.whatsapp}"
+    const activeTypes = new Set();
+    const acctRegex = /Account\s*\{[^}]*\btype=([^,}\s]+)/g;
+    let m;
+    while ((m = acctRegex.exec(dumpsysAccountOutput)) !== null) {
+      const type = m[1].trim();
+      // Core Google accounts (com.google) are allowed when the DPC is testOnly=true.
+      if (type && type !== "com.google") {
+        activeTypes.add(type);
+      }
+    }
+
+    // Map authenticator type -> owning package from:
+    // "ServiceInfo: AuthenticatorDescription {type=com.whatsapp}, ComponentInfo{com.whatsapp/...}"
+    const typeToPackage = new Map();
+    const svcRegex = /AuthenticatorDescription\s*\{type=([^}\s]+)\},\s*ComponentInfo\{([a-zA-Z0-9_.]+)\//g;
+    while ((m = svcRegex.exec(dumpsysAccountOutput)) !== null) {
+      typeToPackage.set(m[1].trim(), m[2].trim());
+    }
+
     const packages = new Set();
-    const lines = queryOutput.split(/\r?\n/);
-
-    // Format 1: --components output (one "com.pkg/com.pkg.AuthService" per line)
-    for (const raw of lines) {
-      const line = raw.trim();
-      if (/^[a-zA-Z0-9_.]+\/[a-zA-Z0-9_.$]+$/.test(line)) {
-        const pkg = line.split("/")[0];
-        if (thirdPartyPackages.has(pkg) && pkg !== "com.garan.threshold") {
-          packages.add(pkg);
-        }
+    for (const type of activeTypes) {
+      const pkg = typeToPackage.get(type);
+      if (pkg && pkg !== "com.google.android.gms" && pkg !== "com.garan.threshold") {
+        packages.add(pkg);
       }
     }
-
-    // Format 2: full ResolveInfo dump fallback (packageName=...)
-    if (packages.size === 0) {
-      for (const raw of lines) {
-        const pkgMatch = raw.match(/packageName=([a-zA-Z0-9_.]+)/);
-        if (pkgMatch) {
-          const pkg = pkgMatch[1];
-          if (thirdPartyPackages.has(pkg) && pkg !== "com.garan.threshold") {
-            packages.add(pkg);
-          }
-        }
-      }
-    }
-
     return Array.from(packages).sort();
   }
 
@@ -223,15 +219,14 @@
     setStageState(2, "active", "Inspecting users, Device Owner state, and 3rd-party authenticators...");
     log("Stage 2: Running read-only suitability audit...");
 
-    const [manufacturerRes, modelRes, releaseRes, sdkRes, usersRes, ownersRes, pkgsRes, authRes] = await Promise.all([
+    const [manufacturerRes, modelRes, releaseRes, sdkRes, usersRes, ownersRes, accountsRes] = await Promise.all([
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.product.manufacturer"),
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.product.model"),
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.build.version.release"),
       window.ThresholdWebAdb.runShell(session.adb, "getprop ro.build.version.sdk"),
       window.ThresholdWebAdb.runShell(session.adb, "pm list users"),
       window.ThresholdWebAdb.runShell(session.adb, "dpm list-owners"),
-      window.ThresholdWebAdb.runShell(session.adb, "pm list packages -3"),
-      window.ThresholdWebAdb.runShell(session.adb, "cmd package query-services --components -a android.accounts.AccountAuthenticator"),
+      window.ThresholdWebAdb.runShell(session.adb, "dumpsys account"),
     ]);
 
     const manufacturer = manufacturerRes.output.trim();
@@ -240,16 +235,7 @@
     const sdkInt = parseInt(sdkRes.output.trim(), 10) || 0;
     const users = parseUsers(usersRes.output);
     const ownersText = ownersRes.output.trim();
-    const thirdPartyPkgs = parseThirdPartyPackages(pkgsRes.output);
-
-    let authComponents = parseAuthenticatorComponents(authRes.output, thirdPartyPkgs);
-    if (authComponents.length === 0 && authRes.output.toLowerCase().includes("unknown")) {
-      const fallbackAuth = await window.ThresholdWebAdb.runShell(
-        session.adb,
-        "cmd package query-services -a android.accounts.AccountAuthenticator"
-      );
-      authComponents = parseAuthenticatorComponents(fallbackAuth.output, thirdPartyPkgs);
-    }
+    const authComponents = parseIncompatibleAccountPackagesFromDumpsys(accountsRes.output);
 
     const alreadyOwner = ownersText.includes("com.garan.threshold");
     const otherOwner = !alreadyOwner && /Device Owner|deviceOwner/i.test(ownersText) && !/No device owner/i.test(ownersText) && ownersText.length > 0 && !ownersText.includes("null");
