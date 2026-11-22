@@ -1,11 +1,11 @@
 # Current Task
 
-- **Active Issue**: [#140](https://github.com/garanj/threshold/issues/140) — `feat(site): build minimalist Threshold website (Home, Features, Configuration, Hardened Mode)`
-- **Branch**: `feat/140-minimalist-website`
+- **Active Issue**: [#142](https://github.com/garanj/threshold/issues/142) — `feat(home): swipe up anywhere on home screen to open search with keyboard`
+- **Branch**: `feat/142-swipe-up-search`
 - **Status**: Ready for Review
 
 ## Checklist
-- [x] Copy real Threshold screenshots into `site/images/`
-- [x] Add `site/favicon.svg` and shared minimalist `site/style.css`
-- [x] Build `site/index.html`, `site/features.html`, `site/configuration.html`, and `site/hardened.html`
-- [x] Preview locally via Firebase Hosting emulator and deploy live to `thresholdlauncher.com`
+- [x] Write Compose UI unit tests for swipe-up gesture activating search, focusing the search input, showing the keyboard, and ignoring downward/horizontal swipes (TDD Red)
+- [x] Implement `Modifier.swipeUpToOpenSearch` on `ThresholdHomeScreen` and wire `LocalSoftwareKeyboardController.current?.show()` in `ThresholdSearchSurface` (TDD Green)
+- [x] Verify `./gradlew spotlessCheck test` passes with zero regressions
+- [x] Open PR assigned to `garanj`

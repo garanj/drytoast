@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -71,8 +72,10 @@ import com.garan.threshold.ui.search.ThresholdSearchSurface
 import com.garan.threshold.ui.theme.SubtleGray
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 internal const val SETTINGS_LONG_PRESS_TIMEOUT_MS = 3_000L
+internal val SWIPE_UP_SEARCH_THRESHOLD = 48.dp
 const val HOME_CANVAS_TEST_TAG = "home_canvas_root"
 
 /**
@@ -233,6 +236,10 @@ fun ThresholdHomeScreen(
     } else {
         val currentHasSeenFirstRunHint by rememberUpdatedState(hasSeenFirstRunHint)
         val currentOnOpenSettings by rememberUpdatedState(onOpenSettings)
+        val currentOnSwipeUpSearch by rememberUpdatedState {
+            hapticEngine.rotaryDetent()
+            viewModel.activateSearch()
+        }
 
         @OptIn(ExperimentalComposeUiApi::class)
         Box(
@@ -244,6 +251,10 @@ fun ThresholdHomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(HOME_CANVAS_TEST_TAG)
+                    .swipeUpToOpenSearch(
+                        enabled = !inSearch,
+                        onSwipeUp = { currentOnSwipeUpSearch() },
+                    )
                     .customLongClickable(
                         longPressTimeoutMillis = SETTINGS_LONG_PRESS_TIMEOUT_MS,
                         onLongClick = {
@@ -508,6 +519,47 @@ internal fun Modifier.customLongClickable(
                 val event = awaitPointerEvent()
                 event.changes.forEach { it.consume() }
             } while (event.changes.any { it.pressed })
+        }
+    }
+}
+
+/**
+ * Detects an upward vertical swipe anywhere on the home canvas to activate search.
+ *
+ * Yields cleanly to child taps, 3-second long presses, and scrollable children by leaving the
+ * initial down event unconsumed and aborting if a child consumes vertical drag movement.
+ */
+internal fun Modifier.swipeUpToOpenSearch(
+    enabled: Boolean,
+    threshold: Dp = SWIPE_UP_SEARCH_THRESHOLD,
+    onSwipeUp: () -> Unit,
+): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(threshold) {
+        val thresholdPx = threshold.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            var triggered = false
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed) break
+                if (triggered) {
+                    change.consume()
+                    continue
+                }
+                if (change.isConsumed) {
+                    break
+                }
+                val dx = change.position.x - down.position.x
+                val dy = change.position.y - down.position.y
+                if (dy <= -thresholdPx && abs(dy) > abs(dx)) {
+                    change.consume()
+                    triggered = true
+                    onSwipeUp()
+                }
+            }
         }
     }
 }

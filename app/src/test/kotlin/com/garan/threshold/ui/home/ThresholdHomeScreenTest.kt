@@ -2,8 +2,12 @@ package com.garan.threshold.ui.home
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
@@ -13,6 +17,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.TextRange
 import com.garan.threshold.MainActivity
 import com.garan.threshold.core.model.AppAccessState
@@ -783,6 +790,97 @@ class ThresholdHomeScreenTest {
         override fun launchDialer(): Boolean {
             dialerLaunchedCount++
             return true
+        }
+    }
+
+    @Test
+    fun swipeUpOnHomeCanvas_activatesSearch_focusesInput_andShowsKeyboard() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+        val haptics = TestHapticEngine()
+        val fakeKeyboard = FakeSoftwareKeyboardController()
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalSoftwareKeyboardController provides fakeKeyboard) {
+                ThresholdTheme {
+                    ThresholdHomeScreen(
+                        viewModel = viewModel,
+                        appLauncher = launcher,
+                        hapticEngine = haptics,
+                    )
+                }
+            }
+        }
+
+        assertThat(viewModel.uiState.value.isSearching).isFalse()
+
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput {
+            swipeUp()
+        }
+        composeTestRule.waitForIdle()
+
+        assertThat(viewModel.uiState.value.isSearching).isTrue()
+        composeTestRule.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(fakeKeyboard.showCount).isGreaterThan(0)
+        assertThat(haptics.rotaryDetentCount).isEqualTo(1)
+    }
+
+    @Test
+    fun swipeDownOnHomeCanvas_doesNotActivateSearch() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput {
+            swipeDown()
+        }
+        composeTestRule.waitForIdle()
+
+        assertThat(viewModel.uiState.value.isSearching).isFalse()
+    }
+
+    @Test
+    fun horizontalSwipeOnHomeCanvas_doesNotActivateSearch() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+
+        composeTestRule.setContent {
+            ThresholdTheme {
+                ThresholdHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput {
+            swipeLeft()
+        }
+        composeTestRule.waitForIdle()
+
+        assertThat(viewModel.uiState.value.isSearching).isFalse()
+    }
+
+    private class FakeSoftwareKeyboardController : SoftwareKeyboardController {
+        var showCount = 0
+            private set
+        var hideCount = 0
+            private set
+
+        override fun show() {
+            showCount++
+        }
+
+        override fun hide() {
+            hideCount++
         }
     }
 
