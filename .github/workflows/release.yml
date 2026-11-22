@@ -93,8 +93,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          THRESHOLD_TEST_ONLY: "false"
-        run: ./gradlew :app:assembleRelease :app:bundleRelease
+        run: ./gradlew :app:assembleRelease :app:bundleRelease -PthresholdTestOnly=false
 
       - name: Stage Production Artifacts & Assemble Signed testOnly Bridge APK
         env:
@@ -104,7 +103,6 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          THRESHOLD_TEST_ONLY: "true"
         run: |
           mkdir -p release-dist site/downloads
           cp "app/build/outputs/apk/release/app-release.apk" "release-dist/threshold-release.apk"
@@ -115,17 +113,17 @@ jobs:
           fi
 
           # Rebuild signed release APK with android:testOnly="true" (same versionCode & signing key)
-          ./gradlew :app:assembleRelease --rerun-tasks
+          ./gradlew :app:assembleRelease -PthresholdTestOnly=true
           cp "app/build/outputs/apk/release/app-release.apk" "release-dist/threshold-testonly.apk"
 
           # Verify testOnly flags via aapt2
           AAPT2=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -name aapt2 | sort -V | tail -n 1)
           if [[ -n "$AAPT2" ]]; then
-            if "$AAPT2" dump xmltree "release-dist/threshold-release.apk" --file AndroidManifest.xml | grep -q "testOnly.*=0xffffffff"; then
+            if "$AAPT2" dump xmltree "release-dist/threshold-release.apk" --file AndroidManifest.xml | grep -Eq "testOnly.*=(true|0xffffffff)"; then
               echo "::error::threshold-release.apk must NOT have testOnly=true"
               exit 1
             fi
-            if ! "$AAPT2" dump xmltree "release-dist/threshold-testonly.apk" --file AndroidManifest.xml | grep -q "testOnly.*=0xffffffff"; then
+            if ! "$AAPT2" dump xmltree "release-dist/threshold-testonly.apk" --file AndroidManifest.xml | grep -Eq "testOnly.*=(true|0xffffffff)"; then
               echo "::error::threshold-testonly.apk MUST have testOnly=true"
               exit 1
             fi
