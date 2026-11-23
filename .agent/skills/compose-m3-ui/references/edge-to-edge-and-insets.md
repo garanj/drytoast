@@ -1,4 +1,4 @@
-# Edge-to-Edge & `WindowInsets` Reference for Threshold
+# Edge-to-Edge & `WindowInsets` Reference for Dry Toast
 
 Synthesized from Google's official `android/skills` (`system/edge-to-edge`) for Android 15/16+ (SDK 35+).
 
@@ -25,7 +25,7 @@ Synthesized from Google's official `android/skills` (`system/edge-to-edge`) for 
      }
      ```
    - **FORBIDDEN on `Scaffold` screens:** Do NOT apply `.windowInsetsPadding(WindowInsets.safeDrawing)` or `.safeDrawingPadding()` on a root `Column` wrapping a top bar and list. Doing so clips the scrolling list before the navigation bar and prevents `TopAppBar` from drawing its container color behind the status bar.
-   - **Permitted ONLY on Chrome-less Full-Screen Canvas Surfaces:** `ThresholdHomeCanvas`, `DragSortSurface`, `CaretTracingSurface`, and `TypedIntentionSurface` have no `TopAppBar` or `Scaffold`. On those full-screen ambient canvases, apply `.safeDrawingPadding()` (and `.imePadding()` where the keyboard is active) inside the `.background(MaterialTheme.colorScheme.background)` modifier so the black background fills the entire display edge-to-edge while keeping text/canvas elements inside the safe drawing area.
+   - **Permitted ONLY on Chrome-less Full-Screen Canvas Surfaces:** `DryToastHomeCanvas`, `DragSortSurface`, `CaretTracingSurface`, and `TypedIntentionSurface` have no `TopAppBar` or `Scaffold`. On those full-screen ambient canvases, apply `.safeDrawingPadding()` (and `.imePadding()` where the keyboard is active) inside the `.background(MaterialTheme.colorScheme.background)` modifier so the black background fills the entire display edge-to-edge while keeping text/canvas elements inside the safe drawing area.
 
 ---
 

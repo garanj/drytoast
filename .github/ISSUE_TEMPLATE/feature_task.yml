@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ### Feature Specification
-        Refer to the PRD in `threshold-spec.md` or `.agent/ROADMAP.md`.
+        Refer to the PRD in `drytoast-spec.md` or `.agent/ROADMAP.md`.
   - type: textarea
     id: problem-context
     attributes:

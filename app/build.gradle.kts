@@ -20,11 +20,11 @@ val robolectricSdk35 by configurations.creating {
 }
 
 android {
-    namespace = "com.garan.threshold"
+    namespace = "com.garan.drytoast"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.garan.threshold"
+        applicationId = "com.garan.drytoast"
         minSdk = 29
         targetSdk = 37
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1

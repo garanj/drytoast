@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Hardened Mode | Threshold Console</title>
+  <title>Hardened Mode | Dry Toast Console</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
     * {
@@ -392,17 +392,17 @@
       <svg class="caret" viewBox="29 36.5 50 33" aria-hidden="true">
         <path fill="#ffffff" d="M49,36.5L59,36.5L79,69.5L68,69.5L54,46L40,69.5L29,69.5Z" />
       </svg>
-      <span class="eyebrow">Threshold Console</span>
+      <span class="eyebrow">Dry Toast Console</span>
     </div>
 
     <nav class="mode-switcher" aria-label="Console mode selector">
       <a class="mode-link" href="/console">
         <span class="mode-link-title">01 · Settings Lock</span>
-        <span class="mode-link-desc">Stop changes to settings &amp; profiles within Threshold</span>
+        <span class="mode-link-desc">Stop changes to settings &amp; profiles within Dry Toast</span>
       </a>
       <a class="mode-link active" href="/console/hardening" aria-current="page">
         <span class="mode-link-title">02 · Hardened Mode</span>
-        <span class="mode-link-desc">Stop disabling Threshold &amp; enforce OS-level app suspension</span>
+        <span class="mode-link-desc">Stop disabling Dry Toast &amp; enforce OS-level app suspension</span>
       </a>
     </nav>
 
@@ -410,7 +410,7 @@
     <p class="subtitle">Provision OS-level Device Owner protection on a fresh install, or deactivate Hardened Mode on an enrolled phone.</p>
 
     <div class="mobile-second-device-note" role="note">
-      <strong>Viewing on your phone?</strong> Open <code>thresholdlauncher.com/hardened-mode</code> on a computer or second screen so you can scan the QR code.
+      <strong>Viewing on your phone?</strong> Open <code>drytoast.app/hardened-mode</code> on a computer or second screen so you can scan the QR code.
     </div>
 
     <div class="action-tabs" role="tablist" aria-label="Hardened Mode action">
@@ -457,7 +457,7 @@
 
         <div class="expect-box">
           <p><strong>What comes back automatically:</strong> After setup finishes and you sign into Google Play, your Contacts, Calendar, Gmail, Photos, Chrome, Play Store app library, and app-native cloud backups (WhatsApp, 2FA, password manager) sync right back.</p>
-          <p><strong>What to expect in Device Owner mode:</strong> Android displays a small "Managed by Threshold" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate Hardened Mode cleanly anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
+          <p><strong>What to expect in Device Owner mode:</strong> Android displays a small "Managed by Dry Toast" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate Hardened Mode cleanly anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
         </div>
       </section>
 
@@ -474,7 +474,7 @@
           <li>Turn on a brand-new or freshly factory-reset Android phone.</li>
           <li>On Android's very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android's built-in QR scanner.</li>
           <li>Connect to Wi-Fi when prompted, then scan the QR code below.</li>
-          <li>Android will download the signed Threshold APK, verify its SHA-256 checksum, and set Threshold as Device Owner automatically.</li>
+          <li>Android will download the signed Dry Toast APK, verify its SHA-256 checksum, and set Dry Toast as Device Owner automatically.</li>
         </ol>
         <div class="qr-wrap">
           <div id="provision-qr-box" class="qr-box" role="img" aria-label="6-Tap Welcome Screen Provisioning QR code">
@@ -486,8 +486,8 @@
 
       <details>
         <summary>USB / ADB command alternative (fresh device with zero accounts)</summary>
-        <pre># If Threshold is already installed on a fresh device with no accounts added:
-adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminReceiver</pre>
+        <pre># If Dry Toast is already installed on a fresh device with no accounts added:
+adb shell dpm set-device-owner com.garan.drytoast/.dpc.DryToastDeviceAdminReceiver</pre>
       </details>
     </div>
 
@@ -496,12 +496,12 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
       <section class="step-card">
         <p class="step-label">Step 01</p>
         <h2>Scan with your phone</h2>
-        <p class="step-desc">Open your phone’s Camera or QR scanner and scan this code to open the hidden <strong>Disable Hardened Mode</strong> screen in Threshold.</p>
+        <p class="step-desc">Open your phone’s Camera or QR scanner and scan this code to open the hidden <strong>Disable Hardened Mode</strong> screen in Dry Toast.</p>
         <div class="qr-wrap">
-          <div class="qr-box" role="img" aria-label="QR code for Threshold Disable Hardened Mode deep link">
-            <svg xmlns="http://www.w3.org/2000/svg" width="264" height="264" viewBox="0 0 264 264" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="264" height="264" fill="#ffffff"/><path d="M32,32h56v8h-56zM96,32h8v8h-8zM144,32h24v8h-24zM176,32h56v8h-56zM32,40h8v8h-8zM80,40h8v8h-8zM96,40h8v8h-8zM120,40h16v8h-16zM160,40h8v8h-8zM176,40h8v8h-8zM224,40h8v8h-8zM32,48h8v8h-8zM48,48h24v8h-24zM80,48h8v8h-8zM96,48h16v8h-16zM128,48h8v8h-8zM152,48h8v8h-8zM176,48h8v8h-8zM192,48h24v8h-24zM224,48h8v8h-8zM32,56h8v8h-8zM48,56h24v8h-24zM80,56h8v8h-8zM96,56h24v8h-24zM136,56h32v8h-32zM176,56h8v8h-8zM192,56h24v8h-24zM224,56h8v8h-8zM32,64h8v8h-8zM48,64h24v8h-24zM80,64h8v8h-8zM104,64h16v8h-16zM128,64h40v8h-40zM176,64h8v8h-8zM192,64h24v8h-24zM224,64h8v8h-8zM32,72h8v8h-8zM80,72h8v8h-8zM96,72h24v8h-24zM136,72h8v8h-8zM176,72h8v8h-8zM224,72h8v8h-8zM32,80h56v8h-56zM96,80h8v8h-8zM112,80h8v8h-8zM128,80h8v8h-8zM144,80h8v8h-8zM160,80h8v8h-8zM176,80h56v8h-56zM112,88h24v8h-24zM144,88h16v8h-16zM32,96h16v8h-16zM64,96h24v8h-24zM112,96h8v8h-8zM128,96h8v8h-8zM184,96h8v8h-8zM200,96h32v8h-32zM40,104h16v8h-16zM64,104h16v8h-16zM96,104h8v8h-8zM120,104h8v8h-8zM136,104h40v8h-40zM184,104h16v8h-16zM216,104h8v8h-8zM32,112h16v8h-16zM56,112h8v8h-8zM80,112h8v8h-8zM96,112h32v8h-32zM144,112h40v8h-40zM200,112h8v8h-8zM32,120h8v8h-8zM48,120h16v8h-16zM96,120h16v8h-16zM120,120h16v8h-16zM160,120h32v8h-32zM208,120h16v8h-16zM32,128h8v8h-8zM48,128h8v8h-8zM64,128h8v8h-8zM80,128h16v8h-16zM120,128h16v8h-16zM144,128h8v8h-8zM160,128h8v8h-8zM176,128h16v8h-16zM208,128h8v8h-8zM32,136h48v8h-48zM88,136h8v8h-8zM112,136h16v8h-16zM144,136h24v8h-24zM192,136h16v8h-16zM64,144h8v8h-8zM80,144h8v8h-8zM96,144h8v8h-8zM112,144h16v8h-16zM136,144h24v8h-24zM176,144h8v8h-8zM208,144h8v8h-8zM48,152h16v8h-16zM96,152h8v8h-8zM144,152h24v8h-24zM176,152h24v8h-24zM208,152h16v8h-16zM32,160h56v8h-56zM104,160h16v8h-16zM128,160h8v8h-8zM160,160h72v8h-72zM96,168h8v8h-8zM120,168h8v8h-8zM136,168h16v8h-16zM160,168h8v8h-8zM192,168h8v8h-8zM216,168h8v8h-8zM32,176h56v8h-56zM104,176h8v8h-8zM120,176h16v8h-16zM144,176h8v8h-8zM160,176h8v8h-8zM176,176h8v8h-8zM192,176h8v8h-8zM32,184h8v8h-8zM80,184h8v8h-8zM96,184h8v8h-8zM120,184h8v8h-8zM160,184h8v8h-8zM192,184h8v8h-8zM208,184h16v8h-16zM32,192h8v8h-8zM48,192h24v8h-24zM80,192h8v8h-8zM96,192h24v8h-24zM128,192h8v8h-8zM160,192h40v8h-40zM208,192h16v8h-16zM32,200h8v8h-8zM48,200h24v8h-24zM80,200h8v8h-8zM104,200h8v8h-8zM120,200h8v8h-8zM144,200h8v8h-8zM176,200h16v8h-16zM208,200h24v8h-24zM32,208h8v8h-8zM48,208h24v8h-24zM80,208h8v8h-8zM104,208h32v8h-32zM152,208h8v8h-8zM168,208h24v8h-24zM200,208h24v8h-24zM32,216h8v8h-8zM80,216h8v8h-8zM96,216h8v8h-8zM112,216h8v8h-8zM144,216h16v8h-16zM176,216h24v8h-24zM208,216h16v8h-16zM32,224h56v8h-56zM96,224h16v8h-16zM152,224h8v8h-8zM168,224h8v8h-8zM208,224h24v8h-24z" fill="#000000"/></svg>
+          <div class="qr-box" role="img" aria-label="QR code for Dry Toast Disable Hardened Mode deep link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="360" height="360" fill="#ffffff"/><path d="M32,32h56v8h-56zM96,32h24v8h-24zM128,32h16v8h-16zM152,32h8v8h-8zM192,32h8v8h-8zM216,32h8v8h-8zM232,32h8v8h-8zM248,32h8v8h-8zM272,32h56v8h-56zM32,40h8v8h-8zM80,40h8v8h-8zM96,40h24v8h-24zM136,40h8v8h-8zM160,40h32v8h-32zM200,40h8v8h-8zM224,40h16v8h-16zM256,40h8v8h-8zM272,40h8v8h-8zM320,40h8v8h-8zM32,48h8v8h-8zM48,48h24v8h-24zM80,48h8v8h-8zM96,48h8v8h-8zM112,48h16v8h-16zM152,48h8v8h-8zM168,48h8v8h-8zM184,48h24v8h-24zM216,48h8v8h-8zM248,48h8v8h-8zM272,48h8v8h-8zM288,48h24v8h-24zM320,48h8v8h-8zM32,56h8v8h-8zM48,56h24v8h-24zM80,56h8v8h-8zM96,56h16v8h-16zM120,56h8v8h-8zM136,56h8v8h-8zM152,56h16v8h-16zM192,56h8v8h-8zM216,56h32v8h-32zM272,56h8v8h-8zM288,56h24v8h-24zM320,56h8v8h-8zM32,64h8v8h-8zM48,64h24v8h-24zM80,64h8v8h-8zM136,64h8v8h-8zM152,64h16v8h-16zM192,64h8v8h-8zM216,64h40v8h-40zM272,64h8v8h-8zM288,64h24v8h-24zM320,64h8v8h-8zM32,72h8v8h-8zM80,72h8v8h-8zM96,72h8v8h-8zM120,72h16v8h-16zM160,72h40v8h-40zM208,72h8v8h-8zM224,72h16v8h-16zM256,72h8v8h-8zM272,72h8v8h-8zM320,72h8v8h-8zM32,80h56v8h-56zM96,80h8v8h-8zM112,80h8v8h-8zM128,80h8v8h-8zM144,80h8v8h-8zM160,80h8v8h-8zM176,80h8v8h-8zM192,80h8v8h-8zM208,80h8v8h-8zM224,80h8v8h-8zM240,80h8v8h-8zM256,80h8v8h-8zM272,80h56v8h-56zM104,88h8v8h-8zM128,88h8v8h-8zM144,88h8v8h-8zM168,88h8v8h-8zM184,88h8v8h-8zM200,88h8v8h-8zM224,88h8v8h-8zM240,88h24v8h-24zM32,96h16v8h-16zM64,96h24v8h-24zM120,96h8v8h-8zM144,96h8v8h-8zM160,96h48v8h-48zM240,96h24v8h-24zM280,96h8v8h-8zM296,96h32v8h-32zM32,104h8v8h-8zM48,104h32v8h-32zM96,104h8v8h-8zM112,104h8v8h-8zM128,104h16v8h-16zM152,104h8v8h-8zM208,104h32v8h-32zM248,104h16v8h-16zM288,104h8v8h-8zM40,112h16v8h-16zM64,112h8v8h-8zM80,112h32v8h-32zM120,112h24v8h-24zM152,112h16v8h-16zM200,112h24v8h-24zM248,112h8v8h-8zM280,112h8v8h-8zM304,112h8v8h-8zM32,120h8v8h-8zM48,120h8v8h-8zM64,120h8v8h-8zM96,120h8v8h-8zM112,120h16v8h-16zM160,120h56v8h-56zM248,120h8v8h-8zM264,120h8v8h-8zM280,120h8v8h-8zM304,120h8v8h-8zM320,120h8v8h-8zM40,128h8v8h-8zM56,128h8v8h-8zM80,128h24v8h-24zM112,128h8v8h-8zM128,128h8v8h-8zM144,128h8v8h-8zM168,128h24v8h-24zM200,128h8v8h-8zM224,128h8v8h-8zM240,128h8v8h-8zM272,128h16v8h-16zM296,128h24v8h-24zM40,136h8v8h-8zM72,136h8v8h-8zM112,136h8v8h-8zM152,136h16v8h-16zM192,136h8v8h-8zM208,136h16v8h-16zM232,136h8v8h-8zM248,136h16v8h-16zM288,136h8v8h-8zM32,144h24v8h-24zM80,144h8v8h-8zM104,144h16v8h-16zM152,144h24v8h-24zM192,144h16v8h-16zM216,144h8v8h-8zM232,144h24v8h-24zM272,144h8v8h-8zM288,144h8v8h-8zM40,152h16v8h-16zM64,152h8v8h-8zM96,152h8v8h-8zM112,152h8v8h-8zM128,152h8v8h-8zM144,152h32v8h-32zM200,152h8v8h-8zM216,152h8v8h-8zM240,152h8v8h-8zM256,152h8v8h-8zM272,152h24v8h-24zM304,152h16v8h-16zM32,160h8v8h-8zM48,160h16v8h-16zM72,160h16v8h-16zM112,160h16v8h-16zM160,160h32v8h-32zM200,160h24v8h-24zM240,160h16v8h-16zM264,160h24v8h-24zM296,160h32v8h-32zM40,168h8v8h-8zM72,168h8v8h-8zM96,168h24v8h-24zM128,168h32v8h-32zM168,168h8v8h-8zM192,168h8v8h-8zM216,168h24v8h-24zM248,168h16v8h-16zM288,168h16v8h-16zM312,168h8v8h-8zM32,176h16v8h-16zM72,176h16v8h-16zM96,176h16v8h-16zM120,176h24v8h-24zM152,176h24v8h-24zM208,176h16v8h-16zM240,176h16v8h-16zM280,176h8v8h-8zM296,176h16v8h-16zM48,184h32v8h-32zM88,184h16v8h-16zM120,184h8v8h-8zM152,184h8v8h-8zM168,184h16v8h-16zM192,184h16v8h-16zM264,184h8v8h-8zM280,184h8v8h-8zM296,184h16v8h-16zM40,192h24v8h-24zM72,192h32v8h-32zM112,192h8v8h-8zM128,192h8v8h-8zM144,192h8v8h-8zM160,192h48v8h-48zM224,192h8v8h-8zM240,192h48v8h-48zM296,192h16v8h-16zM48,200h8v8h-8zM72,200h8v8h-8zM96,200h8v8h-8zM112,200h8v8h-8zM136,200h8v8h-8zM152,200h8v8h-8zM208,200h16v8h-16zM232,200h8v8h-8zM248,200h8v8h-8zM288,200h8v8h-8zM304,200h16v8h-16zM32,208h8v8h-8zM56,208h8v8h-8zM80,208h24v8h-24zM112,208h8v8h-8zM144,208h24v8h-24zM176,208h8v8h-8zM192,208h32v8h-32zM248,208h8v8h-8zM264,208h16v8h-16zM296,208h8v8h-8zM32,216h8v8h-8zM56,216h8v8h-8zM88,216h32v8h-32zM128,216h8v8h-8zM168,216h8v8h-8zM200,216h8v8h-8zM216,216h16v8h-16zM248,216h8v8h-8zM280,216h8v8h-8zM296,216h32v8h-32zM32,224h8v8h-8zM64,224h24v8h-24zM120,224h8v8h-8zM144,224h8v8h-8zM160,224h56v8h-56zM224,224h8v8h-8zM240,224h8v8h-8zM264,224h24v8h-24zM304,224h8v8h-8zM320,224h8v8h-8zM32,232h8v8h-8zM88,232h32v8h-32zM128,232h8v8h-8zM152,232h8v8h-8zM216,232h8v8h-8zM248,232h24v8h-24zM288,232h32v8h-32zM48,240h8v8h-8zM64,240h24v8h-24zM112,240h24v8h-24zM152,240h16v8h-16zM176,240h8v8h-8zM192,240h16v8h-16zM216,240h16v8h-16zM248,240h24v8h-24zM288,240h8v8h-8zM48,248h24v8h-24zM96,248h16v8h-16zM120,248h8v8h-8zM144,248h8v8h-8zM168,248h24v8h-24zM200,248h32v8h-32zM248,248h8v8h-8zM272,248h8v8h-8zM296,248h24v8h-24zM32,256h16v8h-16zM80,256h8v8h-8zM96,256h16v8h-16zM128,256h8v8h-8zM168,256h8v8h-8zM184,256h8v8h-8zM200,256h16v8h-16zM224,256h8v8h-8zM240,256h56v8h-56zM304,256h24v8h-24zM96,264h16v8h-16zM136,264h32v8h-32zM176,264h8v8h-8zM192,264h8v8h-8zM216,264h8v8h-8zM232,264h8v8h-8zM256,264h8v8h-8zM288,264h24v8h-24zM32,272h56v8h-56zM104,272h16v8h-16zM136,272h24v8h-24zM168,272h16v8h-16zM192,272h16v8h-16zM216,272h8v8h-8zM240,272h8v8h-8zM256,272h8v8h-8zM272,272h8v8h-8zM288,272h8v8h-8zM32,280h8v8h-8zM80,280h8v8h-8zM96,280h8v8h-8zM112,280h8v8h-8zM128,280h8v8h-8zM152,280h24v8h-24zM192,280h16v8h-16zM240,280h8v8h-8zM256,280h8v8h-8zM288,280h8v8h-8zM304,280h16v8h-16zM32,288h8v8h-8zM48,288h24v8h-24zM80,288h8v8h-8zM96,288h8v8h-8zM120,288h16v8h-16zM160,288h16v8h-16zM184,288h32v8h-32zM224,288h8v8h-8zM240,288h8v8h-8zM256,288h40v8h-40zM304,288h8v8h-8zM320,288h8v8h-8zM32,296h8v8h-8zM48,296h24v8h-24zM80,296h8v8h-8zM104,296h8v8h-8zM128,296h32v8h-32zM176,296h8v8h-8zM216,296h8v8h-8zM232,296h8v8h-8zM256,296h24v8h-24zM304,296h8v8h-8zM32,304h8v8h-8zM48,304h24v8h-24zM80,304h8v8h-8zM120,304h24v8h-24zM152,304h32v8h-32zM208,304h16v8h-16zM232,304h56v8h-56zM296,304h16v8h-16zM32,312h8v8h-8zM80,312h8v8h-8zM96,312h8v8h-8zM112,312h24v8h-24zM144,312h64v8h-64zM248,312h8v8h-8zM264,312h8v8h-8zM280,312h8v8h-8zM304,312h16v8h-16zM32,320h56v8h-56zM96,320h8v8h-8zM128,320h8v8h-8zM160,320h56v8h-56zM240,320h16v8h-16zM264,320h32v8h-32zM304,320h24v8h-24z" fill="#000000"/></svg>
           </div>
-          <span class="qr-caption">threshold://hardened/disable</span>
+          <span class="qr-caption">drytoast://hardened/disable</span>
         </div>
       </section>
 
@@ -531,13 +531,13 @@ adb shell dpm set-device-owner com.garan.threshold/.dpc.ThresholdDeviceAdminRece
           </div>
         </div>
 
-        <p class="note">Keep Threshold open on your phone while entering the code. Leaving the screen on your phone generates a new 3-digit challenge.</p>
+        <p class="note">Keep Dry Toast open on your phone while entering the code. Leaving the screen on your phone generates a new 3-digit challenge.</p>
       </section>
 
       <details>
         <summary>USB / ADB command alternative</summary>
         <pre># Deactivate Hardened Mode via ADB
-adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n com.garan.threshold/.settings.SettingsLockReceiver</pre>
+adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com.garan.drytoast/.settings.SettingsLockReceiver</pre>
       </details>
     </div>
   </main>
@@ -569,12 +569,12 @@ adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n co
 
       // Dynamically refresh 6-Tap QR from /provisioning-qr-payload.json so it always matches the latest release
       const qrBox = document.getElementById("provision-qr-box");
-      if (qrBox && window.ThresholdQr) {
+      if (qrBox && window.DryToastQr) {
         fetch("/provisioning-qr-payload.json", { cache: "no-store" })
           .then(function (res) { return res.ok ? res.json() : null; })
           .then(function (data) {
             if (data) {
-              qrBox.innerHTML = window.ThresholdQr.renderQrSvg(JSON.stringify(data), 4);
+              qrBox.innerHTML = window.DryToastQr.renderQrSvg(JSON.stringify(data), 4);
             }
           })
           .catch(function () {
@@ -583,7 +583,7 @@ adb shell am broadcast -a com.garan.threshold.action.DISABLE_HARDENED_MODE -n co
       }
 
       // Challenge-Response HMAC-SHA256 generator for domain "hardened-disable"
-      const SECRET = "threshold-v1-shared-totp-key-9f4b2c8e1d7a6053c8b4e2f1a9d07635";
+      const SECRET = "drytoast-v1-shared-totp-key-9f4b2c8e1d7a6053c8b4e2f1a9d07635";
       const DOMAIN = "hardened-disable";
       const input = document.getElementById("challenge-input");
       const output = document.getElementById("response-output");

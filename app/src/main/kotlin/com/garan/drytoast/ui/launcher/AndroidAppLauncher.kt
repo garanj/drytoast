@@ -1,0 +1,128 @@
+package com.garan.drytoast.ui.launcher
+
+import android.app.ActivityOptions
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.pm.LauncherApps
+import android.net.Uri
+import android.os.UserManager
+import android.provider.Settings
+import com.garan.drytoast.core.model.ComponentKey
+import com.garan.drytoast.ui.util.ImeUtils
+import com.garan.drytoast.ui.util.ImeUtils.findActivity
+
+interface AppLauncher {
+    fun launchApp(component: ComponentKey): Boolean
+    fun openAppInfo(component: ComponentKey): Boolean
+    fun launchDialer(): Boolean = false
+}
+
+class AndroidAppLauncher(
+    private val context: Context,
+    private val launcherApps: LauncherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps,
+    private val userManager: UserManager = context.getSystemService(Context.USER_SERVICE) as UserManager,
+) : AppLauncher {
+
+    override fun launchDialer(): Boolean {
+        context.findActivity()?.let { ImeUtils.dismissIme(it) }
+
+        val options = ActivityOptions.makeBasic().toBundle()
+        val dialerPackage = DialerPackageResolver.resolveDefaultDialerPackage(context)
+        val targetedDialIntent = Intent(Intent.ACTION_DIAL).apply {
+            setPackage(dialerPackage)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (runCatching { context.startActivity(targetedDialIntent, options) }.isSuccess) {
+            return true
+        }
+
+        val genericDialIntent = Intent(Intent.ACTION_DIAL).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (runCatching { context.startActivity(genericDialIntent, options) }.isSuccess) {
+            return true
+        }
+
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(dialerPackage)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (launchIntent != null && runCatching { context.startActivity(launchIntent, options) }.isSuccess) {
+            return true
+        }
+
+        return false
+    }
+
+    override fun launchApp(component: ComponentKey): Boolean {
+        context.findActivity()?.let { ImeUtils.dismissIme(it) }
+
+        val componentName = ComponentName(component.packageName, component.activityName)
+        val userHandle = userManager.getUserForSerialNumber(component.userSerial)
+
+        return try {
+            if (userHandle != null) {
+                val options = ActivityOptions.makeBasic().toBundle()
+                launcherApps.startMainActivity(componentName, userHandle, null, options)
+                true
+            } else if (component.userSerial == 0L) {
+                val options = ActivityOptions.makeBasic().toBundle()
+                val intent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setComponent(componentName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent, options)
+                true
+            } else {
+                // Never silently launch a personal-profile app when a Work/Secondary profile
+                // UserHandle (userSerial > 0L) is unavailable or removed.
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override fun openAppInfo(component: ComponentKey): Boolean {
+        context.findActivity()?.let { ImeUtils.dismissIme(it) }
+
+        val componentName = ComponentName(component.packageName, component.activityName)
+        val userHandle = userManager.getUserForSerialNumber(component.userSerial)
+
+        return try {
+            if (userHandle != null) {
+                try {
+                    val options = ActivityOptions.makeBasic().toBundle()
+                    launcherApps.startAppDetailsActivity(componentName, userHandle, null, options)
+                    true
+                } catch (_: UnsupportedOperationException) {
+                    if (component.userSerial == 0L) {
+                        startAppDetailsSettings(component.packageName)
+                        true
+                    } else {
+                        false
+                    }
+                }
+            } else if (component.userSerial == 0L) {
+                startAppDetailsSettings(component.packageName)
+                true
+            } else {
+                // Never silently open personal App Info when a Work/Secondary profile
+                // UserHandle (userSerial > 0L) is unavailable or removed.
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun startAppDetailsSettings(packageName: String) {
+        val options = ActivityOptions.makeBasic().toBundle()
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent, options)
+    }
+}

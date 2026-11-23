@@ -320,5 +320,5 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges" role="img" aria-label="QR Code"><rect width="${total}" height="${total}" fill="#ffffff"/><path d="${path}" fill="#000000"/></svg>`;
   }
 
-  global.ThresholdQr = { renderQrSvg };
+  global.DryToastQr = { renderQrSvg };
 })(window);

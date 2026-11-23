@@ -1,7 +1,7 @@
-# Agent Operating Manual: Threshold
+# Agent Operating Manual: Dry Toast
 
-Welcome to **Threshold** (`com.garan.threshold`).
-Threshold is a tactile, minimalist Android launcher designed to treat the smartphone like a precision mechanical instrument rather than an entertainment console.
+Welcome to **Dry Toast** (`com.garan.drytoast`).
+Dry Toast is a tactile, minimalist Android launcher designed to treat the smartphone like a precision mechanical instrument rather than an entertainment console.
 
 This file establishes the **non-negotiable operating rules, boundaries, and standards** for any AI agent or human contributor working in this repository.
 
@@ -9,11 +9,11 @@ This file establishes the **non-negotiable operating rules, boundaries, and stan
 
 ## 1. Prime Invariants & Architectural Boundaries ("No Shenanigans")
 
-Every line of code committed to Threshold must adhere to these non-negotiable boundaries:
+Every line of code committed to Dry Toast must adhere to these non-negotiable boundaries:
 
 1. **Zero Accessibility Service for App Blocking:**
-   - Threshold NEVER uses an `AccessibilityService` to inspect active window titles, scrape third-party screens, kill background tasks, or draw persistent blocking overlays.
-   - Threshold is an **Intent Gatekeeper** at the home screen and search index. Restricted apps simply do not appear or cannot be launched from Threshold's surfaces.
+   - Dry Toast NEVER uses an `AccessibilityService` to inspect active window titles, scrape third-party screens, kill background tasks, or draw persistent blocking overlays.
+   - Dry Toast is an **Intent Gatekeeper** at the home screen and search index. Restricted apps simply do not appear or cannot be launched from Dry Toast's surfaces.
 
 2. **Universal Dialer AllowList Safety Invariant:**
    - The package holding `android.app.role.DIALER` is **permanently AllowListed** regardless of active profiles, bedtime locks, or friction states. Emergency dialing and core phone communication must never be locked out.
@@ -27,13 +27,13 @@ Every line of code committed to Threshold must adhere to these non-negotiable bo
    - No analytics SDKs, cloud sync, telemetry, or remote crash reporters. All state resides locally in Room / DataStore.
 
 5. **OS-Owned Task Switcher (Recents) Boundary:**
-   - In standard mode, Threshold does not tamper with the system Overview/Recents task switcher.
+   - In standard mode, Dry Toast does not tamper with the system Overview/Recents task switcher.
    - Kernel-level package suspension (`setPackagesSuspended`) and Lock Task mode are strictly isolated to the optional, opt-in **Device Policy Controller (DPC)** mode, mediated by an abstract `AppAccessController` interface.
 
 6. **Memory Ceiling (< 30 MB Total PSS) & Zero `Activity` Retention in `ViewModel`s:**
    - Long-lived state must NEVER hold uncompressed `Bitmap` instances or large icon caches.
    - Typographic mode maintains memory under 25 MB. The hard ceiling in CI is 35,000 KB PSS (accommodating SwiftShader software rendering overhead).
-   - **Never capture an `Activity` in a `ViewModel` or `ViewModelProvider.Factory`:** Because `ViewModel`s outlive `Activity` recreation (e.g., on `fontScale`, `density`, or `locale` changes), no `ViewModel` constructor argument, lambda, or repository may reference `this@MainActivity` or per-Activity fields. All Activity-independent services (`PackageIndexSource`, `SettingsRepository`, `LocationSource`, `HapticEngine`, `ScheduleAlarmScheduler`, `ProfileCapabilityChecker`, and test overrides) must live in the process-scoped `ThresholdAppContainer` (`ThresholdApplication`) initialized with `applicationContext`.
+   - **Never capture an `Activity` in a `ViewModel` or `ViewModelProvider.Factory`:** Because `ViewModel`s outlive `Activity` recreation (e.g., on `fontScale`, `density`, or `locale` changes), no `ViewModel` constructor argument, lambda, or repository may reference `this@MainActivity` or per-Activity fields. All Activity-independent services (`PackageIndexSource`, `SettingsRepository`, `LocationSource`, `HapticEngine`, `ScheduleAlarmScheduler`, `ProfileCapabilityChecker`, and test overrides) must live in the process-scoped `DryToastAppContainer` (`DryToastApplication`) initialized with `applicationContext`.
 
 ---
 

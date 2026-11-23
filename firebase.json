@@ -15,8 +15,8 @@
         "type": 302
       },
       {
-        "source": "/downloads/threshold-release.apk",
-        "destination": "https://github.com/garanj/threshold/releases/latest/download/threshold-release.apk",
+        "source": "/downloads/drytoast-release.apk",
+        "destination": "https://github.com/garanj/drytoast/releases/latest/download/drytoast-release.apk",
         "type": 302
       }
     ],

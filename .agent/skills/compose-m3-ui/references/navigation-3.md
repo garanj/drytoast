@@ -1,6 +1,6 @@
-# Jetpack Navigation 3 (`androidx.navigation3`) Reference for Threshold
+# Jetpack Navigation 3 (`androidx.navigation3`) Reference for Dry Toast
 
-Synthesized from Google's official `android/skills` (`navigation/navigation-3`) and adapted for Threshold's launcher architecture and optical motion curves.
+Synthesized from Google's official `android/skills` (`navigation/navigation-3`) and adapted for Dry Toast's launcher architecture and optical motion curves.
 
 ---
 
@@ -30,28 +30,28 @@ Define all top-level and nested routes as `@Serializable` types implementing `Na
 Never store route parameters (such as `editingProfileId: String?`) as separate `mutableStateOf` variables outside the back stack.
 
 ```kotlin
-package com.garan.threshold.ui.navigation
+package com.garan.drytoast.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface ThresholdRoute : NavKey {
+sealed interface DryToastRoute : NavKey {
     @Serializable
-    data object Home : ThresholdRoute
+    data object Home : DryToastRoute
 
     @Serializable
-    data object Settings : ThresholdRoute
+    data object Settings : DryToastRoute
 
     @Serializable
-    data object Profiles : ThresholdRoute
+    data object Profiles : DryToastRoute
 
     /**
      * Dedicated screen for creating (profileId == null) or editing an existing CustomProfile
      * (name, schedule window, active days, and link to profile app overrides).
      */
     @Serializable
-    data class ProfileEditor(val profileId: String? = null) : ThresholdRoute
+    data class ProfileEditor(val profileId: String? = null) : DryToastRoute
 
     /**
      * Unified app assignment screen.
@@ -59,7 +59,7 @@ sealed interface ThresholdRoute : NavKey {
      * When [profileId] is non-null, edits overrides for that specific CustomProfile.
      */
     @Serializable
-    data class ConfigureApps(val profileId: String? = null) : ThresholdRoute
+    data class ConfigureApps(val profileId: String? = null) : DryToastRoute
 }
 ```
 
@@ -68,13 +68,13 @@ sealed interface ThresholdRoute : NavKey {
 ## 3. `NavDisplay` Setup with Entry Decorators & Optical Transitions
 
 Always configure `NavDisplay` with:
-1. `rememberNavBackStack(ThresholdRoute.Home)` for configuration-change survival.
+1. `rememberNavBackStack(DryToastRoute.Home)` for configuration-change survival.
 2. `rememberSaveableStateHolderNavEntryDecorator()` and `rememberViewModelStoreNavEntryDecorator()`.
-3. Threshold's decelerating optical transitions (`ThresholdMotion.opticalTween`, 80ms–140ms, zero spring physics).
+3. Dry Toast's decelerating optical transitions (`DryToastMotion.opticalTween`, 80ms–140ms, zero spring physics).
 4. `dropUnlessResumed` on forward navigation actions to prevent double-tap duplicate back stack entries.
 
 ```kotlin
-val backStack = rememberNavBackStack(ThresholdRoute.Home)
+val backStack = rememberNavBackStack(DryToastRoute.Home)
 
 NavDisplay(
     backStack = backStack,
@@ -89,46 +89,46 @@ NavDisplay(
     ),
     transitionSpec = {
         fadeIn(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_OPEN_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
         ) togetherWith fadeOut(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_CLOSE_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS),
         )
     },
     popTransitionSpec = {
         fadeIn(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_OPEN_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
         ) togetherWith fadeOut(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_CLOSE_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS),
         )
     },
     predictivePopTransitionSpec = {
         fadeIn(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_OPEN_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
         ) togetherWith fadeOut(
-            animationSpec = ThresholdMotion.opticalTween(ThresholdMotion.SHUTTER_CLOSE_DURATION_MS),
+            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS),
         )
     },
     entryProvider = entryProvider {
-        entry<ThresholdRoute.Home> {
-            ThresholdHomeScreen(
+        entry<DryToastRoute.Home> {
+            DryToastHomeScreen(
                 viewModel = searchViewModel,
                 appLauncher = appLauncher,
                 hapticEngine = hapticEngine,
                 onDismissIme = { ImeUtils.dismissIme(activity) },
                 antiMetricsRepository = antiMetricsRepository,
-                onOpenSettings = { backStack.add(ThresholdRoute.Settings) },
+                onOpenSettings = { backStack.add(DryToastRoute.Settings) },
             )
         }
-        entry<ThresholdRoute.Settings> {
+        entry<DryToastRoute.Settings> {
             // Settings route content
         }
-        entry<ThresholdRoute.Profiles> {
+        entry<DryToastRoute.Profiles> {
             // Profiles list route content
         }
-        entry<ThresholdRoute.ProfileEditor> { route ->
+        entry<DryToastRoute.ProfileEditor> { route ->
             // Profile create/edit destination
         }
-        entry<ThresholdRoute.ConfigureApps> { route ->
+        entry<DryToastRoute.ConfigureApps> { route ->
             // App assignment destination for route.profileId
         }
     },
@@ -139,7 +139,7 @@ NavDisplay(
 
 ## 4. Handling `onNewIntent` (Home Key Press on Root Launcher)
 
-When the user presses the system Home button while inside `Settings`, `Profiles`, or `ConfigureApps`, `MainActivity.onNewIntent` must collapse the navigation stack back to `[ThresholdRoute.Home]`:
+When the user presses the system Home button while inside `Settings`, `Profiles`, or `ConfigureApps`, `MainActivity.onNewIntent` must collapse the navigation stack back to `[DryToastRoute.Home]`:
 
 ```kotlin
 // Reset user-owned back stack to root Home destination:

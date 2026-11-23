@@ -1,4 +1,4 @@
-# Threshold Delivery Roadmap
+# Dry Toast Delivery Roadmap
 
 ## Phase 1: Test Infrastructure, Core Architecture & Safe Shell (Milestone 1)
 - [x] **Task 1.1: Multi-Module Gradle Scaffolding & Hygiene Baseline**
@@ -84,12 +84,12 @@
   - Live active profile indicator below the clock (#82).
   - Tamper resistance: Reboot-staged settings changes (#94) and ADB settings lock (#96).
 - [x] **Task 3.5: Launcher Management & Restore Launcher Action (`:app`)** *(Dropped by design decision)*
-  - *(Dropped to prevent an un-stageable OS `ACTION_HOME_SETTINGS` escape hatch inside Threshold Settings that would bypass "Require reboot for settings changes". Users can switch default home apps via Android System Settings).*
+  - *(Dropped to prevent an un-stageable OS `ACTION_HOME_SETTINGS` escape hatch inside Dry Toast Settings that would bypass "Require reboot for settings changes". Users can switch default home apps via Android System Settings).*
 - [x] **Task 3.6: Onboarding Flow & First-Run Educational Wizard (`:app`)**
   - First-launch detection from Play Store / external launcher (checking if `RoleManager.isRoleHeld(RoleManager.ROLE_HOME)` is false).
-  - Swipeable multi-step introduction educating the user on Threshold's philosophy, intent gatekeeping, and tactile mechanics.
-  - Direct "Set Threshold as Default Launcher" prompt (`RoleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)`).
-  - Seamless handoff into Threshold home screen upon role grant (#100).
+  - Swipeable multi-step introduction educating the user on Dry Toast's philosophy, intent gatekeeping, and tactile mechanics.
+  - Direct "Set Dry Toast as Default Launcher" prompt (`RoleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)`).
+  - Seamless handoff into Dry Toast home screen upon role grant (#100).
 - [x] **Task 3.7: Pure Black Wallpaper Utility Action (`:core` / `:data` / `:app`)**
   - One-tap utility action in Settings and `:wallpaper` search shortcut applying a solid `#000000` AMOLED black wallpaper to system and lock screen (#98).
 
@@ -117,17 +117,17 @@
 
 ## Phase 6: Device Owner & DPC Mode (Milestone 6)
 - [x] **Task 6.1: DPC Receiver & Dynamic Tier Detection (`:app`)**
-  - `ThresholdDeviceAdminReceiver` implementation (`@xml/device_admin_receiver`) and reactive `isDeviceOwnerFlow` via `DevicePolicyManager.isDeviceOwnerApp` (#110).
+  - `DryToastDeviceAdminReceiver` implementation (`@xml/device_admin_receiver`) and reactive `isDeviceOwnerFlow` via `DevicePolicyManager.isDeviceOwnerApp` (#110).
 - [x] **Task 6.2: Kernel-Level Package Suspension (`:core` / `:data` / `:app`)**
   - Diff-reconciled `setPackagesSuspended` via `AppAccessController` port for `Blocked` apps (preserving notifications on `Guarded` apps and permanently exempting the default dialer and system packages) (#110).
   - *(Note: Kiosk `setLockTaskPackages` dropped by design decision; persistent default Home launcher enforced via `addPersistentPreferredActivity`).*
 - [x] **Task 6.3: Anti-Tamper Self-Protection & Hardened Mode Education UI (`:app`)**
   - `setUninstallBlocked`, `setUserControlDisabledPackages` (disabling Force Stop & Clear Storage), and `addPersistentPreferredActivity` when Device Owner is active, plus computer-only `DISABLE_HARDENED_MODE` ADB deactivation (#110).
-  - Dedicated `HardenedModeScreen` (`ThresholdRoute.HardenedMode`) in Settings with live status, Standard vs. Hardened breakdown, Companion Commitment Layers, and copyable ADB commands (#110).
+  - Dedicated `HardenedModeScreen` (`DryToastRoute.HardenedMode`) in Settings with live status, Standard vs. Hardened breakdown, Companion Commitment Layers, and copyable ADB commands (#110).
   - *(Note: `setStatusBarDisabled` notification shade lockdown dropped by design decision).*
 - [x] **Task 6.4: 6-Tap QR Provisioning & QR Deep-Link Deactivation**
-  - Headless `ThresholdProvisioningActivity` (`GET_PROVISIONING_MODE` & `ADMIN_POLICY_COMPLIANCE`) for Android 12+ 6-tap Welcome screen QR setup (#110).
-  - Hidden `DisableHardenedModeScreen` (`threshold://hardened/disable?key=...`) accessible via website QR scan even when Settings are locked (#110).
+  - Headless `DryToastProvisioningActivity` (`GET_PROVISIONING_MODE` & `ADMIN_POLICY_COMPLIANCE`) for Android 12+ 6-tap Welcome screen QR setup (#110).
+  - Hidden `DisableHardenedModeScreen` (`drytoast://hardened/disable?key=...`) accessible via website QR scan even when Settings are locked (#110).
   - External ADB CLI revocation fallback (`DISABLE_HARDENED_MODE`) (#110).
 
 ---
@@ -148,4 +148,4 @@
 - [x] **Task 8.1: Launcher Action Registry & Dispatcher (`:`, `,` prefix)**
   - *(Moved from Phase 2 Task 2.4; dual-flank panels discarded).*
   - Core utility actions (`:settings`, `:wallpaper`) registered as `ActionCandidate` shortcuts in `MainActivity` and `SearchEngine` (#50, #98).
-  - Wired `ThresholdHomeScreen` action execution (`SearchItem.Action` in `onItemClick` and IME `Go` quick-launch).
+  - Wired `DryToastHomeScreen` action execution (`SearchItem.Action` in `onItemClick` and IME `Go` quick-launch).

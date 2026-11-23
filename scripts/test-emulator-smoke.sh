@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PACKAGE_NAME="com.garan.threshold"
-MAIN_ACTIVITY="com.garan.threshold/.MainActivity"
+PACKAGE_NAME="com.garan.drytoast"
+MAIN_ACTIVITY="com.garan.drytoast/.MainActivity"
 CEILING_KB=35000
 APK_PATH="app/build/outputs/apk/release/app-release.apk"
 
 echo "=========================================================="
-echo "  Threshold: Automated Emulator Smoke & Home Role Test"
+echo "  Dry Toast: Automated Emulator Smoke & Home Role Test"
 echo "=========================================================="
 
 if ! command -v adb &> /dev/null; then
@@ -74,10 +74,10 @@ FOCUSED_WINDOW=$(adb shell dumpsys window 2>/dev/null | (grep -E "mCurrentFocus|
 echo "    Current Focus: $FOCUSED_WINDOW"
 
 if [[ "$FOCUSED_WINDOW" != *"$PACKAGE_NAME"* ]]; then
-    echo "ERROR: Threshold was not brought to the foreground upon pressing Home!" >&2
+    echo "ERROR: Dry Toast was not brought to the foreground upon pressing Home!" >&2
     exit 1
 fi
-echo "    SUCCESS: Threshold MainActivity is active and focused."
+echo "    SUCCESS: Dry Toast MainActivity is active and focused."
 
 # 6. Memory Ceiling Check (< 35 MB Total PSS in headless CI with SwiftShader)
 echo "==> Step 6: Asserting TOTAL PSS memory budget (< ${CEILING_KB} KB)..."

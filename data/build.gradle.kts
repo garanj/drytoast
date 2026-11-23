@@ -17,7 +17,7 @@ val robolectricSdk35 by configurations.creating {
 }
 
 android {
-    namespace = "com.garan.threshold.data"
+    namespace = "com.garan.drytoast.data"
     compileSdk = 37
 
     defaultConfig {

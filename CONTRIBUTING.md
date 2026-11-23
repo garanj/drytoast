@@ -1,4 +1,4 @@
-# Engineering Workflow & Contributing Guide: Threshold
+# Engineering Workflow & Contributing Guide: Dry Toast
 
 ## 1. Issue-Driven Development (IDD) & 1:1 Contract
 
