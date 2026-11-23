@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -48,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
@@ -109,6 +112,8 @@ object HardenedModeDeepLink {
 object HardenedModeTestTags {
     const val SCREEN_LIST = "hardened_mode_list"
     const val STATUS_CARD = "hardened_mode_status_card"
+    const val BLOCK_NEW_APP_INSTALLS_ROW = "hardened_mode_block_new_app_installs_row"
+    const val BLOCK_NEW_APP_INSTALLS_SWITCH = "hardened_mode_block_new_app_installs_switch"
     const val COMPANION_CONSOLE_ROW = "hardened_mode_companion_console_row"
     const val OPEN_WEBSITE_BUTTON = "hardened_mode_open_website_button"
     const val DISABLE_SCREEN_ROOT = "disable_hardened_mode_screen"
@@ -133,6 +138,9 @@ fun HardenedModeScreen(
     isHardenedModeActive: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    blockNewAppInstalls: Boolean = false,
+    isSettingsLocked: Boolean = false,
+    onToggleBlockNewAppInstalls: (Boolean) -> Unit = {},
     onOpenWebsite: ((String) -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
@@ -232,6 +240,55 @@ fun HardenedModeScreen(
                     color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 1.dp,
                 )
+            }
+
+            if (isHardenedModeActive) {
+                item(key = "header_controls") {
+                    SettingsSectionHeader(title = stringResource(R.string.hardened_mode_section_controls))
+                }
+
+                item(key = "toggle_block_new_app_installs") {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.setting_block_new_app_installs_title),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = stringResource(R.string.setting_block_new_app_installs_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = blockNewAppInstalls,
+                                onCheckedChange = null,
+                                enabled = !isSettingsLocked,
+                                modifier = Modifier.testTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_SWITCH),
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW)
+                            .toggleable(
+                                value = blockNewAppInstalls,
+                                enabled = !isSettingsLocked,
+                                role = Role.Switch,
+                                onValueChange = onToggleBlockNewAppInstalls,
+                            ),
+                    )
+                }
+
+                item(key = "divider_controls") {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
 
             // SECTION 1: WHAT HARDENED MODE ENFORCES

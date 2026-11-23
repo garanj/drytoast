@@ -167,6 +167,34 @@ class AndroidAppAccessControllerTest {
     }
 
     @Test
+    fun hardenedMode_blockNewAppInstalls_enforcesAndClearsDisallowInstallApps() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        // Default is false -> DISALLOW_INSTALL_APPS is not added
+        controller.enforceHardenedSelfProtection()
+        assertThat(recordingBridge.addedUserRestrictions).doesNotContain(UserManager.DISALLOW_INSTALL_APPS)
+        assertThat(recordingBridge.clearedUserRestrictions).doesNotContain(UserManager.DISALLOW_INSTALL_APPS)
+
+        // Enable blockNewAppInstalls -> adds DISALLOW_INSTALL_APPS
+        val currentGeneral = fakeRepository.getSettings().general
+        fakeRepository.updateGeneralSettings(currentGeneral.copy(blockNewAppInstalls = true))
+        recordingBridge.addedUserRestrictions.clear()
+        controller.enforceHardenedSelfProtection()
+        assertThat(recordingBridge.addedUserRestrictions).contains(UserManager.DISALLOW_INSTALL_APPS)
+
+        // Reconciling again while unchanged does not emit duplicate DISALLOW_INSTALL_APPS calls
+        recordingBridge.addedUserRestrictions.clear()
+        controller.reconcileBlockedPackages(emptySet(), defaultDialerPackage = dialerKey.packageName)
+        assertThat(recordingBridge.addedUserRestrictions).doesNotContain(UserManager.DISALLOW_INSTALL_APPS)
+
+        // Disable blockNewAppInstalls -> clears DISALLOW_INSTALL_APPS immediately on next reconcile
+        fakeRepository.updateGeneralSettings(currentGeneral.copy(blockNewAppInstalls = false))
+        recordingBridge.clearedUserRestrictions.clear()
+        controller.reconcileBlockedPackages(emptySet(), defaultDialerPackage = dialerKey.packageName)
+        assertThat(recordingBridge.clearedUserRestrictions).containsExactly(UserManager.DISALLOW_INSTALL_APPS)
+    }
+
+    @Test
     fun reconcileBlockedPackages_appliesDiffOnly_andAvoidsRedundantDpcCalls() = runTest {
         recordingBridge.isDeviceOwner = true
 
@@ -347,6 +375,7 @@ class AndroidAppAccessControllerTest {
             UserManager.DISALLOW_SAFE_BOOT,
             UserManager.DISALLOW_ADD_USER,
             UserManager.DISALLOW_CONFIG_DATE_TIME,
+            UserManager.DISALLOW_INSTALL_APPS,
         )
         assertThat(recordingBridge.organizationNameCalls.last()).isNull()
         assertThat(recordingBridge.shortSupportMessageCalls.last()).isNull()

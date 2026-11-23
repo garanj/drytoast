@@ -52,6 +52,7 @@ class HardenedModeScreenTest {
 
         composeRule.onNodeWithText("STATUS: STANDARD MODE (NOT ENABLED)").assertIsDisplayed()
         composeRule.onNodeWithText("OS-Level Package Suspension").assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW).assertDoesNotExist()
 
         val list = composeRule.onNodeWithTag(HardenedModeTestTags.SCREEN_LIST)
         list.performScrollToNode(hasTestTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON))
@@ -72,11 +73,16 @@ class HardenedModeScreenTest {
     }
 
     @Test
-    fun hardenedModeScreen_whenActive_displaysHardenedModeActiveStatus() {
+    fun hardenedModeScreen_whenActive_displaysHardenedModeActiveStatusAndInstallToggle() {
+        val toggledValues = mutableListOf<Boolean>()
+
         composeRule.setContent {
             ThresholdTheme {
                 HardenedModeScreen(
                     isHardenedModeActive = true,
+                    blockNewAppInstalls = false,
+                    isSettingsLocked = false,
+                    onToggleBlockNewAppInstalls = { toggledValues.add(it) },
                     onBack = {},
                 )
             }
@@ -86,6 +92,30 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithText(
             "Threshold holds Device Owner privileges. Blocked and Guarded apps are suspended at the OS level and launcher self-protection is active.",
         ).assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW)
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+
+        assertThat(toggledValues).containsExactly(true)
+    }
+
+    @Test
+    fun hardenedModeScreen_whenSettingsLocked_disablesBlockNewAppInstallsToggle() {
+        composeRule.setContent {
+            ThresholdTheme {
+                HardenedModeScreen(
+                    isHardenedModeActive = true,
+                    blockNewAppInstalls = true,
+                    isSettingsLocked = true,
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
     }
 
     @Test

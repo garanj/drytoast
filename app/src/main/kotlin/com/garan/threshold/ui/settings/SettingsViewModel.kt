@@ -180,6 +180,14 @@ class SettingsViewModel(
         }
     }
 
+    fun updateBlockNewAppInstalls(block: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(current.copy(blockNewAppInstalls = block))
+            appAccessController.enforceHardenedSelfProtection()
+        }
+    }
+
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()

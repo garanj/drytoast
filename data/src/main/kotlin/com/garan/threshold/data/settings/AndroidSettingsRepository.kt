@@ -78,6 +78,7 @@ class AndroidSettingsRepository(
         val HAS_SEEN_FIRST_RUN_HINT = booleanPreferencesKey("has_seen_first_run_hint")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val GUARDED_SESSION_GRACE_MINUTES = intPreferencesKey("guarded_session_grace_minutes")
+        val BLOCK_NEW_APP_INSTALLS = booleanPreferencesKey("block_new_app_installs")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
         val APP_ASSIGNMENTS = stringPreferencesKey("app_assignments")
@@ -343,6 +344,7 @@ class AndroidSettingsRepository(
         prefs[Keys.REQUIRE_FULL_TYPING] = updated.general.requireFullTypingOfGuardedApps
         prefs[Keys.REQUIRE_REBOOT] = updated.general.requireRebootForSettingsChange
         prefs[Keys.GUARDED_SESSION_GRACE_MINUTES] = updated.general.guardedSessionGraceMinutes
+        prefs[Keys.BLOCK_NEW_APP_INSTALLS] = updated.general.blockNewAppInstalls
         prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
         prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(updated.baseProfile.quickActions)
         prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
@@ -511,6 +513,7 @@ class AndroidSettingsRepository(
         val hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
         val guardedSessionGraceMinutes = prefs[Keys.GUARDED_SESSION_GRACE_MINUTES]
             ?: GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES
+        val blockNewAppInstalls = prefs[Keys.BLOCK_NEW_APP_INSTALLS] ?: false
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
         val dpcSuspendedPackagesRaw = prefs[Keys.DPC_SUSPENDED_PACKAGES].orEmpty()
         val dpcSuspendedPackages = if (dpcSuspendedPackagesRaw.isBlank()) {
@@ -625,6 +628,7 @@ class AndroidSettingsRepository(
                 hasSeenFirstRunHint = hasSeenHint,
                 hasCompletedOnboarding = hasCompletedOnboarding,
                 guardedSessionGraceMinutes = guardedSessionGraceMinutes,
+                blockNewAppInstalls = blockNewAppInstalls,
             ),
             baseProfile = BaseProfileSettings(
                 defaultFriction = defaultFriction,
@@ -648,6 +652,7 @@ class AndroidSettingsRepository(
         obj.put("requireFullTyping", snapshot.general.requireFullTypingOfGuardedApps)
         obj.put("requireReboot", snapshot.general.requireRebootForSettingsChange)
         obj.put("guardedSessionGraceMinutes", snapshot.general.guardedSessionGraceMinutes)
+        obj.put("blockNewAppInstalls", snapshot.general.blockNewAppInstalls)
         obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
         obj.put(
             "quickActions",
@@ -676,6 +681,7 @@ class AndroidSettingsRepository(
                 "guardedSessionGraceMinutes",
                 GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES,
             )
+            val blockNewAppInstalls = obj.optBoolean("blockNewAppInstalls", false)
             val defaultFriction = runCatching {
                 FrictionChoice.valueOf(
                     obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
@@ -695,6 +701,7 @@ class AndroidSettingsRepository(
                     hasSeenFirstRunHint = liveHasSeenFirstRunHint,
                     hasCompletedOnboarding = liveHasCompletedOnboarding,
                     guardedSessionGraceMinutes = guardedSessionGraceMinutes,
+                    blockNewAppInstalls = blockNewAppInstalls,
                 ),
                 baseProfile = BaseProfileSettings(
                     defaultFriction = defaultFriction,
