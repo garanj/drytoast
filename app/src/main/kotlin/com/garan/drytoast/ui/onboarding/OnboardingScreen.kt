@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -25,8 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -393,7 +389,6 @@ private fun DeliberateLaunchPage() {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IntentionalFrictionPage(
     hapticEngine: HapticEngine,
@@ -500,50 +495,30 @@ private fun IntentionalFrictionPage(
 
         val previewChoices = remember {
             listOf(
-                FrictionChoice.TYPED_INTENTION to R.string.friction_typed_intention,
-                FrictionChoice.DRAG_SORT to R.string.friction_drag_sort,
-                FrictionChoice.CARET_TRACING to R.string.friction_caret_tracing,
+                FrictionChoice.TYPED_INTENTION,
+                FrictionChoice.DRAG_SORT,
+                FrictionChoice.CARET_TRACING,
             )
         }
 
-        FlowRow(
+        DryToastMultiStateToggle(
+            options = previewChoices,
+            selected = selectedFrictionChoice,
+            onSelect = { selectedFrictionChoice = it },
+            label = { choice ->
+                when (choice) {
+                    FrictionChoice.TYPED_INTENTION -> stringResource(R.string.friction_typed_intention)
+                    FrictionChoice.DRAG_SORT -> stringResource(R.string.friction_drag_sort)
+                    FrictionChoice.CARET_TRACING -> stringResource(R.string.friction_caret_tracing)
+                    FrictionChoice.RANDOM -> stringResource(R.string.friction_random)
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            previewChoices.forEach { (choice, labelRes) ->
-                val isSelected = selectedFrictionChoice == choice
-                FilterChip(
-                    selected = isSelected,
-                    onClick = {
-                        if (!isSelected) {
-                            hapticEngine.rotaryDetent()
-                            selectedFrictionChoice = choice
-                        }
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(labelRes),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        )
-                    },
-                    shape = RoundedCornerShape(4.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        borderColor = MaterialTheme.colorScheme.outlineVariant,
-                        selectedBorderColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    modifier = Modifier.testTag(OnboardingTestTags.FRICTION_CHIP_PREFIX + choice.name),
-                )
-            }
-        }
+            height = 48.dp,
+            hapticEngine = hapticEngine,
+            maxLines = 2,
+            optionTestTag = { OnboardingTestTags.FRICTION_CHIP_PREFIX + it.name },
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
