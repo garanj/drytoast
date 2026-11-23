@@ -122,6 +122,11 @@
     <string name="hardened_mode_section_controls">Hardened Mode Controls</string>
     <string name="setting_block_new_app_installs_title">Block new app installs</string>
     <string name="setting_block_new_app_installs_summary">Prevents installing new apps from Google Play or other sources while enabled</string>
+    <string name="setting_lock_screen_text_title">Lock screen text</string>
+    <string name="setting_lock_screen_owner_preview">This device belongs to %1$s</string>
+    <string name="setting_lock_screen_owner_name_label">Owner name</string>
+    <string name="setting_lock_screen_info_label">Additional lock screen line (optional)</string>
+    <string name="setting_lock_screen_info_placeholder">e.g. If found, please call…</string>
     <string name="hardened_mode_section_capabilities">What Hardened Mode Enforces</string>
     <string name="hardened_mode_cap_suspend_title">OS-Level Package Suspension</string>
     <string name="hardened_mode_cap_suspend_body">Suspends Blocked and Guarded apps in the Android OS (setPackagesSuspended). Blocked apps remain continuously suspended while active. Guarded apps are suspended at rest so they cannot be resumed from Recents, temporarily unsuspended when you pass a friction checkpoint, and re-suspended after the configured grace period when you return home or lock the screen.</string>

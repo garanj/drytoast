@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -53,6 +54,7 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithText("STATUS: STANDARD MODE (NOT ENABLED)").assertIsDisplayed()
         composeRule.onNodeWithText("OS-Level Package Suspension").assertIsDisplayed()
         composeRule.onNodeWithTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW).assertDoesNotExist()
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_TEXT_ROW).assertDoesNotExist()
 
         val list = composeRule.onNodeWithTag(HardenedModeTestTags.SCREEN_LIST)
         list.performScrollToNode(hasTestTag(HardenedModeTestTags.OPEN_WEBSITE_BUTTON))
@@ -116,6 +118,46 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithTag(HardenedModeTestTags.BLOCK_NEW_APP_INSTALLS_ROW)
             .assertIsDisplayed()
             .assertIsNotEnabled()
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_TEXT_ROW)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun hardenedModeScreen_lockScreenTextSheet_editsAndSavesBothLines() {
+        var savedOwnerName: String? = null
+        var savedInfo: String? = null
+
+        composeRule.setContent {
+            ThresholdTheme {
+                HardenedModeScreen(
+                    isHardenedModeActive = true,
+                    hardenedOwnerName = "Threshold",
+                    hardenedLockScreenInfo = "",
+                    isSettingsLocked = false,
+                    onSaveLockScreenText = { owner, info ->
+                        savedOwnerName = owner
+                        savedInfo = info
+                    },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_TEXT_ROW)
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_SHEET).assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.OWNER_NAME_INPUT)
+            .performTextReplacement("Garan")
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_INFO_INPUT)
+            .performTextReplacement("If found, call 555-0199")
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_SAVE_BUTTON)
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(savedOwnerName).isEqualTo("Garan")
+        assertThat(savedInfo).isEqualTo("If found, call 555-0199")
     }
 
     @Test

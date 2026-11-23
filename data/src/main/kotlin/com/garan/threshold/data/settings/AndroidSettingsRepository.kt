@@ -79,6 +79,8 @@ class AndroidSettingsRepository(
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val GUARDED_SESSION_GRACE_MINUTES = intPreferencesKey("guarded_session_grace_minutes")
         val BLOCK_NEW_APP_INSTALLS = booleanPreferencesKey("block_new_app_installs")
+        val HARDENED_OWNER_NAME = stringPreferencesKey("hardened_owner_name")
+        val HARDENED_LOCK_SCREEN_INFO = stringPreferencesKey("hardened_lock_screen_info")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
         val APP_ASSIGNMENTS = stringPreferencesKey("app_assignments")
@@ -345,6 +347,8 @@ class AndroidSettingsRepository(
         prefs[Keys.REQUIRE_REBOOT] = updated.general.requireRebootForSettingsChange
         prefs[Keys.GUARDED_SESSION_GRACE_MINUTES] = updated.general.guardedSessionGraceMinutes
         prefs[Keys.BLOCK_NEW_APP_INSTALLS] = updated.general.blockNewAppInstalls
+        prefs[Keys.HARDENED_OWNER_NAME] = updated.general.effectiveHardenedOwnerName()
+        prefs[Keys.HARDENED_LOCK_SCREEN_INFO] = updated.general.hardenedLockScreenInfo.trim()
         prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
         prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(updated.baseProfile.quickActions)
         prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
@@ -514,6 +518,10 @@ class AndroidSettingsRepository(
         val guardedSessionGraceMinutes = prefs[Keys.GUARDED_SESSION_GRACE_MINUTES]
             ?: GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES
         val blockNewAppInstalls = prefs[Keys.BLOCK_NEW_APP_INSTALLS] ?: false
+        val hardenedOwnerName = prefs[Keys.HARDENED_OWNER_NAME]
+            ?.takeIf { it.isNotBlank() }
+            ?: GeneralSettings.DEFAULT_HARDENED_OWNER_NAME
+        val hardenedLockScreenInfo = prefs[Keys.HARDENED_LOCK_SCREEN_INFO].orEmpty()
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
         val dpcSuspendedPackagesRaw = prefs[Keys.DPC_SUSPENDED_PACKAGES].orEmpty()
         val dpcSuspendedPackages = if (dpcSuspendedPackagesRaw.isBlank()) {
@@ -629,6 +637,8 @@ class AndroidSettingsRepository(
                 hasCompletedOnboarding = hasCompletedOnboarding,
                 guardedSessionGraceMinutes = guardedSessionGraceMinutes,
                 blockNewAppInstalls = blockNewAppInstalls,
+                hardenedOwnerName = hardenedOwnerName,
+                hardenedLockScreenInfo = hardenedLockScreenInfo,
             ),
             baseProfile = BaseProfileSettings(
                 defaultFriction = defaultFriction,
@@ -653,6 +663,8 @@ class AndroidSettingsRepository(
         obj.put("requireReboot", snapshot.general.requireRebootForSettingsChange)
         obj.put("guardedSessionGraceMinutes", snapshot.general.guardedSessionGraceMinutes)
         obj.put("blockNewAppInstalls", snapshot.general.blockNewAppInstalls)
+        obj.put("hardenedOwnerName", snapshot.general.effectiveHardenedOwnerName())
+        obj.put("hardenedLockScreenInfo", snapshot.general.hardenedLockScreenInfo.trim())
         obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
         obj.put(
             "quickActions",
@@ -682,6 +694,11 @@ class AndroidSettingsRepository(
                 GeneralSettings.DEFAULT_GUARDED_SESSION_GRACE_MINUTES,
             )
             val blockNewAppInstalls = obj.optBoolean("blockNewAppInstalls", false)
+            val hardenedOwnerName = obj.optString(
+                "hardenedOwnerName",
+                GeneralSettings.DEFAULT_HARDENED_OWNER_NAME,
+            ).takeIf { it.isNotBlank() } ?: GeneralSettings.DEFAULT_HARDENED_OWNER_NAME
+            val hardenedLockScreenInfo = obj.optString("hardenedLockScreenInfo", "")
             val defaultFriction = runCatching {
                 FrictionChoice.valueOf(
                     obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
@@ -702,6 +719,8 @@ class AndroidSettingsRepository(
                     hasCompletedOnboarding = liveHasCompletedOnboarding,
                     guardedSessionGraceMinutes = guardedSessionGraceMinutes,
                     blockNewAppInstalls = blockNewAppInstalls,
+                    hardenedOwnerName = hardenedOwnerName,
+                    hardenedLockScreenInfo = hardenedLockScreenInfo,
                 ),
                 baseProfile = BaseProfileSettings(
                     defaultFriction = defaultFriction,

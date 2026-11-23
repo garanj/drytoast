@@ -195,6 +195,36 @@ class AndroidAppAccessControllerTest {
     }
 
     @Test
+    fun hardenedMode_customLockScreenText_appliesOwnerNameAndOptionalInfoAndClearsWhenBlank() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        // Custom owner name + optional info line
+        val baseGeneral = fakeRepository.getSettings().general
+        fakeRepository.updateGeneralSettings(
+            baseGeneral.copy(
+                hardenedOwnerName = "Garan",
+                hardenedLockScreenInfo = "If found, call 555-0199",
+            ),
+        )
+        controller.enforceHardenedSelfProtection()
+        assertThat(recordingBridge.organizationNameCalls).containsExactly("Garan")
+        assertThat(recordingBridge.lockScreenInfoCalls).containsExactly("If found, call 555-0199")
+
+        // Clearing both reverts owner name to "Threshold" and clears lock screen info with null
+        fakeRepository.updateGeneralSettings(
+            baseGeneral.copy(
+                hardenedOwnerName = "   ",
+                hardenedLockScreenInfo = "",
+            ),
+        )
+        recordingBridge.organizationNameCalls.clear()
+        recordingBridge.lockScreenInfoCalls.clear()
+        controller.reconcileBlockedPackages(emptySet(), defaultDialerPackage = dialerKey.packageName)
+        assertThat(recordingBridge.organizationNameCalls).containsExactly("Threshold")
+        assertThat(recordingBridge.lockScreenInfoCalls).containsExactly(null)
+    }
+
+    @Test
     fun reconcileBlockedPackages_appliesDiffOnly_andAvoidsRedundantDpcCalls() = runTest {
         recordingBridge.isDeviceOwner = true
 
@@ -379,6 +409,7 @@ class AndroidAppAccessControllerTest {
         )
         assertThat(recordingBridge.organizationNameCalls.last()).isNull()
         assertThat(recordingBridge.shortSupportMessageCalls.last()).isNull()
+        assertThat(recordingBridge.lockScreenInfoCalls.last()).isNull()
         assertThat(recordingBridge.userControlDisabledCalls.last()).isEmpty()
         assertThat(recordingBridge.uninstallBlockedCalls.last()).isEqualTo("com.garan.threshold" to false)
         assertThat(recordingBridge.clearedDeviceOwnerPackages).containsExactly("com.garan.threshold")
@@ -715,6 +746,7 @@ class AndroidAppAccessControllerTest {
         val backupServiceEnabledCalls = mutableListOf<Boolean>()
         val organizationNameCalls = mutableListOf<CharSequence?>()
         val shortSupportMessageCalls = mutableListOf<CharSequence?>()
+        val lockScreenInfoCalls = mutableListOf<CharSequence?>()
         val clearedDeviceOwnerPackages = mutableListOf<String>()
 
         override fun isDeviceOwnerApp(packageName: String): Boolean = isDeviceOwner
@@ -770,6 +802,10 @@ class AndroidAppAccessControllerTest {
 
         override fun setShortSupportMessage(admin: ComponentName, message: CharSequence?) {
             shortSupportMessageCalls.add(message)
+        }
+
+        override fun setDeviceOwnerLockScreenInfo(admin: ComponentName, info: CharSequence?) {
+            lockScreenInfoCalls.add(info)
         }
 
         override fun clearDeviceOwnerApp(packageName: String) {
