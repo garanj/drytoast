@@ -136,6 +136,7 @@ class AndroidAppAccessController(
     private var lastReconciledBlocked: Set<ComponentKey>? = null
     private var lastReconciledGuarded: Set<ComponentKey>? = null
     private var lastReconciledDialer: String? = null
+    private var lastBlockNewAppInstalls: Boolean? = null
     private var hasPendingRetry: Boolean = false
 
     private val _isDeviceOwnerFlow = MutableStateFlow(computeIsDeviceOwner())
@@ -154,7 +155,21 @@ class AndroidAppAccessController(
     }
 
     override suspend fun enforceHardenedSelfProtection(): Boolean = mutex.withLock {
-        applySelfProtectionImmediate()
+        val applied = applySelfProtectionImmediate()
+        if (applied) {
+            syncInstallAppsRestrictionLocked(settingsRepository.getSettings().general.blockNewAppInstalls)
+        }
+        applied
+    }
+
+    private fun syncInstallAppsRestrictionLocked(blockNewAppInstalls: Boolean) {
+        if (lastBlockNewAppInstalls == blockNewAppInstalls) return
+        if (blockNewAppInstalls) {
+            bridge.addUserRestriction(adminComponent, UserManager.DISALLOW_INSTALL_APPS)
+        } else if (lastBlockNewAppInstalls == true) {
+            bridge.clearUserRestriction(adminComponent, UserManager.DISALLOW_INSTALL_APPS)
+        }
+        lastBlockNewAppInstalls = blockNewAppInstalls
     }
 
     internal fun applySelfProtectionImmediate(): Boolean {
@@ -199,6 +214,9 @@ class AndroidAppAccessController(
         if (!isSelfProtectionApplied) {
             applySelfProtectionLocked()
         }
+
+        val currentSettings = settingsRepository.getSettings()
+        syncInstallAppsRestrictionLocked(currentSettings.general.blockNewAppInstalls)
 
         val now = nowEpochMillisProvider()
 
@@ -378,6 +396,7 @@ class AndroidAppAccessController(
             for (restriction in HARDENED_USER_RESTRICTIONS) {
                 bridge.clearUserRestriction(adminComponent, restriction)
             }
+            bridge.clearUserRestriction(adminComponent, UserManager.DISALLOW_INSTALL_APPS)
             bridge.clearPackagePersistentPreferredActivities(adminComponent, selfPackageName)
             bridge.setUserControlDisabledPackages(adminComponent, emptyList())
             bridge.setUninstallBlocked(adminComponent, selfPackageName, false)
@@ -390,6 +409,7 @@ class AndroidAppAccessController(
         nextLeaseExpiryEpochMillis = Long.MAX_VALUE
         invalidateFastPathLocked()
         lastSuspendedPackages = emptySet()
+        lastBlockNewAppInstalls = null
         isSelfProtectionApplied = false
         if (settings.dpcSuspendedPackages.isNotEmpty()) {
             settingsRepository.updateDpcSuspendedPackages(emptySet())

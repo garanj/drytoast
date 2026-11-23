@@ -706,6 +706,9 @@ class MainActivity : ComponentActivity() {
                             }
                             HardenedModeScreen(
                                 isHardenedModeActive = settingsUiState.isHardenedModeActive,
+                                blockNewAppInstalls = settingsUiState.general.blockNewAppInstalls,
+                                isSettingsLocked = settingsUiState.isSettingsLocked,
+                                onToggleBlockNewAppInstalls = settingsViewModel::updateBlockNewAppInstalls,
                                 onBack = {
                                     if (backStack.size > 1) backStack.removeLastOrNull()
                                 },

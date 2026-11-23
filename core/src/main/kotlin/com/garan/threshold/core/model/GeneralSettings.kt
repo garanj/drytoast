@@ -15,6 +15,8 @@ package com.garan.threshold.core.model
  * @property guardedSessionGraceMinutes Duration in minutes (`0`, `1`, `5`, `15`, or `30`) that a Guarded app
  *   remains unsuspended in Hardened (Device Owner) mode after passing a friction gate before being re-suspended
  *   upon returning home or locking the screen.
+ * @property blockNewAppInstalls When true in Hardened (Device Owner) mode, enforces
+ *   `UserManager.DISALLOW_INSTALL_APPS` to block installing new apps from Google Play or other sources.
  */
 data class GeneralSettings(
     val showUnlocks: Boolean = true,
@@ -25,6 +27,7 @@ data class GeneralSettings(
     val requireRebootForSettingsChange: Boolean = false,
     val hasCompletedOnboarding: Boolean = false,
     val guardedSessionGraceMinutes: Int = DEFAULT_GUARDED_SESSION_GRACE_MINUTES,
+    val blockNewAppInstalls: Boolean = false,
 ) {
     /**
      * Returns `true` if the user-configurable general settings match [other], ignoring
@@ -35,7 +38,8 @@ data class GeneralSettings(
         showDialerIcon == other.showDialerIcon &&
         requireFullTypingOfGuardedApps == other.requireFullTypingOfGuardedApps &&
         requireRebootForSettingsChange == other.requireRebootForSettingsChange &&
-        guardedSessionGraceMinutes == other.guardedSessionGraceMinutes
+        guardedSessionGraceMinutes == other.guardedSessionGraceMinutes &&
+        blockNewAppInstalls == other.blockNewAppInstalls
 
     companion object {
         const val DEFAULT_GUARDED_SESSION_GRACE_MINUTES = 5
