@@ -1,5 +1,5 @@
 {
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.garan.drytoast/.dpc.DryToastDeviceAdminReceiver",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://github.com/garanj/drytoast/releases/download/v0.1.1/drytoast-release.apk",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "qKJ9vZGI9uKSPHBGKD-twB1V1-ebSZJmx38l-R50BNM"
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://github.com/garanj/drytoast/releases/download/v0.2.0/drytoast-release.apk",
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "SL2txZwuRAlVpjQHbSszc40WBSRCieaax7o_XdHy3DE"
 }
