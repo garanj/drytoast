@@ -188,6 +188,21 @@ class SettingsViewModel(
         }
     }
 
+    fun updateHardenedLockScreenText(ownerName: String, lockScreenInfo: String) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(
+                current.copy(
+                    hardenedOwnerName = ownerName.trim().ifEmpty {
+                        com.garan.threshold.core.model.GeneralSettings.DEFAULT_HARDENED_OWNER_NAME
+                    },
+                    hardenedLockScreenInfo = lockScreenInfo.trim(),
+                ),
+            )
+            appAccessController.enforceHardenedSelfProtection()
+        }
+    }
+
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()

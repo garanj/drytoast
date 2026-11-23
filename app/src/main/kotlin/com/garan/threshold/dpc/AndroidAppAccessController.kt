@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.UserManager
 import com.garan.threshold.MainActivity
 import com.garan.threshold.core.model.ComponentKey
+import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.core.port.AppAccessController
 import com.garan.threshold.core.port.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ interface DpcPolicyBridge {
     fun setBackupServiceEnabled(admin: ComponentName, enabled: Boolean)
     fun setOrganizationName(admin: ComponentName, title: CharSequence?)
     fun setShortSupportMessage(admin: ComponentName, message: CharSequence?)
+    fun setDeviceOwnerLockScreenInfo(admin: ComponentName, info: CharSequence?)
     fun clearDeviceOwnerApp(packageName: String)
 }
 
@@ -88,6 +90,10 @@ internal class AndroidDpcPolicyBridge(private val context: Context) : DpcPolicyB
         runCatching { dpm?.setShortSupportMessage(admin, message) }
     }
 
+    override fun setDeviceOwnerLockScreenInfo(admin: ComponentName, info: CharSequence?) {
+        runCatching { dpm?.setDeviceOwnerLockScreenInfo(admin, info) }
+    }
+
     @Suppress("DEPRECATION")
     override fun clearDeviceOwnerApp(packageName: String) {
         runCatching { dpm?.clearDeviceOwnerApp(packageName) }
@@ -137,6 +143,8 @@ class AndroidAppAccessController(
     private var lastReconciledGuarded: Set<ComponentKey>? = null
     private var lastReconciledDialer: String? = null
     private var lastBlockNewAppInstalls: Boolean? = null
+    private var lastOwnerName: String? = null
+    private var lastLockScreenInfo: String? = null
     private var hasPendingRetry: Boolean = false
 
     private val _isDeviceOwnerFlow = MutableStateFlow(computeIsDeviceOwner())
@@ -155,9 +163,11 @@ class AndroidAppAccessController(
     }
 
     override suspend fun enforceHardenedSelfProtection(): Boolean = mutex.withLock {
-        val applied = applySelfProtectionImmediate()
+        val general = settingsRepository.getSettings().general
+        val applied = applySelfProtectionImmediate(ownerName = general.effectiveHardenedOwnerName())
         if (applied) {
-            syncInstallAppsRestrictionLocked(settingsRepository.getSettings().general.blockNewAppInstalls)
+            syncInstallAppsRestrictionLocked(general.blockNewAppInstalls)
+            syncLockScreenBrandingLocked(general)
         }
         applied
     }
@@ -172,16 +182,32 @@ class AndroidAppAccessController(
         lastBlockNewAppInstalls = blockNewAppInstalls
     }
 
-    internal fun applySelfProtectionImmediate(): Boolean {
+    private fun syncLockScreenBrandingLocked(general: GeneralSettings) {
+        val ownerName = general.effectiveHardenedOwnerName()
+        if (lastOwnerName != ownerName) {
+            bridge.setOrganizationName(adminComponent, ownerName)
+            lastOwnerName = ownerName
+        }
+        val lockScreenInfo = general.hardenedLockScreenInfo.trim().takeIf { it.isNotEmpty() }
+        if (lockScreenInfo != null && lastLockScreenInfo != lockScreenInfo) {
+            bridge.setDeviceOwnerLockScreenInfo(adminComponent, lockScreenInfo)
+            lastLockScreenInfo = lockScreenInfo
+        } else if (lockScreenInfo == null && lastLockScreenInfo != null) {
+            bridge.setDeviceOwnerLockScreenInfo(adminComponent, null)
+            lastLockScreenInfo = null
+        }
+    }
+
+    internal fun applySelfProtectionImmediate(ownerName: String = HARDENED_ORGANIZATION_NAME): Boolean {
         if (!isDeviceOwner()) {
             isSelfProtectionApplied = false
             return false
         }
-        applySelfProtectionLocked()
+        applySelfProtectionLocked(ownerName = ownerName)
         return true
     }
 
-    private fun applySelfProtectionLocked() {
+    private fun applySelfProtectionLocked(ownerName: String = HARDENED_ORGANIZATION_NAME) {
         bridge.setUninstallBlocked(adminComponent, selfPackageName, true)
         bridge.setUserControlDisabledPackages(adminComponent, listOf(selfPackageName))
         for (restriction in HARDENED_USER_RESTRICTIONS) {
@@ -195,7 +221,8 @@ class AndroidAppAccessController(
         // Android disables the system Backup Service by default on Device Owner devices; explicitly
         // re-enable it so ongoing Google Backup continues working normally in Hardened Mode.
         bridge.setBackupServiceEnabled(adminComponent, true)
-        bridge.setOrganizationName(adminComponent, HARDENED_ORGANIZATION_NAME)
+        bridge.setOrganizationName(adminComponent, ownerName)
+        lastOwnerName = ownerName
         bridge.setShortSupportMessage(adminComponent, HARDENED_SHORT_SUPPORT_MESSAGE)
         isSelfProtectionApplied = true
     }
@@ -211,12 +238,13 @@ class AndroidAppAccessController(
             return emptySet()
         }
 
+        val currentSettings = settingsRepository.getSettings()
         if (!isSelfProtectionApplied) {
-            applySelfProtectionLocked()
+            applySelfProtectionLocked(ownerName = currentSettings.general.effectiveHardenedOwnerName())
         }
 
-        val currentSettings = settingsRepository.getSettings()
         syncInstallAppsRestrictionLocked(currentSettings.general.blockNewAppInstalls)
+        syncLockScreenBrandingLocked(currentSettings.general)
 
         val now = nowEpochMillisProvider()
 
@@ -402,6 +430,7 @@ class AndroidAppAccessController(
             bridge.setUninstallBlocked(adminComponent, selfPackageName, false)
             bridge.setShortSupportMessage(adminComponent, null)
             bridge.setOrganizationName(adminComponent, null)
+            bridge.setDeviceOwnerLockScreenInfo(adminComponent, null)
             bridge.clearDeviceOwnerApp(selfPackageName)
         }
 
@@ -410,6 +439,8 @@ class AndroidAppAccessController(
         invalidateFastPathLocked()
         lastSuspendedPackages = emptySet()
         lastBlockNewAppInstalls = null
+        lastOwnerName = null
+        lastLockScreenInfo = null
         isSelfProtectionApplied = false
         if (settings.dpcSuspendedPackages.isNotEmpty()) {
             settingsRepository.updateDpcSuspendedPackages(emptySet())

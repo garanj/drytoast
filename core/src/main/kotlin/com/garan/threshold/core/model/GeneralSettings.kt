@@ -17,6 +17,10 @@ package com.garan.threshold.core.model
  *   upon returning home or locking the screen.
  * @property blockNewAppInstalls When true in Hardened (Device Owner) mode, enforces
  *   `UserManager.DISALLOW_INSTALL_APPS` to block installing new apps from Google Play or other sources.
+ * @property hardenedOwnerName Custom owner/organization name displayed on the lock screen disclosure
+ *   (`"This device belongs to <name>"`) in Hardened Mode. Defaults to `"Threshold"`.
+ * @property hardenedLockScreenInfo Optional additional line displayed on the Android lock screen
+ *   via `DevicePolicyManager.setDeviceOwnerLockScreenInfo` in Hardened Mode. Blank clears the line.
  */
 data class GeneralSettings(
     val showUnlocks: Boolean = true,
@@ -28,7 +32,15 @@ data class GeneralSettings(
     val hasCompletedOnboarding: Boolean = false,
     val guardedSessionGraceMinutes: Int = DEFAULT_GUARDED_SESSION_GRACE_MINUTES,
     val blockNewAppInstalls: Boolean = false,
+    val hardenedOwnerName: String = DEFAULT_HARDENED_OWNER_NAME,
+    val hardenedLockScreenInfo: String = "",
 ) {
+    /**
+     * Returns the trimmed owner name for Android's Device Owner lock screen disclosure,
+     * falling back to [DEFAULT_HARDENED_OWNER_NAME] if blank.
+     */
+    fun effectiveHardenedOwnerName(): String = hardenedOwnerName.trim().ifEmpty { DEFAULT_HARDENED_OWNER_NAME }
+
     /**
      * Returns `true` if the user-configurable general settings match [other], ignoring
      * runtime-only flags such as [hasSeenFirstRunHint] and [hasCompletedOnboarding].
@@ -39,10 +51,13 @@ data class GeneralSettings(
         requireFullTypingOfGuardedApps == other.requireFullTypingOfGuardedApps &&
         requireRebootForSettingsChange == other.requireRebootForSettingsChange &&
         guardedSessionGraceMinutes == other.guardedSessionGraceMinutes &&
-        blockNewAppInstalls == other.blockNewAppInstalls
+        blockNewAppInstalls == other.blockNewAppInstalls &&
+        effectiveHardenedOwnerName() == other.effectiveHardenedOwnerName() &&
+        hardenedLockScreenInfo.trim() == other.hardenedLockScreenInfo.trim()
 
     companion object {
         const val DEFAULT_GUARDED_SESSION_GRACE_MINUTES = 5
+        const val DEFAULT_HARDENED_OWNER_NAME = "Threshold"
         val GUARDED_SESSION_GRACE_OPTIONS_MINUTES = listOf(0, 1, 5, 15, 30)
     }
 }

@@ -29,13 +29,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.garan.threshold.R
+import com.garan.threshold.core.model.GeneralSettings
 import com.garan.threshold.core.security.ChallengeResponseVerifier
 import com.garan.threshold.core.security.VerificationDomain
 
@@ -114,6 +119,11 @@ object HardenedModeTestTags {
     const val STATUS_CARD = "hardened_mode_status_card"
     const val BLOCK_NEW_APP_INSTALLS_ROW = "hardened_mode_block_new_app_installs_row"
     const val BLOCK_NEW_APP_INSTALLS_SWITCH = "hardened_mode_block_new_app_installs_switch"
+    const val LOCK_SCREEN_TEXT_ROW = "hardened_mode_lock_screen_text_row"
+    const val LOCK_SCREEN_SHEET = "hardened_mode_lock_screen_sheet"
+    const val OWNER_NAME_INPUT = "hardened_mode_owner_name_input"
+    const val LOCK_SCREEN_INFO_INPUT = "hardened_mode_lock_screen_info_input"
+    const val LOCK_SCREEN_SAVE_BUTTON = "hardened_mode_lock_screen_save_button"
     const val COMPANION_CONSOLE_ROW = "hardened_mode_companion_console_row"
     const val OPEN_WEBSITE_BUTTON = "hardened_mode_open_website_button"
     const val DISABLE_SCREEN_ROOT = "disable_hardened_mode_screen"
@@ -139,8 +149,11 @@ fun HardenedModeScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     blockNewAppInstalls: Boolean = false,
+    hardenedOwnerName: String = GeneralSettings.DEFAULT_HARDENED_OWNER_NAME,
+    hardenedLockScreenInfo: String = "",
     isSettingsLocked: Boolean = false,
     onToggleBlockNewAppInstalls: (Boolean) -> Unit = {},
+    onSaveLockScreenText: (ownerName: String, lockScreenInfo: String) -> Unit = { _, _ -> },
     onOpenWebsite: ((String) -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
@@ -148,6 +161,7 @@ fun HardenedModeScreen(
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
+    var showLockScreenTextSheet by remember { mutableStateOf(false) }
 
     val openWebsiteHandler: (String) -> Unit = onOpenWebsite ?: { url ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -279,6 +293,44 @@ fun HardenedModeScreen(
                                 role = Role.Switch,
                                 onValueChange = onToggleBlockNewAppInstalls,
                             ),
+                    )
+                }
+
+                item(key = "lock_screen_text_row") {
+                    val effectiveName = hardenedOwnerName.trim().ifEmpty { GeneralSettings.DEFAULT_HARDENED_OWNER_NAME }
+                    val ownerPreview = stringResource(R.string.setting_lock_screen_owner_preview, effectiveName)
+                    val summaryText = if (hardenedLockScreenInfo.isNotBlank()) {
+                        "$ownerPreview · ${hardenedLockScreenInfo.trim()}"
+                    } else {
+                        ownerPreview
+                    }
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.setting_lock_screen_text_title),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = summaryText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                imageVector = ThresholdIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(HardenedModeTestTags.LOCK_SCREEN_TEXT_ROW)
+                            .clickable(enabled = !isSettingsLocked) {
+                                showLockScreenTextSheet = true
+                            },
                     )
                 }
 
@@ -428,6 +480,103 @@ fun HardenedModeScreen(
             onOpenHere = openWebsiteHandler,
             onDismiss = { pendingSecondDeviceUrl = null },
         )
+    }
+
+    if (showLockScreenTextSheet && isHardenedModeActive && !isSettingsLocked) {
+        LockScreenTextBottomSheet(
+            initialOwnerName = hardenedOwnerName,
+            initialLockScreenInfo = hardenedLockScreenInfo,
+            onSave = { ownerName, info ->
+                onSaveLockScreenText(ownerName, info)
+                showLockScreenTextSheet = false
+            },
+            onDismiss = { showLockScreenTextSheet = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+private fun LockScreenTextBottomSheet(
+    initialOwnerName: String,
+    initialLockScreenInfo: String,
+    onSave: (ownerName: String, lockScreenInfo: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var ownerName by remember(initialOwnerName) { mutableStateOf(initialOwnerName) }
+    var lockScreenInfo by remember(initialLockScreenInfo) { mutableStateOf(initialLockScreenInfo) }
+    val previewName = ownerName.trim().ifEmpty { GeneralSettings.DEFAULT_HARDENED_OWNER_NAME }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier
+            .semantics { testTagsAsResourceId = true }
+            .testTag(HardenedModeTestTags.LOCK_SCREEN_SHEET),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.setting_lock_screen_text_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            OutlinedTextField(
+                value = ownerName,
+                onValueChange = { ownerName = it },
+                label = { Text(stringResource(R.string.setting_lock_screen_owner_name_label)) },
+                supportingText = {
+                    Text(stringResource(R.string.setting_lock_screen_owner_preview, previewName))
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(HardenedModeTestTags.OWNER_NAME_INPUT),
+            )
+
+            OutlinedTextField(
+                value = lockScreenInfo,
+                onValueChange = { lockScreenInfo = it },
+                label = { Text(stringResource(R.string.setting_lock_screen_info_label)) },
+                placeholder = { Text(stringResource(R.string.setting_lock_screen_info_placeholder)) },
+                maxLines = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(HardenedModeTestTags.LOCK_SCREEN_INFO_INPUT),
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
+                ) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+                Button(
+                    onClick = { onSave(ownerName, lockScreenInfo) },
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag(HardenedModeTestTags.LOCK_SCREEN_SAVE_BUTTON),
+                ) {
+                    Text(stringResource(R.string.action_save))
+                }
+            }
+        }
     }
 }
 
