@@ -1,6 +1,6 @@
 # Material 3 Components & Monochrome Design Tokens Reference
 
-Threshold uses a strict high-contrast monochrome palette (`#000000` AMOLED background, `#FFFFFF` primary foreground) with mechanical precision. To avoid "AI-generated" UI clutter, all screens must map this monochrome palette onto **Material 3 semantic color roles** and use **canonical M3 components**.
+Dry Toast uses a strict high-contrast monochrome palette (`#000000` AMOLED background, `#FFFFFF` primary foreground) with mechanical precision. To avoid "AI-generated" UI clutter, all screens must map this monochrome palette onto **Material 3 semantic color roles** and use **canonical M3 components**.
 
 ---
 
@@ -9,7 +9,7 @@ Threshold uses a strict high-contrast monochrome palette (`#000000` AMOLED backg
 Never define `private val CardBackground = Color(0xFF121212)` or `Color(0xFF888888)` inside screen files. Instead, populate the full Material 3 `darkColorScheme` in `Theme.kt`:
 
 ```kotlin
-private val ThresholdDarkColorScheme = darkColorScheme(
+private val DryToastDarkColorScheme = darkColorScheme(
     primary = PureWhite,                // #FFFFFF — Active controls, primary fills
     onPrimary = AmoledBlack,            // #000000 — Text/icons on primary fills
     primaryContainer = SurfaceHigh,     // #1E1E1E — Tonal button/chip fills
@@ -59,7 +59,7 @@ fun ExampleSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = ThresholdIcons.ArrowBack,
+                            imageVector = DryToastIcons.ArrowBack,
                             contentDescription = stringResource(R.string.action_go_back),
                         )
                     }
@@ -122,7 +122,7 @@ ListItem(
     },
     trailingContent = {
         Icon(
-            imageVector = ThresholdIcons.ChevronRight,
+            imageVector = DryToastIcons.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

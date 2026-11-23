@@ -1,4 +1,4 @@
-# Engineering Standards & Guardrails: Threshold
+# Engineering Standards & Guardrails: Dry Toast
 
 ## 1. Jetpack Compose, Material 3 & Navigation 3 Guidelines
 
@@ -25,7 +25,7 @@
    - **Edge-to-Edge Insets:** On `Scaffold` screens, pass `innerPadding` to `LazyColumn(contentPadding = innerPadding)` and `Modifier.consumeWindowInsets(innerPadding)`. Never apply `.windowInsetsPadding(WindowInsets.safeDrawing)` on the root container of a `Scaffold` screen.
    - **48dp Minimum Touch Targets:** Every interactive control must meet the `48.dp × 48.dp` accessibility touch target minimum.
 6. **UI Automation & Deterministic `testTag` Standards:**
-   - **Root `testTagsAsResourceId = true`:** Always enable `@OptIn(ExperimentalComposeUiApi::class) Modifier.semantics { testTagsAsResourceId = true }` at the root `ThresholdHomeScreen` container so every `Modifier.testTag(...)` is automatically exposed as an Android `resource-id` (`By.res(...)`) for UiAutomator instrumented tests (`androidTest`), Macrobenchmark, and `android layout` inspection.
+   - **Root `testTagsAsResourceId = true`:** Always enable `@OptIn(ExperimentalComposeUiApi::class) Modifier.semantics { testTagsAsResourceId = true }` at the root `DryToastHomeScreen` container so every `Modifier.testTag(...)` is automatically exposed as an Android `resource-id` (`By.res(...)`) for UiAutomator instrumented tests (`androidTest`), Macrobenchmark, and `android layout` inspection.
    - **When `Modifier.testTag(...)` Is Mandatory:**
      1. **Nested Sheets / Dialogs:** Any action button or text field inside a `ModalBottomSheet` or `AlertDialog` that shares a label with an underlying screen/sheet (e.g., `"Create"` / `"Save"` / `"Name"` in `ProfileRulesEditorSheet` vs `TriggerEditorSheet`).
      2. **Repeating Cards, Rows, and Rule Groups:** Controls inside a list of profiles, triggers, apps, or `AND`/`OR` rule groups MUST include the stable entity ID or rule index in the tag (e.g., `profile_toggle_<id>`, `profile_delete_<id>`, `profile_rule_<index>_add_and`, `profile_rule_<index>_remove_<triggerId>`). Never rely on `.onAllNodes(...)[index]` or `.onLast()` when a deterministic tag can be attached.
@@ -47,7 +47,7 @@
 4. **Zero `Activity` Retention in `ViewModel`s & Process-Scoped Dependencies:**
    - Never pass an `Activity` reference or a lambda that captures `this@MainActivity` (including lambdas reading `Activity` properties or calling `this@MainActivity.applicationContext`) into a `ViewModel` or `ViewModelProvider.Factory`.
    - Never instantiate shared stateful sources (such as `AndroidLocationSource`, `AndroidSettingsRepository`, or test override hooks) as per-`Activity` `by lazy` properties when a `ViewModel` also observes them—after configuration recreation (`fontScale`, `density`, `locale`), the new `Activity` UI and the surviving `ViewModel` will split onto separate instances and leak the old `Activity`.
-   - Always wire Activity-independent dependencies through `ThresholdAppContainer` (owned by `ThresholdApplication` and constructed strictly with `applicationContext`).
+   - Always wire Activity-independent dependencies through `DryToastAppContainer` (owned by `DryToastApplication` and constructed strictly with `applicationContext`).
 
 ---
 

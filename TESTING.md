@@ -1,6 +1,6 @@
-# Testing Strategy & Quality Guardrails: Threshold
+# Testing Strategy & Quality Guardrails: Dry Toast
 
-Threshold adheres to a strict test-driven development (TDD) discipline. No feature code should be written without prior failing unit tests.
+Dry Toast adheres to a strict test-driven development (TDD) discipline. No feature code should be written without prior failing unit tests.
 
 ---
 
@@ -49,7 +49,7 @@ Threshold adheres to a strict test-driven development (TDD) discipline. No featu
 - **TOTAL PSS Budget:** Strictly capped at **30,000 KB (30 MB)**.
 - Verified in CI and local emulator via:
   ```bash
-  adb shell dumpsys meminfo com.garan.threshold | grep "TOTAL PSS"
+  adb shell dumpsys meminfo com.garan.drytoast | grep "TOTAL PSS"
   ```
 - **LeakCanary** embedded in local debug builds.
 - Zero bitmap objects held in long-lived state.

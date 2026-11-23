@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Threshold</string>
+    <string name="app_name">Dry Toast</string>
 
     <!-- Search Surface -->
     <string name="search_placeholder">Type to launch...</string>
@@ -15,17 +15,17 @@
     <string name="onboarding_step_indicator_format">%1$02d / %2$02d</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
-    <string name="onboarding_set_default_launcher">Set Threshold as Default Launcher</string>
-    <string name="onboarding_enter_threshold">Enter Threshold</string>
+    <string name="onboarding_set_default_launcher">Set Dry Toast as Default Launcher</string>
+    <string name="onboarding_enter_drytoast">Enter Dry Toast</string>
     <string name="onboarding_default_launcher_required_warning">Default home launcher role is required to complete setup.</string>
     <string name="onboarding_default_launcher_active">DEFAULT HOME LAUNCHER ACTIVE</string>
     <string name="onboarding_default_launcher_pending">STATUS: NOT SET AS DEFAULT LAUNCHER</string>
 
-    <!-- Onboarding Page 01: Threshold -->
+    <!-- Onboarding Page 01: Dry Toast -->
     <string name="onboarding_p1_eyebrow">01 // PHILOSOPHY</string>
-    <string name="onboarding_p1_title">THRESHOLD</string>
+    <string name="onboarding_p1_title">DRY TOAST</string>
     <string name="onboarding_p1_subtitle">Quiet by default.</string>
-    <string name="onboarding_p1_body">Threshold removes app grids, notification badges and feeds, providing just a plain, undistracting, minimal surface. It turns your phone into a precision tool, rather than an attention trap.</string>
+    <string name="onboarding_p1_body">Dry Toast removes app grids, notification badges and feeds, providing just a plain, undistracting, minimal surface. It turns your phone into a precision tool, rather than an attention trap.</string>
     <string name="onboarding_p1_item1_label">ZERO VISUAL NOISE</string>
     <string name="onboarding_p1_item1_desc">No colourful app icons, unread counters, or infinite home screen pages.</string>
     <string name="onboarding_p1_item2_label">INTENT GATEKEEPER</string>
@@ -61,7 +61,7 @@
     <string name="onboarding_p3_preview_drag_title">DRAG-TO-MATCH</string>
     <string name="onboarding_p3_preview_drag_desc">Drag geometric glyph pairs into their matching target slots with tactile snap detents.</string>
     <string name="onboarding_p3_preview_caret_title">CARET TRACING</string>
-    <string name="onboarding_p3_preview_caret_desc">Trace the Threshold caret steadily across its perimeter—releasing early resets the countdown.</string>
+    <string name="onboarding_p3_preview_caret_desc">Trace the Dry Toast caret steadily across its perimeter—releasing early resets the countdown.</string>
     <string name="onboarding_p3_preview_random_title">RANDOM</string>
     <string name="onboarding_p3_preview_random_desc">Dynamically selects a different cognitive checkpoint on every launch attempt.</string>
 
@@ -81,7 +81,7 @@
     <string name="onboarding_p5_eyebrow">05 // COMMITMENT</string>
     <string name="onboarding_p5_title">TAMPER RESISTANCE</string>
     <string name="onboarding_p5_subtitle">Press and hold to configure.</string>
-    <string name="onboarding_p5_body">Threshold keeps settings out of sight during daily use and provides optional self-binding commitment locks when you want to prevent impulse edits:</string>
+    <string name="onboarding_p5_body">Dry Toast keeps settings out of sight during daily use and provides optional self-binding commitment locks when you want to prevent impulse edits:</string>
     <string name="onboarding_p5_item1_label">3-SECOND PRESS &amp; HOLD</string>
     <string name="onboarding_p5_item1_desc">Press and hold on the home canvas for 3 seconds (or type :settings in search) to open Settings.</string>
     <string name="onboarding_p5_item2_label">REBOOT-STAGED CHANGES</string>
@@ -93,7 +93,7 @@
     <string name="onboarding_p6_eyebrow">06 // ACTIVATION</string>
     <string name="onboarding_p6_title">SET DEFAULT LAUNCHER</string>
     <string name="onboarding_p6_subtitle">Required to complete setup.</string>
-    <string name="onboarding_p6_body">To serve as your home screen and intent gatekeeper, Threshold must hold the system Default Home App role. If Threshold is not set as your default launcher, this wizard will run again next time you open the app.</string>
+    <string name="onboarding_p6_body">To serve as your home screen and intent gatekeeper, Dry Toast must hold the system Default Home App role. If Dry Toast is not set as your default launcher, this wizard will run again next time you open the app.</string>
 
     <!-- Settings & App Configuration -->
     <string name="settings_title">Settings</string>
@@ -113,12 +113,12 @@
     <string name="guarded_grace_immediate">Immediate (re-suspend on return / screen off)</string>
     <string name="guarded_grace_minutes_one">1 minute</string>
     <string name="guarded_grace_minutes_format">%1$d minutes</string>
-    <string name="dpc_admin_description">Enables Threshold Hardened Mode for OS-level package suspension and tamper resistance.</string>
+    <string name="dpc_admin_description">Enables Dry Toast Hardened Mode for OS-level package suspension and tamper resistance.</string>
     <string name="hardened_mode_title">Hardened Mode</string>
     <string name="hardened_mode_status_active_label">STATUS: HARDENED MODE ACTIVE</string>
     <string name="hardened_mode_status_inactive_label">STATUS: STANDARD MODE (NOT ENABLED)</string>
-    <string name="hardened_mode_status_active_body">Threshold holds Device Owner privileges. Blocked and Guarded apps are suspended at the OS level and launcher self-protection is active.</string>
-    <string name="hardened_mode_status_inactive_body">Threshold is running as a standard intent gatekeeper. Blocked apps are hidden from Threshold\'s launcher surfaces, but can still be opened via the Android Recents switcher, notifications, or external deep links.</string>
+    <string name="hardened_mode_status_active_body">Dry Toast holds Device Owner privileges. Blocked and Guarded apps are suspended at the OS level and launcher self-protection is active.</string>
+    <string name="hardened_mode_status_inactive_body">Dry Toast is running as a standard intent gatekeeper. Blocked apps are hidden from Dry Toast\'s launcher surfaces, but can still be opened via the Android Recents switcher, notifications, or external deep links.</string>
     <string name="hardened_mode_section_controls">Hardened Mode Controls</string>
     <string name="setting_block_new_app_installs_title">Block new app installs</string>
     <string name="setting_block_new_app_installs_summary">Prevents installing new apps from Google Play or other sources while enabled</string>
@@ -131,26 +131,26 @@
     <string name="hardened_mode_cap_suspend_title">OS-Level Package Suspension</string>
     <string name="hardened_mode_cap_suspend_body">Suspends Blocked and Guarded apps in the Android OS (setPackagesSuspended). Blocked apps remain continuously suspended while active. Guarded apps are suspended at rest so they cannot be resumed from Recents, temporarily unsuspended when you pass a friction checkpoint, and re-suspended after the configured grace period when you return home or lock the screen.</string>
     <string name="hardened_mode_cap_home_title">Persistent Default Launcher</string>
-    <string name="hardened_mode_cap_home_body">Locks Threshold as the persistent system Home app so the stock launcher cannot be re-selected in Android System Settings to bypass your rules.</string>
+    <string name="hardened_mode_cap_home_body">Locks Dry Toast as the persistent system Home app so the stock launcher cannot be re-selected in Android System Settings to bypass your rules.</string>
     <string name="hardened_mode_cap_tamper_title">Uninstall &amp; Force-Stop Protection</string>
-    <string name="hardened_mode_cap_tamper_body">Disables Uninstall, Force Stop, and Clear Storage for Threshold in Android System Settings while Hardened Mode is active.</string>
+    <string name="hardened_mode_cap_tamper_body">Disables Uninstall, Force Stop, and Clear Storage for Dry Toast in Android System Settings while Hardened Mode is active.</string>
     <string name="hardened_mode_section_companion">Companion Commitment Layers</string>
-    <string name="hardened_mode_companion_intro">Hardened Mode closes Android OS escape hatches. Pair it with Threshold\'s Settings locks so rules cannot be weakened from inside Threshold:</string>
+    <string name="hardened_mode_companion_intro">Hardened Mode closes Android OS escape hatches. Pair it with Dry Toast\'s Settings locks so rules cannot be weakened from inside Dry Toast:</string>
     <string name="hardened_mode_companion_reboot_title">Require Reboot for Settings Changes</string>
     <string name="hardened_mode_companion_reboot_body">Stages any edits to app rules, profiles, or triggers in Settings until you restart your phone.</string>
     <string name="hardened_mode_companion_adb_title">Settings Lock Console</string>
-    <string name="hardened_mode_companion_adb_body">Completely locks Threshold Settings from being opened on the phone until unlocked from another device at thresholdlauncher.com/console.</string>
+    <string name="hardened_mode_companion_adb_body">Completely locks Dry Toast Settings from being opened on the phone until unlocked from another device at drytoast.app/console.</string>
     <string name="hardened_mode_section_setup">Setup &amp; Removal</string>
-    <string name="hardened_mode_setup_intro">Hardened Mode cannot be toggled from inside Threshold\'s normal menus. You can enable or disable it either by scanning the QR codes on the Threshold website or via USB debugging (ADB) from a computer.</string>
+    <string name="hardened_mode_setup_intro">Hardened Mode cannot be toggled from inside Dry Toast\'s normal menus. You can enable or disable it either by scanning the QR codes on the Dry Toast website or via USB debugging (ADB) from a computer.</string>
     <string name="action_open_hardened_mode_website">Open Hardened Mode Setup Guide</string>
-    <string name="hardened_mode_website_url" translatable="false">https://thresholdlauncher.com/hardened-mode</string>
-    <string name="docs_website_url" translatable="false">https://thresholdlauncher.com/configuration</string>
-    <string name="console_website_url" translatable="false">https://thresholdlauncher.com/console</string>
+    <string name="hardened_mode_website_url" translatable="false">https://drytoast.app/hardened-mode</string>
+    <string name="docs_website_url" translatable="false">https://drytoast.app/configuration</string>
+    <string name="console_website_url" translatable="false">https://drytoast.app/console</string>
     <string name="section_guide_and_console">GUIDE &amp; CONSOLE</string>
     <string name="setting_docs_title">Documentation &amp; Guides</string>
     <string name="setting_docs_summary">Profiles, triggers, Settings Lock &amp; Hardened Mode</string>
     <string name="setting_console_title">Settings Lock Console</string>
-    <string name="setting_console_summary">Open thresholdlauncher.com/console on a computer or second device</string>
+    <string name="setting_console_summary">Open drytoast.app/console on a computer or second device</string>
     <string name="second_device_sheet_title">Open on another device</string>
     <string name="second_device_sheet_body">This console uses QR codes (or USB from a computer) so you can scan them with this phone. Open this address on a laptop, desktop, or second screen:</string>
     <string name="action_share_link">Share link</string>
@@ -159,20 +159,20 @@
     <string name="toast_link_copied">Link copied</string>
     <string name="disable_hardened_mode_title">Disable Hardened Mode</string>
     <string name="disable_hardened_mode_headline">Release Device Owner Protection?</string>
-    <string name="disable_hardened_mode_body">Disabling Hardened Mode will immediately:\n\n• Unsuspend all Blocked apps in the Android OS\n• Unlock Default Home App selection, Force Stop, Clear Storage, and Uninstall for Threshold\n• Permanently release Device Owner privileges (re-enabling Hardened Mode later requires a freshly reset device)</string>
+    <string name="disable_hardened_mode_body">Disabling Hardened Mode will immediately:\n\n• Unsuspend all Blocked apps in the Android OS\n• Unlock Default Home App selection, Force Stop, Clear Storage, and Uninstall for Dry Toast\n• Permanently release Device Owner privileges (re-enabling Hardened Mode later requires a freshly reset device)</string>
     <string name="disable_hardened_mode_inactive_body">Hardened Mode (Device Owner) is not currently active on this device.</string>
     <string name="action_disable_hardened_mode">Deactivate</string>
     <string name="toast_hardened_mode_disabled">Hardened Mode disabled</string>
     <string name="challenge_code_label">CHALLENGE</string>
-    <string name="challenge_code_supporting">Enter this 3-digit code on the Threshold website. Leaving this screen rotates the code.</string>
+    <string name="challenge_code_supporting">Enter this 3-digit code on the Dry Toast website. Leaving this screen rotates the code.</string>
     <string name="challenge_response_label">6-DIGIT CODE</string>
     <string name="challenge_error_invalid_code">Invalid or expired code. Check the 3-digit challenge and try again.</string>
     <string name="challenge_multi_window_blocked">Full-screen mode is required. Exit split-screen or floating window mode to continue.</string>
     <string name="challenge_keypad_clear">CLR</string>
     <string name="challenge_keypad_backspace">DEL</string>
     <string name="settings_lock_title">Settings Lock</string>
-    <string name="settings_lock_headline_unlocked">Lock Threshold Settings?</string>
-    <string name="settings_lock_headline_locked">Unlock Threshold Settings?</string>
+    <string name="settings_lock_headline_unlocked">Lock Dry Toast Settings?</string>
+    <string name="settings_lock_headline_locked">Unlock Dry Toast Settings?</string>
     <string name="settings_lock_body_unlocked">Prevents opening Settings until unlocked via the website QR code or ADB.</string>
     <string name="settings_lock_body_locked">Settings are currently locked. Verify with the website code to unlock.</string>
     <string name="action_lock_settings">Lock Settings</string>
@@ -193,12 +193,12 @@
     <string name="dialog_black_wallpaper_message">This will replace your current system and lock screen wallpaper with solid AMOLED black.</string>
     <string name="action_apply">Apply</string>
     <string name="toast_black_wallpaper_applied">Pure black wallpaper applied</string>
-    <string name="action_threshold_settings">Threshold Settings</string>
+    <string name="action_dry_toast_settings">Dry Toast Settings</string>
     <string name="action_set_black_wallpaper_command">Set Pure Black Wallpaper</string>
     <string name="action_send_feedback">Send Feedback</string>
     <string name="action_feedback_is_a_gift">Feedback is a gift!</string>
     <string name="feedback_email_recipient" translatable="false">moc.liamg=sppaydrab</string>
-    <string name="feedback_email_subject">Threshold feedback</string>
+    <string name="feedback_email_subject">Dry Toast feedback</string>
     <string name="feedback_email_body_template">App version: %1$s\nAndroid version: %2$s\nDevice: %3$s\n\nAdd your feedback here.</string>
     <string name="toast_no_email_app">No email app found</string>
     <string name="section_app_configuration">App Configuration</string>
@@ -284,6 +284,6 @@
         <item>This is a deliberate action</item>
         <item>Acting with full awareness</item>
         <item>Pausing before I begin</item>
-        <item>Stepping across the threshold</item>
+        <item>Keeping it plain and simple</item>
     </string-array>
 </resources>

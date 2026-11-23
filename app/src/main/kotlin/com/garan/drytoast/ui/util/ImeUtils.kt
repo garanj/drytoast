@@ -1,0 +1,44 @@
+package com.garan.drytoast.ui.util
+
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+
+/**
+ * Utility functions for keyboard dismissal and launch transitions.
+ * Dismisses the soft keyboard before starting an activity to prevent IME jitter and animation lag.
+ */
+object ImeUtils {
+
+    fun dismissIme(activity: Activity) {
+        val window = activity.window ?: return
+        val decorView = window.decorView
+        val imm = activity.getSystemService(InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(decorView.windowToken, 0)
+        val insets = ViewCompat.getRootWindowInsets(decorView)
+        if (insets?.isVisible(WindowInsetsCompat.Type.ime()) == true) {
+            WindowCompat.getInsetsController(window, decorView)
+                .hide(WindowInsetsCompat.Type.ime())
+        }
+    }
+
+    fun Context.findActivity(): Activity? {
+        var currentContext = this
+        while (currentContext is ContextWrapper) {
+            if (currentContext is Activity) return currentContext
+            currentContext = currentContext.baseContext
+        }
+        return null
+    }
+
+    fun Context.launchActivityDismissingIme(intent: Intent, options: Bundle? = null) {
+        findActivity()?.let { dismissIme(it) }
+        startActivity(intent, options)
+    }
+}

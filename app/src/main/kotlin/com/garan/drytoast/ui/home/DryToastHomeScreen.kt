@@ -1,0 +1,583 @@
+package com.garan.drytoast.ui.home
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.garan.drytoast.R
+import com.garan.drytoast.core.model.AntiMetricsFormatter
+import com.garan.drytoast.core.model.FrictionPolicy
+import com.garan.drytoast.core.model.ProfileCapability
+import com.garan.drytoast.core.model.ProfileCapabilityIssue
+import com.garan.drytoast.core.port.AntiMetricsRepository
+import com.garan.drytoast.core.port.HapticEngine
+import com.garan.drytoast.core.port.LaunchResult
+import com.garan.drytoast.core.port.NoOpHapticEngine
+import com.garan.drytoast.core.search.SearchItem
+import com.garan.drytoast.ui.friction.CaretTracingSurface
+import com.garan.drytoast.ui.friction.DragSortSurface
+import com.garan.drytoast.ui.friction.TypedIntentionSurface
+import com.garan.drytoast.ui.launcher.AppLauncher
+import com.garan.drytoast.ui.motion.DryToastMotion
+import com.garan.drytoast.ui.search.DryToastSearchSurface
+import com.garan.drytoast.ui.search.SearchViewModel
+import com.garan.drytoast.ui.theme.SubtleGray
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.delay
+import kotlin.math.abs
+
+internal const val SETTINGS_LONG_PRESS_TIMEOUT_MS = 3_000L
+internal val SWIPE_UP_SEARCH_drytoast = 48.dp
+const val HOME_CANVAS_TEST_TAG = "home_canvas_root"
+
+/**
+ * Top-level home screen for Dry Toast.
+ * Houses the ambient typographic canvas, search surface, and back navigation handling.
+ *
+ * Back Navigation Policy:
+ * 1. When a friction checkpoint is active, swiping/pressing back dismisses the checkpoint.
+ * 2. When in search mode (active search or query non-empty), swiping/pressing back dismisses
+ *    search mode, resets the query, and hides the soft keyboard.
+ * 3. When in ambient home mode, back navigation is consumed cleanly as a no-op so the OS
+ *    never finishes or restarts the root launcher activity window.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DryToastHomeScreen(
+    viewModel: SearchViewModel,
+    appLauncher: AppLauncher,
+    modifier: Modifier = Modifier,
+    hapticEngine: HapticEngine = NoOpHapticEngine,
+    onDismissIme: () -> Unit = {},
+    searchListState: LazyListState = rememberLazyListState(),
+    antiMetricsRepository: AntiMetricsRepository? = null,
+    statusText: String? = null,
+    onOpenSettings: () -> Unit = {},
+    onResolveCapabilityIssue: (ProfileCapability) -> Unit = {},
+    onApplyPureBlackWallpaper: () -> Unit = {},
+    onSendFeedback: () -> Unit = {},
+    isImeVisible: Boolean = WindowInsets.isImeVisible,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var showCapabilityFaultSheet by remember { mutableStateOf(false) }
+    var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
+
+    val metrics by antiMetricsRepository?.metrics?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(null) }
+    val showUnlocks = uiState.generalSettings.showUnlocks
+    val showRest = uiState.generalSettings.showRest
+    val effectiveStatusText = statusText
+        ?: if (!showUnlocks && !showRest) {
+            stringResource(R.string.app_name)
+        } else {
+            metrics?.let { AntiMetricsFormatter.formatStatus(it, showUnlocks = showUnlocks, showRest = showRest) }
+                ?.ifBlank { stringResource(R.string.app_name) }
+                ?: stringResource(R.string.app_name)
+        }
+
+    val activeFriction = uiState.activeFriction
+    val inSearch = uiState.isSearching || uiState.query.isNotEmpty()
+
+    val hasSeenFirstRunHint = uiState.generalSettings.hasSeenFirstRunHint
+    var showHint by remember(hasSeenFirstRunHint) { mutableStateOf(!hasSeenFirstRunHint) }
+    val hintAlpha = remember { Animatable(1f) }
+
+    if (showHint && !hasSeenFirstRunHint) {
+        LaunchedEffect(Unit) {
+            delay(20_000L)
+            hintAlpha.animateTo(
+                targetValue = 0f,
+                animationSpec = DryToastMotion.opticalTween(DryToastMotion.MAX_DURATION_MS),
+            )
+            showHint = false
+            viewModel.markFirstRunHintSeen()
+        }
+    }
+
+    fun hideImeAndClearFocus() {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        onDismissIme()
+    }
+
+    fun resetSearchAndHideIme() {
+        viewModel.dismissSearch()
+        hideImeAndClearFocus()
+    }
+
+    // When the user dismisses the soft keyboard with an empty query (via the IME dismiss button or
+    // the first back-swipe consumed by the IME), exit search mode immediately so the dialer icon
+    // reappears and the swipe-up gesture is re-armed without requiring a second back-swipe.
+    var imeWasVisibleDuringSearch by remember(inSearch) { mutableStateOf(false) }
+    LaunchedEffect(inSearch, isImeVisible, uiState.query) {
+        if (!inSearch) {
+            imeWasVisibleDuringSearch = false
+        } else if (isImeVisible) {
+            imeWasVisibleDuringSearch = true
+        } else if (imeWasVisibleDuringSearch && uiState.query.isEmpty()) {
+            resetSearchAndHideIme()
+        }
+    }
+
+    fun confirmGuardedOpen(component: com.garan.drytoast.core.model.ComponentKey) {
+        viewModel.confirmFrictionAndLaunch(component) {
+            val launched = appLauncher.launchApp(component)
+            if (launched) {
+                resetSearchAndHideIme()
+            }
+        }
+    }
+
+    // Clear any open or completed friction gate when the screen locks or the user leaves the launcher,
+    // preventing pre-warmed friction checkpoints from lingering across sessions.
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    viewModel.refreshScheduleEvaluation()
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    viewModel.dismissFriction()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    BackHandler(enabled = true) {
+        if (activeFriction != null) {
+            viewModel.dismissFriction()
+        } else if (inSearch) {
+            resetSearchAndHideIme()
+        } else {
+            // Ambient home canvas: consume back navigation cleanly as a no-op so the OS
+            // never invokes finishAfterTransition() or restarts the launcher activity.
+        }
+    }
+
+    if (activeFriction != null) {
+        when (val policy = activeFriction.policy) {
+            is FrictionPolicy.DragSort -> {
+                DragSortSurface(
+                    pairCount = policy.pairCount,
+                    onConfirmOpen = {
+                        confirmGuardedOpen(activeFriction.app.component)
+                    },
+                    onDismiss = {
+                        viewModel.dismissFriction()
+                    },
+                    hapticEngine = hapticEngine,
+                )
+            }
+            is FrictionPolicy.TimedDelay -> {
+                CaretTracingSurface(
+                    totalDurationMs = policy.seconds * 1000L,
+                    onConfirmOpen = {
+                        confirmGuardedOpen(activeFriction.app.component)
+                    },
+                    onDismiss = {
+                        viewModel.dismissFriction()
+                    },
+                    hapticEngine = hapticEngine,
+                )
+            }
+            is FrictionPolicy.TypedIntention, is FrictionPolicy.SessionBudget -> {
+                TypedIntentionSurface(
+                    appLabel = activeFriction.app.label,
+                    onConfirmOpen = {
+                        confirmGuardedOpen(activeFriction.app.component)
+                    },
+                    onDismiss = {
+                        viewModel.dismissFriction()
+                    },
+                    hapticEngine = hapticEngine,
+                )
+            }
+        }
+    } else {
+        val currentHasSeenFirstRunHint by rememberUpdatedState(hasSeenFirstRunHint)
+        val currentOnOpenSettings by rememberUpdatedState(onOpenSettings)
+        val currentOnSwipeUpSearch by rememberUpdatedState {
+            hapticEngine.rotaryDetent()
+            viewModel.activateSearch()
+        }
+
+        @OptIn(ExperimentalComposeUiApi::class)
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .semantics { testTagsAsResourceId = true },
+        ) {
+            DryToastHomeCanvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(HOME_CANVAS_TEST_TAG)
+                    .swipeUpToOpenSearch(
+                        enabled = !inSearch,
+                        onSwipeUp = { currentOnSwipeUpSearch() },
+                    )
+                    .customLongClickable(
+                        longPressTimeoutMillis = SETTINGS_LONG_PRESS_TIMEOUT_MS,
+                        onLongClick = {
+                            if (!currentHasSeenFirstRunHint) {
+                                viewModel.markFirstRunHintSeen()
+                            }
+                            currentOnOpenSettings()
+                        },
+                    ),
+                statusText = effectiveStatusText,
+                activeProfiles = uiState.activeProfiles,
+                hasCapabilityIssues = uiState.capabilityIssues.isNotEmpty(),
+                onCapabilityFaultClick = { showCapabilityFaultSheet = true },
+                showDialerIcon = uiState.generalSettings.showDialerIcon && !inSearch,
+                onDialerClick = {
+                    hapticEngine.rotaryDetent()
+                    val launched = appLauncher.launchDialer()
+                    if (launched) {
+                        resetSearchAndHideIme()
+                    }
+                },
+                onTimeTick = {
+                    antiMetricsRepository?.refreshForCurrentDate()
+                    viewModel.refreshScheduleEvaluation()
+                },
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                DryToastSearchSurface(
+                    query = uiState.query,
+                    onQueryChange = viewModel::onQueryChanged,
+                    results = uiState.results,
+                    listState = searchListState,
+                    quickActions = uiState.quickActions,
+                    onQuickActionClick = { quickItem ->
+                        viewModel.launchQuickAction(quickItem) {
+                            val launched = appLauncher.launchApp(quickItem.component)
+                            if (launched) {
+                                resetSearchAndHideIme()
+                            }
+                        }
+                    },
+                    onItemClick = { item ->
+                        when (item) {
+                            is SearchItem.App -> {
+                                when (val result = viewModel.evaluateLaunch(item)) {
+                                    is LaunchResult.Launched -> {
+                                        val launched = appLauncher.launchApp(item.component)
+                                        if (launched) {
+                                            resetSearchAndHideIme()
+                                        }
+                                    }
+                                    is LaunchResult.FrictionRequired -> {
+                                        hapticEngine.resistanceDetent()
+                                        val requiresKeyboard = result.policy is FrictionPolicy.TypedIntention ||
+                                            result.policy is FrictionPolicy.SessionBudget
+                                        if (!requiresKeyboard) {
+                                            hideImeAndClearFocus()
+                                        }
+                                        viewModel.openFriction(item, result.policy)
+                                    }
+                                    is LaunchResult.Blocked -> {
+                                        hapticEngine.resistanceDetent()
+                                    }
+                                }
+                            }
+                            is SearchItem.Action -> {
+                                when (item.id) {
+                                    "settings" -> {
+                                        resetSearchAndHideIme()
+                                        onOpenSettings()
+                                    }
+                                    "wallpaper" -> {
+                                        resetSearchAndHideIme()
+                                        showConfirmBlackWallpaperDialog = true
+                                    }
+                                    "feedback" -> {
+                                        resetSearchAndHideIme()
+                                        onSendFeedback()
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onItemLongClick = { item ->
+                        if (item is SearchItem.App) {
+                            hapticEngine.resistanceDetent()
+                            val opened = appLauncher.openAppInfo(item.component)
+                            if (opened) {
+                                resetSearchAndHideIme()
+                            }
+                        }
+                    },
+                    isSearchActive = inSearch,
+                    onActivateSearch = viewModel::activateSearch,
+                    hapticEngine = hapticEngine,
+                )
+            }
+
+            // First-run Onboarding Hint (displayed in center, optical fade out at 20s)
+            if (showHint && !hasSeenFirstRunHint && !inSearch) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.hint_long_press_to_configure),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SubtleGray.copy(alpha = hintAlpha.value),
+                    )
+                }
+            }
+
+            if (showCapabilityFaultSheet && uiState.capabilityIssues.isNotEmpty()) {
+                CapabilityFaultBottomSheet(
+                    issues = uiState.capabilityIssues,
+                    onGrantPermission = { capability ->
+                        showCapabilityFaultSheet = false
+                        onResolveCapabilityIssue(capability)
+                    },
+                    onDismiss = { showCapabilityFaultSheet = false },
+                )
+            }
+
+            if (showConfirmBlackWallpaperDialog) {
+                AlertDialog(
+                    onDismissRequest = { showConfirmBlackWallpaperDialog = false },
+                    title = {
+                        Text(text = stringResource(R.string.dialog_black_wallpaper_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.dialog_black_wallpaper_message))
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showConfirmBlackWallpaperDialog = false
+                                onApplyPureBlackWallpaper()
+                            },
+                        ) {
+                            Text(text = stringResource(R.string.action_apply))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showConfirmBlackWallpaperDialog = false },
+                        ) {
+                            Text(text = stringResource(R.string.action_cancel))
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CapabilityFaultBottomSheet(
+    issues: ImmutableList<ProfileCapabilityIssue>,
+    onGrantPermission: (ProfileCapability) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val primaryCapability = issues.firstOrNull()?.missingCapabilities?.firstOrNull()
+        ?: ProfileCapability.EXACT_ALARM
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.capability_fault_sheet_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.capability_fault_sheet_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val exactAlarmLabel = stringResource(R.string.capability_fault_exact_alarm)
+            val backgroundLocationLabel = stringResource(R.string.capability_fault_background_location)
+            val nfcHardwareLabel = stringResource(R.string.capability_fault_nfc_hardware)
+
+            issues.forEach { issue ->
+                val issueCapability = issue.missingCapabilities.firstOrNull() ?: primaryCapability
+                ListItem(
+                    leadingContent = {
+                        ActiveProfileSquareBadge(profile = issue.profile)
+                    },
+                    headlineContent = {
+                        Text(
+                            text = issue.profile.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = issue.missingCapabilities.joinToString(", ") { cap ->
+                                when (cap) {
+                                    ProfileCapability.EXACT_ALARM -> exactAlarmLabel
+                                    ProfileCapability.BACKGROUND_LOCATION -> backgroundLocationLabel
+                                    ProfileCapability.NFC_HARDWARE_ENABLED -> nfcHardwareLabel
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onGrantPermission(issueCapability) },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End),
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_dismiss))
+                }
+                Button(onClick = { onGrantPermission(primaryCapability) }) {
+                    Text(stringResource(R.string.action_grant_permission))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Self-contained custom long-press modifier that waits [longPressTimeoutMillis] before invoking
+ * [onLongClick] without mutating [androidx.compose.ui.platform.LocalViewConfiguration] on the
+ * layout hierarchy.
+ */
+internal fun Modifier.customLongClickable(
+    longPressTimeoutMillis: Long = SETTINGS_LONG_PRESS_TIMEOUT_MS,
+    onLongClick: () -> Unit,
+): Modifier = pointerInput(longPressTimeoutMillis) {
+    awaitEachGesture {
+        awaitFirstDown()
+        val releasedOrCancelledEarly = withTimeoutOrNull(longPressTimeoutMillis) {
+            waitForUpOrCancellation()
+            true
+        }
+        if (releasedOrCancelledEarly == null) {
+            onLongClick()
+            do {
+                val event = awaitPointerEvent()
+                event.changes.forEach { it.consume() }
+            } while (event.changes.any { it.pressed })
+        }
+    }
+}
+
+/**
+ * Detects an upward vertical swipe anywhere on the home canvas to activate search.
+ *
+ * Yields cleanly to child taps, 3-second long presses, and scrollable children by leaving the
+ * initial down event unconsumed and aborting if a child consumes vertical drag movement.
+ */
+internal fun Modifier.swipeUpToOpenSearch(
+    enabled: Boolean,
+    drytoast: Dp = SWIPE_UP_SEARCH_drytoast,
+    onSwipeUp: () -> Unit,
+): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(drytoast) {
+        val dryToastPx = drytoast.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            var triggered = false
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed) break
+                if (triggered) {
+                    change.consume()
+                    continue
+                }
+                if (change.isConsumed) {
+                    break
+                }
+                val dx = change.position.x - down.position.x
+                val dy = change.position.y - down.position.y
+                if (dy <= -dryToastPx && abs(dy) > abs(dx)) {
+                    change.consume()
+                    triggered = true
+                    onSwipeUp()
+                }
+            }
+        }
+    }
+}

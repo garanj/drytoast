@@ -1,8 +1,8 @@
-# Architectural Specification: Threshold
+# Architectural Specification: Dry Toast
 
 ## 1. High-Level Modular Architecture
 
-Threshold is structured as a modular Android project prioritizing testability, separation of concerns, and host JVM execution speed:
+Dry Toast is structured as a modular Android project prioritizing testability, separation of concerns, and host JVM execution speed:
 
 ```
                   ┌───────────────────────────────────────────────┐
@@ -78,7 +78,7 @@ When multiple profiles are eligible simultaneously, deterministic resolution occ
 
 ## 4. Hardware Calibrated DPC Tier (Optional Managed Device Mode)
 
-Threshold includes an optional Device Policy Controller tier:
+Dry Toast includes an optional Device Policy Controller tier:
 - Provisioned via WebUSB companion web app or `adb shell dpm set-device-owner`.
 - Inspected at runtime via `DevicePolicyManager.isDeviceOwnerApp`.
 - When active, leverages:

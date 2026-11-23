@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.garan.threshold.benchmark"
+    namespace = "com.garan.drytoast.benchmark"
     compileSdk = 37
 
     defaultConfig {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PACKAGE_NAME="com.garan.threshold"
+PACKAGE_NAME="com.garan.drytoast"
 CEILING_KB=30000
 
 echo "==> Verifying Memory Budget for $PACKAGE_NAME (Ceiling: ${CEILING_KB} KB PSS)..."

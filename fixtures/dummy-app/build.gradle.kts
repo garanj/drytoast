@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.garan.threshold.fixtures.dummy"
+    namespace = "com.garan.drytoast.fixtures.dummy"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.garan.threshold.fixtures.dummy"
+        applicationId = "com.garan.drytoast.fixtures.dummy"
         minSdk = 29
         targetSdk = 37
         versionCode = 1

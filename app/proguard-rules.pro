@@ -1,21 +1,21 @@
-# Threshold R8 / ProGuard Configuration
+# Dry Toast R8 / ProGuard Configuration
 
 # Preserve line numbers for local crash diagnostics while stripping absolute host paths
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
 # Navigation 3 @Serializable routes & Kotlinx Serialization
--keep @kotlinx.serialization.Serializable class com.garan.threshold.** { *; }
--keepclassmembers class com.garan.threshold.** {
+-keep @kotlinx.serialization.Serializable class com.garan.drytoast.** { *; }
+-keepclassmembers class com.garan.drytoast.** {
     *** Companion;
 }
--keepclasseswithmembers class com.garan.threshold.** {
+-keepclasseswithmembers class com.garan.drytoast.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep class com.garan.threshold.ThresholdRoute** { *; }
+-keep class com.garan.drytoast.DryToastRoute** { *; }
 
 # DPC & System Broadcast Entry Points
--keep class com.garan.threshold.dpc.ThresholdDeviceAdminReceiver { *; }
--keep class com.garan.threshold.dpc.ThresholdProvisioningActivity { *; }
--keep class com.garan.threshold.settings.SettingsLockReceiver { *; }
--keep class com.garan.threshold.schedule.ScheduleAlarmReceiver { *; }
+-keep class com.garan.drytoast.dpc.DryToastDeviceAdminReceiver { *; }
+-keep class com.garan.drytoast.dpc.DryToastProvisioningActivity { *; }
+-keep class com.garan.drytoast.settings.SettingsLockReceiver { *; }
+-keep class com.garan.drytoast.schedule.ScheduleAlarmReceiver { *; }

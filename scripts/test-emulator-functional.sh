@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "=========================================================="
-echo "  Threshold: Automated Functional Instrumented Tests"
+echo "  Dry Toast: Automated Functional Instrumented Tests"
 echo "=========================================================="
 
 if ! command -v adb &> /dev/null; then

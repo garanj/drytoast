@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "threshold"
+rootProject.name = "drytoast"
 
 include(":core")
 include(":data")

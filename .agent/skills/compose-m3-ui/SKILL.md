@@ -2,16 +2,16 @@
 name: compose-m3-ui
 description: >-
   Use this skill whenever designing, building, refactoring, or auditing Jetpack Compose UI
-  screens, components, themes, or navigation flows in Threshold. Enforces Material 3 (M3)
+  screens, components, themes, or navigation flows in Dry Toast. Enforces Material 3 (M3)
   best practices, Jetpack Navigation 3 (NavDisplay/NavKey), edge-to-edge WindowInsets,
   semantic tokens, spatial hierarchy over pop-up dialogs, and anti-"AI-slop" layout standards.
 ---
 
-# Threshold Compose UI & Material 3 Specialist (`compose-m3-ui`)
+# Dry Toast Compose UI & Material 3 Specialist (`compose-m3-ui`)
 
-Threshold treats the smartphone like a **precision mechanical instrument** rather than an entertainment console. However, "minimalist and monochrome" does **not** mean hand-rolling raw `Box`/`Row`/`Column` primitives with arbitrary borders, ASCII symbols (`"▲"`, `"▼"`, `"→"`), or chaining modal `Dialog`s.
+Dry Toast treats the smartphone like a **precision mechanical instrument** rather than an entertainment console. However, "minimalist and monochrome" does **not** mean hand-rolling raw `Box`/`Row`/`Column` primitives with arbitrary borders, ASCII symbols (`"▲"`, `"▼"`, `"→"`), or chaining modal `Dialog`s.
 
-Every screen in Threshold must combine **Google's Material 3 (M3) & Navigation 3 architectural best practices** with **Threshold's monochrome sensory contract**.
+Every screen in Dry Toast must combine **Google's Material 3 (M3) & Navigation 3 architectural best practices** with **Dry Toast's monochrome sensory contract**.
 
 ---
 
@@ -29,7 +29,7 @@ AI-generated UIs share recognizable anti-patterns. **Strictly avoid all of the f
    - Use **dedicated Navigation 3 screen destinations** (for primary entity creation/editing like a Profile) or **M3 `ModalBottomSheet`** (for focused contextual pickers like adding a Quick Action or picking a friction override).
 3. **No ASCII Art or Text Characters as Icons:**
    - **NEVER** use Unicode characters (`"▲"`, `"▼"`, `"→"`, `"Manage →"`, `"☾"`, `"+"`) as interactive buttons or directional indicators.
-   - Always use crisp vector `Icon`s (`ThresholdIcons` / Material Symbols) inside proper M3 icon slots (`leadingContent`, `trailingContent`, `IconButton`).
+   - Always use crisp vector `Icon`s (`DryToastIcons` / Material Symbols) inside proper M3 icon slots (`leadingContent`, `trailingContent`, `IconButton`).
 4. **No Pinned Full-Width "Save" Footer Buttons on Settings Screens:**
    - Settings, toggles, and app assignment changes should either **persist reactively** on toggle/selection (Single Source of Truth in DataStore/Room via ViewModel) or use a top-bar action in an explicit creation flow—never a giant 52dp white rectangle pinned to the bottom of a browse/list screen.
 5. **No File-Private Hardcoded Hex Colors or Ad-Hoc Font Sizes:**
@@ -45,15 +45,15 @@ All multi-screen flows in `:app` MUST use **Jetpack Navigation 3 (`androidx.navi
 Read [references/navigation-3.md](references/navigation-3.md) when adding routes, transitions, or sheet scenes.
 
 1. **User-Owned Type-Safe Back Stack:**
-   - Define routes as `@Serializable sealed interface ThresholdRoute : NavKey`.
-   - Hold navigation state via `rememberNavBackStack(ThresholdRoute.Home)`.
-   - Never use `enum class` screen switching (`when (currentScreen)`) or loose `var editingProfileId: String?` state variables in `MainActivity`. Pass IDs inside the type-safe `NavKey` data class (e.g., `ThresholdRoute.ProfileDetail(profileId: String?)`).
+   - Define routes as `@Serializable sealed interface DryToastRoute : NavKey`.
+   - Hold navigation state via `rememberNavBackStack(DryToastRoute.Home)`.
+   - Never use `enum class` screen switching (`when (currentScreen)`) or loose `var editingProfileId: String?` state variables in `MainActivity`. Pass IDs inside the type-safe `NavKey` data class (e.g., `DryToastRoute.ProfileDetail(profileId: String?)`).
 2. **`NavDisplay` & Entry Decorators:**
    - Render the back stack with `NavDisplay`, wired with `rememberSaveableStateHolderNavEntryDecorator()` and `rememberViewModelStoreNavEntryDecorator()`.
    - Use `entryProvider { entry<Route> { ... } }` DSL.
-   - Apply Threshold's optical transitions (`ThresholdMotion.opticalTween`, 80ms–140ms, zero spring physics) via `transitionSpec`, `popTransitionSpec`, and `predictivePopTransitionSpec`.
+   - Apply Dry Toast's optical transitions (`DryToastMotion.opticalTween`, 80ms–140ms, zero spring physics) via `transitionSpec`, `popTransitionSpec`, and `predictivePopTransitionSpec`.
 3. **Home Launcher Root Back Contract:**
-   - On `ThresholdRoute.Home`, back navigation dismisses active friction or active search; when at rest on the ambient home canvas, back is consumed as a no-op so the root launcher activity never finishes.
+   - On `DryToastRoute.Home`, back navigation dismisses active friction or active search; when at rest on the ambient home canvas, back is consumed as a no-op so the root launcher activity never finishes.
    - On all child routes (`backStack.size > 1`), `onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }` pops the back stack with predictive back support.
 
 ---
@@ -69,7 +69,7 @@ Read [references/m3-components-and-tokens.md](references/m3-components-and-token
 | **Settings / Preference Row** | `ListItem` | Use `headlineContent`, `supportingContent`, `leadingContent`, and `trailingContent` (`Switch`, `Icon`, value label). |
 | **Section Header** | `Text` (`labelMedium`, `onSurfaceVariant`) | Placed with `padding(start = 16.dp, top = 24.dp, bottom = 8.dp)`—no box around the section unless using M3 Expressive grouped containers (`surfaceContainerLow`). |
 | **Horizontal Category Filter** | `LazyRow` + `FilterChip` | Use M3 `FilterChip` with `FilterChipDefaults` mapped to monochrome tokens. |
-| **Single-Choice Inline Selector** | `SingleChoiceSegmentedButtonRow` or `ThresholdMultiStateToggle` | Use M3 `SegmentedButton` for standard 2–4 option choices; `ThresholdMultiStateToggle` is permitted for the tactile 3-state app gate (`ALLOW` / `GUARD` / `BLOCK`) when sized to `48.dp` min touch target height. |
+| **Single-Choice Inline Selector** | `SingleChoiceSegmentedButtonRow` or `DryToastMultiStateToggle` | Use M3 `SegmentedButton` for standard 2–4 option choices; `DryToastMultiStateToggle` is permitted for the tactile 3-state app gate (`ALLOW` / `GUARD` / `BLOCK`) when sized to `48.dp` min touch target height. |
 | **Time Window Picker** | M3 `TimePicker` or `TimeInput` (in `TimePickerDialog` / `ModalBottomSheet`) | Never use custom `"▲"` / `"▼"` text steppers for hours/minutes. |
 | **Day-of-Week Selector** | `MultiChoiceSegmentedButtonRow` or M3 `FilterChip` row | Minimum `48.dp` touch target height with proper `Role.Checkbox` semantics. |
 | **Contextual Picker / Secondary Editor** | `ModalBottomSheet` | Use for picking Quick Action apps or configuring a single app's friction override. |
@@ -86,7 +86,7 @@ Read [references/edge-to-edge-and-insets.md](references/edge-to-edge-and-insets.
    - Pass `Scaffold`'s `innerPadding` directly to `LazyColumn(contentPadding = innerPadding, modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding))`.
    - **NEVER** apply `.windowInsetsPadding(WindowInsets.safeDrawing)` on the root `Column` of a screen—that prevents the `TopAppBar` and list content from drawing edge-to-edge behind system bars.
 2. **Spatial Grid (4dp / 8dp):**
-   - Horizontal screen keylines: `16.dp` on compact phones (Settings, Lists), `24.dp` on ambient canvas surfaces (`ThresholdHomeCanvas`, Friction checkpoints).
+   - Horizontal screen keylines: `16.dp` on compact phones (Settings, Lists), `24.dp` on ambient canvas surfaces (`DryToastHomeCanvas`, Friction checkpoints).
    - List item vertical rhythm: handled automatically by M3 `ListItem` (`56.dp` 1-line, `72.dp` 2-line, `88.dp` 3-line).
    - Minimum interactive touch target: **`48.dp × 48.dp`** on every tappable element (`IconButton`, day-of-week toggles, reorder handles, segmented controls).
 3. **Borders & Dividers (The 1dp Rule):**
@@ -102,7 +102,7 @@ Read [references/edge-to-edge-and-insets.md](references/edge-to-edge-and-insets.
      - `XyzRoute(viewModel, onNavigate...)`: Collects `uiState` via `collectAsStateWithLifecycle()`.
      - `XyzScreen(uiState, onEvent..., modifier)`: Pure, stateless `@Composable` that takes immutable state and lambdas.
 2. **Previews & Roborazzi Goldens:**
-   - Every stateless `Screen` composable must be testable in [`ThresholdScreenshotTest.kt`](file:///home/garan/threshold/app/src/test/kotlin/com/garan/threshold/ThresholdScreenshotTest.kt).
+   - Every stateless `Screen` composable must be testable in [`DryToastScreenshotTest.kt`](file:///home/garan/drytoast/app/src/test/kotlin/com/garan/drytoast/DryToastScreenshotTest.kt).
    - After modifying any UI, run `./gradlew testDebugUnitTest` (and `./gradlew recordRoborazziDebug` when intentionally updating visual goldens) and inspect the generated PNGs in `app/src/test/snapshots/` using `read_file` to visually verify layout, alignment, contrast, and spacing.
 3. **Deterministic UI Automation (`Modifier.testTag` & `testTagsAsResourceId`):**
    - Keep `Modifier.semantics { testTagsAsResourceId = true }` enabled at the root composable so `testTag`s work in both Compose tests (`onNodeWithTag`) and UiAutomator (`By.res`).
