@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -86,6 +87,8 @@ fun <T> DryToastMultiStateToggle(
     enabled: Boolean = true,
     hapticEngine: HapticEngine = NoOpHapticEngine,
     isResistanceState: (T) -> Boolean = { false },
+    maxLines: Int = 1,
+    optionTestTag: ((T) -> String)? = null,
 ) {
     require(options.isNotEmpty()) { "Options list cannot be empty" }
     val selectedIndex = if (selected != null) options.indexOf(selected) else -1
@@ -141,10 +144,12 @@ fun <T> DryToastMultiStateToggle(
                 val isSelected = index == selectedIndex
                 val interactionSource = remember { MutableInteractionSource() }
 
+                val tag = optionTestTag?.invoke(option)
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .then(if (tag != null) Modifier.testTag(tag) else Modifier)
                         .semantics {
                             this.selected = isSelected
                         }
@@ -161,7 +166,8 @@ fun <T> DryToastMultiStateToggle(
                                 }
                                 onSelect(option)
                             }
-                        },
+                        }
+                        .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -171,7 +177,7 @@ fun <T> DryToastMultiStateToggle(
                         fontWeight = if (isSelected && enabled) FontWeight.Bold else FontWeight.Medium,
                         letterSpacing = 0.5.sp,
                         textAlign = TextAlign.Center,
-                        maxLines = 1,
+                        maxLines = maxLines,
                     )
                 }
             }
