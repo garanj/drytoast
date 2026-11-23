@@ -34,9 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -58,8 +59,34 @@ import com.garan.drytoast.ui.theme.PureWhite
 import com.garan.drytoast.ui.theme.SubtleGray
 import kotlinx.coroutines.withContext
 
-private const val CARET_ASPECT_RATIO = 1.515f
+private const val TOAST_VIEWPORT_SIZE = 108f
 private const val CARET_PASS_COUNT = 5f
+
+/**
+ * Populates [target] with the Dry Toast "Hollow Crust" outline scaled to fit [canvasSize].
+ * Starts at the bottom-left corner, traces up the left side, across the domed top crust
+ * (midpoint at the top apex), down the right side, and back along the bottom edge.
+ */
+private fun buildToastOutlinePath(target: Path, canvasSize: Size) {
+    val side = minOf(canvasSize.width, canvasSize.height)
+    val scale = side / TOAST_VIEWPORT_SIZE
+    val offsetX = (canvasSize.width - side) / 2f
+    val offsetY = (canvasSize.height - side) / 2f
+    fun x(vx: Float): Float = offsetX + vx * scale
+    fun y(vy: Float): Float = offsetY + vy * scale
+
+    target.reset()
+    target.moveTo(x(35f), y(77f))
+    target.cubicTo(x(33.3f), y(77f), x(32f), y(75.7f), x(32f), y(74f))
+    target.lineTo(x(32f), y(48f))
+    target.cubicTo(x(27.5f), y(46.8f), x(25.5f), y(43f), x(26.5f), y(38.5f))
+    target.cubicTo(x(27.8f), y(32.5f), x(36.5f), y(29f), x(54f), y(29f))
+    target.cubicTo(x(71.5f), y(29f), x(80.2f), y(32.5f), x(81.5f), y(38.5f))
+    target.cubicTo(x(82.5f), y(43f), x(80.5f), y(46.8f), x(76f), y(48f))
+    target.lineTo(x(76f), y(74f))
+    target.cubicTo(x(76f), y(75.7f), x(74.7f), y(77f), x(73f), y(77f))
+    target.close()
+}
 
 /**
  * Enforces a 1.0x time scale for intentional friction delays so that system-level
@@ -109,12 +136,13 @@ fun CaretTracingSurface(
     var isComplete by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
-    val strokeWidthPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val strokeWidthPx = remember(density) { with(density) { 10.dp.toPx() } }
     val stroke = remember(strokeWidthPx) {
         Stroke(width = strokeWidthPx, cap = StrokeCap.Round, join = StrokeJoin.Round)
     }
-    val caretWidthPx = remember(density) { with(density) { 140.dp.toPx() } }
-    val caretHeightPx = remember(caretWidthPx) { caretWidthPx / CARET_ASPECT_RATIO }
+    val toastPath = remember { Path() }
+    val pathMeasure = remember { PathMeasure() }
+    var measuredCanvasSize by remember { mutableStateOf(Size.Zero) }
     val pass1Path = remember { Path() }
     val pass2Path = remember { Path() }
     val pass3Path = remember { Path() }
@@ -217,40 +245,22 @@ fun CaretTracingSurface(
                 val p4 = (progress - 3f).coerceIn(0f, 1f)
                 val p5 = (progress - 4f).coerceIn(0f, 1f)
 
-                val centerX = size.width / 2f
-                val centerY = size.height / 2f
-                val left = centerX - caretWidthPx / 2f
-                val right = centerX + caretWidthPx / 2f
-                val top = centerY - caretHeightPx / 2f
-                val bottom = centerY + caretHeightPx / 2f
-
-                fun getPoint(f: Float): Offset {
-                    val clamped = f.coerceIn(0f, 1f)
-                    return if (clamped <= 0.5f) {
-                        val u = clamped / 0.5f
-                        Offset(
-                            x = left + u * (centerX - left),
-                            y = bottom + u * (top - bottom),
-                        )
-                    } else {
-                        val u = (clamped - 0.5f) / 0.5f
-                        Offset(
-                            x = centerX + u * (right - centerX),
-                            y = top + u * (bottom - top),
-                        )
-                    }
+                if (measuredCanvasSize != size) {
+                    buildToastOutlinePath(toastPath, size)
+                    pathMeasure.setPath(toastPath, forceClosed = true)
+                    measuredCanvasSize = size
                 }
+                val totalLength = pathMeasure.length
 
                 fun drawSegment(targetPath: Path, startFrac: Float, endFrac: Float, color: Color) {
-                    if (endFrac <= startFrac) return
+                    if (endFrac <= startFrac || totalLength <= 0f) return
                     targetPath.reset()
-                    val pStart = getPoint(startFrac)
-                    targetPath.moveTo(pStart.x, pStart.y)
-                    if (startFrac < 0.5f && endFrac > 0.5f) {
-                        targetPath.lineTo(centerX, top)
-                    }
-                    val pEnd = getPoint(endFrac)
-                    targetPath.lineTo(pEnd.x, pEnd.y)
+                    pathMeasure.getSegment(
+                        startDistance = startFrac.coerceIn(0f, 1f) * totalLength,
+                        stopDistance = endFrac.coerceIn(0f, 1f) * totalLength,
+                        destination = targetPath,
+                        startWithMoveTo = true,
+                    )
                     drawPath(targetPath, color = color, style = stroke)
                 }
 
