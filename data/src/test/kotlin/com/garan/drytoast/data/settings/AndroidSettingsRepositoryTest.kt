@@ -836,4 +836,63 @@ class AndroidSettingsRepositoryTest {
         repository.promotePendingSettingsOnBoot()
         assertThat(repository.getSettings().general.guardedSessionGraceMinutes).isEqualTo(0)
     }
+
+    @Test
+    fun breakGlass_persistsConfigAndRuntimeExpiry_respectsSettingsLockAndRebootStaging() = runTest(testDispatcher) {
+        // 1. Save normalized Break-Glass card UID & custom duration
+        repository.updateGeneralSettings(
+            GeneralSettings(
+                breakGlassTagUid = "04a1b2c3",
+                breakGlassDurationMinutes = 60,
+            ),
+        )
+        val saved = repository.getSettings()
+        assertThat(saved.general.breakGlassTagUid).isEqualTo("04:A1:B2:C3")
+        assertThat(saved.general.breakGlassDurationMinutes).isEqualTo(60)
+        assertThat(saved.breakGlassUntilEpochMillis).isNull()
+
+        // 2. Lock Settings -> card UID & duration mutations are rejected,
+        //    but runtime updateBreakGlassUntil() STILL works so tapping the physical card works while locked!
+        repository.setSettingsLocked(true)
+        repository.updateGeneralSettings(
+            saved.general.copy(breakGlassTagUid = "04:FF:EE:DD", breakGlassDurationMinutes = 15),
+        )
+        assertThat(repository.getSettings().general.breakGlassTagUid).isEqualTo("04:A1:B2:C3")
+        assertThat(repository.getSettings().general.breakGlassDurationMinutes).isEqualTo(60)
+
+        val expiryMillis = 1_750_000_000_000L
+        repository.updateBreakGlassUntil(expiryMillis)
+        assertThat(repository.getSettings().breakGlassUntilEpochMillis).isEqualTo(expiryMillis)
+
+        repository.updateBreakGlassUntil(null)
+        assertThat(repository.getSettings().breakGlassUntilEpochMillis).isNull()
+
+        // 3. Unlock Settings & enable requireRebootForSettingsChange -> card replacement is staged until reboot,
+        //    while runtime updateBreakGlassUntil() still applies immediately without touching stagedShadow.
+        repository.setSettingsLocked(false)
+        repository.updateGeneralSettings(
+            repository.getSettings().general.copy(requireRebootForSettingsChange = true),
+        )
+        repository.updateGeneralSettings(
+            repository.getSettings().editableSnapshot.general.copy(
+                breakGlassTagUid = "04:99:88:77",
+                breakGlassDurationMinutes = 15,
+            ),
+        )
+        val staged = repository.getSettings()
+        assertThat(staged.hasPendingRebootChanges).isTrue()
+        assertThat(staged.general.breakGlassTagUid).isEqualTo("04:A1:B2:C3")
+        assertThat(staged.editableSnapshot.general.breakGlassTagUid).isEqualTo("04:99:88:77")
+        assertThat(staged.editableSnapshot.general.breakGlassDurationMinutes).isEqualTo(15)
+
+        repository.updateBreakGlassUntil(expiryMillis)
+        assertThat(repository.getSettings().breakGlassUntilEpochMillis).isEqualTo(expiryMillis)
+        assertThat(repository.getSettings().hasPendingRebootChanges).isTrue()
+
+        repository.promotePendingSettingsOnBoot()
+        val promoted = repository.getSettings()
+        assertThat(promoted.general.breakGlassTagUid).isEqualTo("04:99:88:77")
+        assertThat(promoted.general.breakGlassDurationMinutes).isEqualTo(15)
+        assertThat(promoted.breakGlassUntilEpochMillis).isEqualTo(expiryMillis)
+    }
 }
