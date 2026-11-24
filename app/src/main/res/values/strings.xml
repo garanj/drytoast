@@ -60,8 +60,8 @@
     <string name="onboarding_p3_preview_typed_desc">Transcribe a randomized mindfulness phrase character-for-character (e.g. \"I am opening Social Feed intentionally\") to unlock launch.</string>
     <string name="onboarding_p3_preview_drag_title">DRAG-TO-MATCH</string>
     <string name="onboarding_p3_preview_drag_desc">Drag geometric glyph pairs into their matching target slots with tactile snap detents.</string>
-    <string name="onboarding_p3_preview_caret_title">TOAST TRACING</string>
-    <string name="onboarding_p3_preview_caret_desc">Watch the Dry Toast outline trace steadily across five passes—leaving early resets the countdown.</string>
+    <string name="onboarding_p3_preview_caret_title">TOASTER TIMER</string>
+    <string name="onboarding_p3_preview_caret_desc">Hold the toaster lever down until all eight slices pop. Releasing early resets the timer.</string>
     <string name="onboarding_p3_preview_random_title">RANDOM</string>
     <string name="onboarding_p3_preview_random_desc">Dynamically selects a different cognitive checkpoint on every launch attempt.</string>
 
@@ -207,7 +207,11 @@
     <string name="label_default_friction">Default Friction</string>
     <string name="friction_typed_intention">Typed Intention</string>
     <string name="friction_drag_sort">Drag-to-Match</string>
-    <string name="friction_caret_tracing">Toast Tracing</string>
+    <string name="friction_caret_tracing">Toaster Timer</string>
+    <string name="toaster_hint_idle">Hold lever down to toast</string>
+    <string name="toaster_hint_holding">%1$d / %2$d slices popped</string>
+    <string name="toaster_hint_ready">All %1$d slices toasted</string>
+    <string name="cd_toaster_lever">Toaster lever. Press and hold down to toast.</string>
     <string name="friction_random">Random</string>
     <string name="action_configure_default_apps">Configure default app behavior</string>
     <string name="action_save">Save</string>

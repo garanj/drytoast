@@ -32,6 +32,6 @@ enum class FrictionChoice {
     }
 
     companion object {
-        const val CARET_DEFAULT_SECONDS = 17
+        const val CARET_DEFAULT_SECONDS = 16
     }
 }

@@ -16,6 +16,7 @@ import com.garan.drytoast.core.port.HapticEngine
  * - Target Snap: [VibrationEffect.Composition.PRIMITIVE_CLICK]
  * - Resistance Detent: [VibrationEffect.Composition.PRIMITIVE_THUD] (or double-notch [VibrationEffect.Composition.PRIMITIVE_CLICK] stutter)
  * - Relay Snap: [VibrationEffect.Composition.PRIMITIVE_THUD] (or [VibrationEffect.Composition.PRIMITIVE_CLICK]) + delayed [VibrationEffect.Composition.PRIMITIVE_TICK] (30ms)
+ * - Clockwork Tick: [VibrationEffect.Composition.PRIMITIVE_LOW_TICK] (API 31+) or low-scale [VibrationEffect.Composition.PRIMITIVE_TICK]
  *
  * Pre-computes and caches immutable [VibrationEffect] instances on first access so 120Hz scroll detents
  * incur zero heap allocations and only a single Binder call.
@@ -114,6 +115,25 @@ class AndroidHapticEngine(
         }
     }
 
+    internal val clockworkTickEffect: VibrationEffect? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val v = vibrator ?: return@lazy null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)
+        ) {
+            VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.35f)
+                .compose()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK)
+        ) {
+            VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.3f)
+                .compose()
+        } else {
+            VibrationEffect.createOneShot(10L, 40)
+        }
+    }
+
     override fun rotaryDetent() {
         if (!hasVibratorHardware) return
         rotaryDetentEffect?.let(::vibrate)
@@ -132,6 +152,11 @@ class AndroidHapticEngine(
     override fun relaySnap() {
         if (!hasVibratorHardware) return
         relaySnapEffect?.let(::vibrate)
+    }
+
+    override fun clockworkTick() {
+        if (!hasVibratorHardware) return
+        clockworkTickEffect?.let(::vibrate)
     }
 
     private fun vibrate(effect: VibrationEffect) {

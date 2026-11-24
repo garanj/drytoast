@@ -155,7 +155,7 @@ class OnboardingScreenTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(OnboardingTestTags.FRICTION_PREVIEW_DESCRIPTION)
             .performScrollTo()
-            .assertTextContains("Watch the Dry Toast outline trace steadily", substring = true)
+            .assertTextContains("Hold the toaster lever down until all eight slices pop", substring = true)
         composeRule.onNodeWithTag("caret_tracing_surface")
             .performScrollTo()
             .assertIsDisplayed()

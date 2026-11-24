@@ -581,14 +581,15 @@ private fun IntentionalFrictionPage(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(260.dp),
+                                .height(292.dp),
                         ) {
                             CaretTracingSurface(
                                 onConfirmOpen = { demoResetNonce++ },
                                 onDismiss = { demoResetNonce++ },
                                 hapticEngine = hapticEngine,
-                                totalDurationMs = 8_500L,
+                                totalDurationMs = 8_000L,
                                 embedded = true,
+                                onInteractionActiveChanged = onDragActiveChanged,
                             )
                         }
                     }
