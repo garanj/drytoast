@@ -10,11 +10,13 @@ Dry Toast (`com.garan.drytoast`) is a quiet, text-only Android launcher designed
 - **Direct APK Releases:** https://github.com/garanj/drytoast/releases/latest
 
 <p align="center">
-  <img src="site/images/home.png" width="210" alt="Dry Toast Home Screen" />
+  <img src="site/images/home.png" width="180" alt="Dry Toast Home Screen" />
   &nbsp;&nbsp;
-  <img src="site/images/search.png" width="210" alt="Dry Toast Fuzzy Search" />
+  <img src="site/images/search.png" width="180" alt="Dry Toast Fuzzy Search" />
   &nbsp;&nbsp;
-  <img src="site/images/friction.png" width="210" alt="Dry Toast Friction Checkpoint" />
+  <img src="site/images/toaster.png" width="180" alt="Dry Toast Toaster Timer Checkpoint" />
+  &nbsp;&nbsp;
+  <img src="site/images/friction.png" width="180" alt="Dry Toast Drag-to-Match Checkpoint" />
 </p>
 
 ---
