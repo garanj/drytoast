@@ -895,4 +895,34 @@ class AndroidSettingsRepositoryTest {
         assertThat(promoted.general.breakGlassDurationMinutes).isEqualTo(15)
         assertThat(promoted.breakGlassUntilEpochMillis).isEqualTo(expiryMillis)
     }
+
+    @Test
+    fun customProfile_defaultRule_persistsAcrossReloadsAndRebootStaging() = runTest(testDispatcher) {
+        val strictProfile = com.garan.drytoast.core.model.CustomProfile(
+            id = "strict",
+            name = "Strict",
+            priority = 0,
+            enabled = true,
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+        )
+        repository.saveCustomProfile(strictProfile)
+
+        val loaded = repository.getSettings().customProfiles.first { it.id == "strict" }
+        assertThat(loaded.defaultRule).isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL)
+
+        // Stage change to ALLOW_ALL while requireRebootForSettingsChange is active
+        repository.updateGeneralSettings(GeneralSettings(requireRebootForSettingsChange = true))
+        repository.saveCustomProfile(
+            strictProfile.copy(defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL),
+        )
+        val staged = repository.getSettings()
+        assertThat(staged.customProfiles.first { it.id == "strict" }.defaultRule)
+            .isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL)
+        assertThat(staged.editableSnapshot.customProfiles.first { it.id == "strict" }.defaultRule)
+            .isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL)
+
+        repository.promotePendingSettingsOnBoot()
+        assertThat(repository.getSettings().customProfiles.first { it.id == "strict" }.defaultRule)
+            .isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL)
+    }
 }

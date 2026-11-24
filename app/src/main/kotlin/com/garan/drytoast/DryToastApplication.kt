@@ -162,13 +162,27 @@ class DryToastAppContainer(context: Context) {
         }
         val currentLocation = locationSource.currentLocation.value
         val dialerPkg = dialerPackageResolver()
+        val hasRestrictiveDefaultProfile = !breakGlassActive && settings.customProfiles.any { profile ->
+            profile.enabled && (
+                profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL ||
+                    profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL
+                )
+        }
+        val additionalComponents = if (hasRestrictiveDefaultProfile) {
+            buildSet {
+                addAll(settings.baseProfile.quickActions.map { it.component })
+                addAll(packageIndexSource.getInstalledApps().map { it.component })
+            }
+        } else {
+            settings.baseProfile.quickActions.map { it.component }
+        }
         val workingSet = dpcCascadingEngine.resolveWorkingSet(
             baseProfile = settings.baseProfile,
             customProfiles = settings.customProfiles,
             currentDay = now.dayOfWeek,
             currentTime = now.timeOfDay,
             defaultDialerPackage = dialerPkg,
-            additionalComponents = settings.baseProfile.quickActions.map { it.component },
+            additionalComponents = additionalComponents,
             currentLocation = currentLocation,
             savedTriggers = settings.savedTriggers,
             nfcLatchStates = settings.nfcLatches,

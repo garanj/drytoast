@@ -898,7 +898,14 @@ private fun ProfileCard(
     val appSummary = if (totalOverrides == 0) {
         "All apps inherit default behavior"
     } else {
-        "$blockedCount Blocked · $guardedCount Guarded · $allowCount Allow"
+        val ruleCounts = "$blockedCount Blocked · $guardedCount Guarded · $allowCount Allow"
+        val defaultPrefix = when (profile.defaultRule) {
+            com.garan.drytoast.core.model.ProfileDefaultRule.FALLTHROUGH -> null
+            com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL -> "Default: Allow all"
+            com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL -> "Default: Guard all"
+            com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL -> "Default: Block all"
+        }
+        if (defaultPrefix != null) "$defaultPrefix · $ruleCounts" else ruleCounts
     }
 
     val baseColor = profileBaseColor(profile.colorIndex)

@@ -28,6 +28,7 @@ import com.garan.drytoast.core.model.NfcLatchState
 import com.garan.drytoast.core.model.NfcTagEntry
 import com.garan.drytoast.core.model.NfcTrigger
 import com.garan.drytoast.core.model.NfcTriggerMode
+import com.garan.drytoast.core.model.ProfileDefaultRule
 import com.garan.drytoast.core.model.ProfileTrigger
 import com.garan.drytoast.core.model.SavedTrigger
 import com.garan.drytoast.core.model.ScheduleTrigger
@@ -1145,6 +1146,7 @@ class AndroidSettingsRepository(
             obj.put("enabled", profile.enabled)
             obj.put("priority", profile.priority)
             obj.put("colorIndex", profile.colorIndex)
+            obj.put("defaultRule", profile.defaultRule.name)
             profile.frictionOverride?.let { obj.put("frictionOverride", it.name) }
 
             val rulesArray = JSONArray()
@@ -1174,6 +1176,12 @@ class AndroidSettingsRepository(
                 val enabled = obj.optBoolean("enabled", true)
                 val priority = obj.optInt("priority", i)
                 val colorIndex = obj.optInt("colorIndex", i % CustomProfile.PALETTE_SIZE)
+                val defaultRule = if (obj.has("defaultRule")) {
+                    runCatching { ProfileDefaultRule.valueOf(obj.getString("defaultRule")) }
+                        .getOrDefault(ProfileDefaultRule.FALLTHROUGH)
+                } else {
+                    ProfileDefaultRule.FALLTHROUGH
+                }
                 val frictionOverride = if (obj.has("frictionOverride")) {
                     runCatching { FrictionChoice.valueOf(obj.getString("frictionOverride")) }.getOrNull()
                 } else {
@@ -1214,6 +1222,7 @@ class AndroidSettingsRepository(
                         activationRules = activationRules,
                         trigger = trigger,
                         appAssignments = appAssignments,
+                        defaultRule = defaultRule,
                         frictionOverride = frictionOverride,
                         colorIndex = colorIndex,
                     ),

@@ -1,6 +1,24 @@
 package com.garan.drytoast.core.model
 
 /**
+ * Fallback behavior applied by a [CustomProfile] to apps that do not have an explicit
+ * [CustomProfile.appAssignments] entry in that profile.
+ */
+enum class ProfileDefaultRule {
+    /** Unspecified apps fall through to lower-priority active profiles or the base profile. */
+    FALLTHROUGH,
+
+    /** Unspecified apps are allowed, overriding lower-priority profiles and the base profile. */
+    ALLOW_ALL,
+
+    /** Unspecified apps are guarded using the profile's friction override or base default friction. */
+    GUARD_ALL,
+
+    /** Unspecified apps are blocked (permanent default dialer allowlist still applies). */
+    BLOCK_ALL,
+}
+
+/**
  * A user-defined behavioral profile overriding base app access rules when triggered.
  *
  * @property id Stable unique identifier for this profile.
@@ -9,7 +27,8 @@ package com.garan.drytoast.core.model
  * @property priority User-ordered priority ranking (0 = highest priority). Evaluated top-to-bottom.
  * @property trigger Optional legacy inline trigger fallback when [activationRules] is not populated.
  * @property activationRules Disjunction (`OR` list) of [TriggerRule] conjunctions (`AND` groups) of [SavedTrigger] IDs.
- * @property appAssignments Explicit app overrides (`Standard`/Allow, `Guarded`, `Blocked`). Apps omitted here cascade.
+ * @property appAssignments Explicit app overrides (`Standard`/Allow, `Guarded`, `Blocked`). Apps omitted here use [defaultRule].
+ * @property defaultRule Fallback behavior for apps omitted from [appAssignments]. Defaults to [ProfileDefaultRule.FALLTHROUGH].
  * @property frictionOverride Optional profile-wide friction override for guarded apps in this profile.
  * @property colorIndex Index into the profile color palette assigned when the profile is created.
  */
@@ -21,6 +40,7 @@ data class CustomProfile(
     val trigger: ProfileTrigger? = ProfileTrigger.Schedule(),
     val activationRules: List<TriggerRule> = emptyList(),
     val appAssignments: Map<ComponentKey, AppAssignment> = emptyMap(),
+    val defaultRule: ProfileDefaultRule = ProfileDefaultRule.FALLTHROUGH,
     val frictionOverride: FrictionChoice? = null,
     val colorIndex: Int = 0,
 ) {

@@ -882,6 +882,13 @@ class MainActivity : ComponentActivity() {
                                 hapticEngine = hapticEngine,
                                 isCustomProfile = isCustomProfile,
                                 customProfileName = targetProfile?.name,
+                                profileDefaultRule = targetProfile?.defaultRule
+                                    ?: com.garan.drytoast.core.model.ProfileDefaultRule.FALLTHROUGH,
+                                onUpdateProfileDefaultRule = { rule ->
+                                    targetProfile?.let { profile ->
+                                        settingsViewModel.updateCustomProfileDefaultRule(profile.id, rule)
+                                    }
+                                },
                             )
                         }
                     },

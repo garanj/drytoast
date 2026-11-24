@@ -1,10 +1,16 @@
 package com.garan.drytoast.ui.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import com.garan.drytoast.core.model.AppAssignment
 import com.garan.drytoast.core.model.ComponentKey
 import com.garan.drytoast.core.model.FrictionChoice
@@ -91,7 +97,42 @@ class ConfigureAppsScreenTest {
         composeTestRule.onNodeWithText("DEFAULT (1)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Chrome").assertIsDisplayed()
         composeTestRule.onNodeWithText("Clock").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("configure_apps_list").performScrollToNode(hasText("Instagram"))
         composeTestRule.onNodeWithText("Instagram").assertIsDisplayed()
+    }
+
+    @Test
+    fun customProfileMode_defaultRuleSelector_updatesRuleAndDescription() {
+        var selectedRule by mutableStateOf(com.garan.drytoast.core.model.ProfileDefaultRule.FALLTHROUGH)
+        composeTestRule.setContent {
+            DryToastTheme {
+                ConfigureAppsScreen(
+                    availableApps = apps,
+                    initialAssignments = emptyMap(),
+                    defaultFriction = FrictionChoice.TYPED_INTENTION,
+                    onSave = {},
+                    onBack = {},
+                    isCustomProfile = true,
+                    customProfileName = "Bedtime",
+                    profileDefaultRule = selectedRule,
+                    onUpdateProfileDefaultRule = { selectedRule = it },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("profile_default_rule_BLOCK_ALL").performClick()
+        composeTestRule.waitForIdle()
+        assertThat(selectedRule).isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL)
+        composeTestRule.onNodeWithText("Unspecified apps are blocked (your phone dialer is always allowed).")
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("profile_default_rule_ALLOW_ALL").performClick()
+        composeTestRule.waitForIdle()
+        assertThat(selectedRule).isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL)
+
+        composeTestRule.onNodeWithTag("profile_default_rule_GUARD_ALL").performClick()
+        composeTestRule.waitForIdle()
+        assertThat(selectedRule).isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL)
     }
 
     @Test
