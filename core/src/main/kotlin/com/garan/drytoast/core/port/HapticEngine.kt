@@ -36,6 +36,12 @@ interface HapticEngine {
      * signaling completion of physical or high-intent confirmations (e.g. NFC tap, checklist completion).
      */
     fun relaySnap()
+
+    /**
+     * Subtle mechanical clockwork escapement tick (e.g. Dualit timer tick while holding the lever).
+     * Defaults to [rotaryDetent] for fakes/test doubles that do not override it.
+     */
+    fun clockworkTick() = rotaryDetent()
 }
 
 /**
@@ -46,4 +52,5 @@ object NoOpHapticEngine : HapticEngine {
     override fun targetSnap() {}
     override fun resistanceDetent() {}
     override fun relaySnap() {}
+    override fun clockworkTick() {}
 }

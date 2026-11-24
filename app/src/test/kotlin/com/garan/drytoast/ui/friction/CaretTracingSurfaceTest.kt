@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import com.garan.drytoast.core.port.HapticEngine
 import com.garan.drytoast.ui.motion.DryToastMotion
 import com.garan.drytoast.ui.theme.DryToastTheme
@@ -27,9 +28,10 @@ class CaretTracingSurfaceTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun initialState_showsGoBackButton_andDismissesOnClick() {
+    fun initialState_showsIdleToaster_doesNotAutoComplete_andDismissesOnGoBack() {
         var dismissed = false
         var confirmed = false
+        val haptic = TestHapticEngine()
 
         composeTestRule.mainClock.autoAdvance = false
 
@@ -38,14 +40,23 @@ class CaretTracingSurfaceTest {
                 CaretTracingSurface(
                     onConfirmOpen = { confirmed = true },
                     onDismiss = { dismissed = true },
-                    totalDurationMs = 10_000L,
+                    hapticEngine = haptic,
+                    totalDurationMs = 1_600L,
                 )
             }
         }
 
         composeTestRule.onNodeWithTag("caret_tracing_surface").assertIsDisplayed()
         composeTestRule.onNodeWithTag("caret_tracing_canvas").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("caret_tracing_lever").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Hold lever down to toast").assertIsDisplayed()
         composeTestRule.onNodeWithText("Go back").assertIsDisplayed()
+
+        // Passive waiting without holding the lever must never unlock
+        composeTestRule.mainClock.advanceTimeBy(5_000L)
+        composeTestRule.onNodeWithText("Go back").assertIsDisplayed()
+        assertThat(haptic.relaySnapCount).isEqualTo(0)
+        assertThat(haptic.targetSnapCount).isEqualTo(0)
 
         composeTestRule.onNodeWithText("Go back").performClick()
         assertThat(dismissed).isTrue()
@@ -53,7 +64,7 @@ class CaretTracingSurfaceTest {
     }
 
     @Test
-    fun animationCompletion_triggersHapticCadence_andRevealsOpenButton() {
+    fun holdingLeverToCompletion_triggersLatchTicksPopsAndRelaySnap_thenRevealsOpen() {
         var confirmed = false
         var dismissed = false
         val haptic = TestHapticEngine()
@@ -66,66 +77,88 @@ class CaretTracingSurfaceTest {
                     onConfirmOpen = { confirmed = true },
                     onDismiss = { dismissed = true },
                     hapticEngine = haptic,
-                    totalDurationMs = 1000L, // 100ms per half-pass across 5 passes (200ms per pass)
+                    totalDurationMs = 1_600L, // 200ms per slice across 8 slices
                 )
             }
         }
 
         composeTestRule.waitForIdle()
-        // Latch the animation start time on the first frame
+
+        // Press and hold the carriage lever down
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            down(center)
+        }
+        composeTestRule.waitForIdle()
         composeTestRule.mainClock.advanceTimeByFrame()
+        assertThat(haptic.resistanceDetentCount).isEqualTo(1)
 
-        // Pass 1: Apex at 100ms (playTime = 112ms)
-        composeTestRule.mainClock.advanceTimeBy(112L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(1)
-        assertThat(haptic.targetSnapCount).isEqualTo(0)
-        assertThat(haptic.relaySnapCount).isEqualTo(0)
+        // Advance smoothly in 16ms frames through the full 1,600ms hold
+        repeat(110) {
+            composeTestRule.mainClock.advanceTimeBy(16L)
+        }
 
-        // Pass 1: Complete at 200ms (playTime = 208ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(1)
-        assertThat(haptic.targetSnapCount).isEqualTo(1)
-
-        // Pass 2: Apex at 300ms (playTime = 304ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(2)
-
-        // Pass 2: Complete at 400ms (playTime = 400ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.targetSnapCount).isEqualTo(2)
-
-        // Pass 3: Apex at 500ms (playTime = 512ms)
-        composeTestRule.mainClock.advanceTimeBy(112L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(3)
-
-        // Pass 3: Complete at 600ms (playTime = 608ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.targetSnapCount).isEqualTo(3)
-
-        // Pass 4: Apex at 700ms (playTime = 704ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(4)
-
-        // Pass 4: Complete at 800ms (playTime = 800ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
-        assertThat(haptic.targetSnapCount).isEqualTo(4)
-
-        // Pass 5: Apex at 900ms (playTime = 912ms)
-        composeTestRule.mainClock.advanceTimeBy(112L)
-        assertThat(haptic.rotaryDetentCount).isEqualTo(5)
-        assertThat(haptic.relaySnapCount).isEqualTo(0)
-
-        // Pass 5: Complete at 1000ms (playTime = 1008ms)
-        composeTestRule.mainClock.advanceTimeBy(96L)
+        // Expect: 1 latch, clockwork ticks (> 0), 7 slice pops (slices 1..7), 1 final relay snap (slice 8)
+        assertThat(haptic.clockworkTickCount).isGreaterThan(0)
+        assertThat(haptic.targetSnapCount).isEqualTo(7)
         assertThat(haptic.relaySnapCount).isEqualTo(1)
 
-        // "Open" action button is revealed and active
+        // Release finger after completion — must NOT reset completed state
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            up()
+        }
         composeTestRule.mainClock.advanceTimeBy(DryToastMotion.SHUTTER_OPEN_DURATION_MS.toLong() + 50L)
+
         composeTestRule.onNodeWithText("Open").assertIsDisplayed()
         composeTestRule.onNodeWithText("Open").performClick()
 
         assertThat(confirmed).isTrue()
         assertThat(dismissed).isFalse()
+    }
+
+    @Test
+    fun releasingLeverEarly_resetsTimerAndRequiresFreshHold() {
+        val haptic = TestHapticEngine()
+        var interactionActive = false
+
+        composeTestRule.mainClock.autoAdvance = false
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                CaretTracingSurface(
+                    onConfirmOpen = {},
+                    onDismiss = {},
+                    hapticEngine = haptic,
+                    totalDurationMs = 1_600L,
+                    onInteractionActiveChanged = { interactionActive = it },
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Hold for ~650ms (3 slices popped out of 8)
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            down(center)
+        }
+        assertThat(interactionActive).isTrue()
+        composeTestRule.waitForIdle()
+        repeat(42) {
+            composeTestRule.mainClock.advanceTimeBy(16L)
+        }
+        assertThat(haptic.targetSnapCount).isGreaterThan(0)
+        assertThat(haptic.relaySnapCount).isEqualTo(0)
+
+        // Release lever early -> must spring back, reset to idle, and unlock parent interaction
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            up()
+        }
+        assertThat(interactionActive).isFalse()
+        composeTestRule.mainClock.advanceTimeBy(200L)
+
+        assertThat(haptic.rotaryDetentCount).isEqualTo(1)
+        assertThat(haptic.relaySnapCount).isEqualTo(0)
+        composeTestRule.onNodeWithText("Hold lever down to toast").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Go back").assertIsDisplayed()
     }
 
     @Test
@@ -163,18 +196,24 @@ class CaretTracingSurfaceTest {
                         onConfirmOpen = {},
                         onDismiss = {},
                         hapticEngine = haptic,
-                        totalDurationMs = 600L,
+                        totalDurationMs = 800L,
                     )
                 }
             }
 
-            // Advance a single frame: with UnscaledMotionDurationScale, it must NOT jump to Open
+            composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+                down(center)
+            }
+
+            // Advance a single 32ms step: with UnscaledMotionDurationScale, it must NOT jump to Open
             composeTestRule.mainClock.advanceTimeBy(32L)
             composeTestRule.onNodeWithText("Go back").assertIsDisplayed()
             assertThat(haptic.relaySnapCount).isEqualTo(0)
 
-            // Only after advancing the full duration does it complete
-            composeTestRule.mainClock.advanceTimeBy(700L)
+            // Only after holding for the full duration does it complete
+            repeat(60) {
+                composeTestRule.mainClock.advanceTimeBy(16L)
+            }
             assertThat(haptic.relaySnapCount).isEqualTo(1)
             composeTestRule.onNodeWithText("Open").assertIsDisplayed()
         } finally {
@@ -187,18 +226,26 @@ class CaretTracingSurfaceTest {
         var relaySnapCount = 0
         var resistanceDetentCount = 0
         var targetSnapCount = 0
+        var clockworkTickCount = 0
 
         override fun rotaryDetent() {
             rotaryDetentCount++
         }
+
         override fun relaySnap() {
             relaySnapCount++
         }
+
         override fun resistanceDetent() {
             resistanceDetentCount++
         }
+
         override fun targetSnap() {
             targetSnapCount++
+        }
+
+        override fun clockworkTick() {
+            clockworkTickCount++
         }
     }
 }
