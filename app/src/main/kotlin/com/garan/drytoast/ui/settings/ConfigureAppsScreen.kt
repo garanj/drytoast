@@ -372,6 +372,8 @@ private fun ProfileDefaultRuleHeader(
                 }
             },
             hapticEngine = hapticEngine,
+            height = 48.dp,
+            maxLines = 2,
             optionTestTag = { rule -> "profile_default_rule_${rule.name}" },
             modifier = Modifier.fillMaxWidth(),
         )
