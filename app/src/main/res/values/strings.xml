@@ -321,4 +321,18 @@
     <string name="break_glass_error_too_small">Card memory is too small for Dry Toast\'s NDEF tag.</string>
     <string name="break_glass_error_write_failed">Could not write to card. Hold it steady and try again.</string>
     <string name="break_glass_locked_notice">Settings Lock is active. Unlock Settings to register, replace, or remove the Break-Glass card.</string>
+
+    <!-- Per-profile default rule for unspecified apps -->
+    <string name="profile_default_rule_header">DEFAULT FOR UNSPECIFIED APPS</string>
+    <string name="profile_default_rule_fallthrough">Default</string>
+    <string name="profile_default_rule_allow_all">Allow</string>
+    <string name="profile_default_rule_guard_all">Guard</string>
+    <string name="profile_default_rule_block_all">Block</string>
+    <string name="profile_default_rule_fallthrough_desc">Unspecified apps inherit rules from lower profiles or base settings.</string>
+    <string name="profile_default_rule_allow_all_desc">Unspecified apps are allowed, overriding lower profiles and base settings.</string>
+    <string name="profile_default_rule_guard_all_desc">Unspecified apps require a friction checkpoint before opening.</string>
+    <string name="profile_default_rule_block_all_desc">Unspecified apps are blocked (your phone dialer is always allowed).</string>
+    <string name="profile_default_rule_summary_allow_all">Default: Allow all</string>
+    <string name="profile_default_rule_summary_guard_all">Default: Guard all</string>
+    <string name="profile_default_rule_summary_block_all">Default: Block all</string>
 </resources>

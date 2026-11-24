@@ -229,6 +229,18 @@ class SettingsViewModel(
         }
     }
 
+    fun updateCustomProfileDefaultRule(
+        profileId: String,
+        defaultRule: com.garan.drytoast.core.model.ProfileDefaultRule,
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            val editable = settingsRepository.getSettings().editableSnapshot
+            val existing = editable.customProfiles.firstOrNull { it.id == profileId } ?: return@launch
+            if (existing.defaultRule == defaultRule) return@launch
+            settingsRepository.saveCustomProfile(existing.copy(defaultRule = defaultRule))
+        }
+    }
+
     fun discardPendingChanges() {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.discardPendingChanges()

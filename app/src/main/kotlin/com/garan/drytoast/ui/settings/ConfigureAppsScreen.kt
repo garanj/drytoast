@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +63,7 @@ import com.garan.drytoast.core.model.AppAssignment
 import com.garan.drytoast.core.model.ComponentKey
 import com.garan.drytoast.core.model.FrictionChoice
 import com.garan.drytoast.core.model.InstalledApp
+import com.garan.drytoast.core.model.ProfileDefaultRule
 import com.garan.drytoast.core.port.HapticEngine
 import com.garan.drytoast.core.port.NoOpHapticEngine
 import com.garan.drytoast.ui.motion.DryToastMotion
@@ -90,6 +92,8 @@ fun ConfigureAppsScreen(
     hapticEngine: HapticEngine = NoOpHapticEngine,
     isCustomProfile: Boolean = false,
     customProfileName: String? = null,
+    profileDefaultRule: ProfileDefaultRule = ProfileDefaultRule.FALLTHROUGH,
+    onUpdateProfileDefaultRule: (ProfileDefaultRule) -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
@@ -224,32 +228,49 @@ fun ConfigureAppsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        if (filteredApps.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = when (selectedFilter) {
-                        AppListFilter.BLOCKED -> "NO BLOCKED APPS"
-                        AppListFilter.GUARDED -> "NO GUARDED APPS"
-                        AppListFilter.ALLOW -> "NO ALLOWED APPS"
-                        AppListFilter.DEFAULT -> "NO DEFAULT APPS"
-                        AppListFilter.ALL -> "NO APPS INSTALLED"
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(innerPadding)
+                .testTag("configure_apps_list"),
+            contentPadding = innerPadding,
+        ) {
+            if (isCustomProfile) {
+                item(key = "profile_default_rule_selector") {
+                    ProfileDefaultRuleHeader(
+                        selectedRule = profileDefaultRule,
+                        onSelectRule = { rule ->
+                            if (rule != profileDefaultRule) {
+                                hapticEngine.rotaryDetent()
+                                onUpdateProfileDefaultRule(rule)
+                            }
+                        },
+                    )
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .consumeWindowInsets(innerPadding),
-                contentPadding = innerPadding,
-            ) {
+
+            if (filteredApps.isEmpty()) {
+                item(key = "empty_state") {
+                    Box(
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 64.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = when (selectedFilter) {
+                                AppListFilter.BLOCKED -> "NO BLOCKED APPS"
+                                AppListFilter.GUARDED -> "NO GUARDED APPS"
+                                AppListFilter.ALLOW -> "NO ALLOWED APPS"
+                                AppListFilter.DEFAULT -> "NO DEFAULT APPS"
+                                AppListFilter.ALL -> "NO APPS INSTALLED"
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
                 items(filteredApps, key = { it.component.id }) { app ->
                     val assignment = assignments[app.component]
                     val isExpanded = expandedAppKey == app.component
@@ -313,6 +334,65 @@ fun ConfigureAppsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ProfileDefaultRuleHeader(
+    selectedRule: ProfileDefaultRule,
+    onSelectRule: (ProfileDefaultRule) -> Unit,
+    hapticEngine: HapticEngine = NoOpHapticEngine,
+) {
+    val options = remember { ProfileDefaultRule.entries }
+    val fallthroughLabel = stringResource(R.string.profile_default_rule_fallthrough)
+    val allowAllLabel = stringResource(R.string.profile_default_rule_allow_all)
+    val guardAllLabel = stringResource(R.string.profile_default_rule_guard_all)
+    val blockAllLabel = stringResource(R.string.profile_default_rule_block_all)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.profile_default_rule_header),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        DryToastMultiStateToggle(
+            options = options,
+            selected = selectedRule,
+            onSelect = onSelectRule,
+            label = { rule ->
+                when (rule) {
+                    ProfileDefaultRule.FALLTHROUGH -> fallthroughLabel
+                    ProfileDefaultRule.ALLOW_ALL -> allowAllLabel
+                    ProfileDefaultRule.GUARD_ALL -> guardAllLabel
+                    ProfileDefaultRule.BLOCK_ALL -> blockAllLabel
+                }
+            },
+            hapticEngine = hapticEngine,
+            optionTestTag = { rule -> "profile_default_rule_${rule.name}" },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        val descriptionRes = when (selectedRule) {
+            ProfileDefaultRule.FALLTHROUGH -> R.string.profile_default_rule_fallthrough_desc
+            ProfileDefaultRule.ALLOW_ALL -> R.string.profile_default_rule_allow_all_desc
+            ProfileDefaultRule.GUARD_ALL -> R.string.profile_default_rule_guard_all_desc
+            ProfileDefaultRule.BLOCK_ALL -> R.string.profile_default_rule_block_all_desc
+        }
+        Text(
+            text = stringResource(descriptionRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("profile_default_rule_description"),
+        )
+    }
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        thickness = 1.dp,
+    )
 }
 
 /**

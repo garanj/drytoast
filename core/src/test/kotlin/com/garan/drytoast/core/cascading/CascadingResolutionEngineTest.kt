@@ -1268,4 +1268,224 @@ class CascadingResolutionEngineTest {
         assertThat(ws.blockedComponents).isEmpty()
         assertThat(ws.guardedComponents).isEmpty()
     }
+
+    @Test
+    fun `defaultRule BLOCK_ALL blocks unspecified apps honors explicit Allow and keeps Dialer exempt`() {
+        val base = BaseProfileSettings(
+            appAssignments = mapOf(
+                socialComponent to AppAssignment.Standard,
+            ),
+        )
+        val bedtime = CustomProfile(
+            id = "bedtime",
+            name = "Bedtime",
+            priority = 0,
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(22, 0),
+                    endTime = TimeOfDay(7, 0),
+                ),
+            ),
+            appAssignments = mapOf(
+                utilityComponent to AppAssignment.Standard,
+            ),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+        )
+
+        val ws = engine.resolveWorkingSet(
+            baseProfile = base,
+            customProfiles = listOf(bedtime),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(23, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            additionalComponents = listOf(workComponent, dialerComponent),
+        )
+
+        assertThat(ws.effectiveProfile.defaultAccess).isEqualTo(AppAccessState.Blocked)
+        // Explicit Allow in Bedtime -> Direct
+        assertThat(ws.effectiveProfile.appRules[utilityComponent]).isEqualTo(AppAccessState.Direct)
+        // Dialer safety invariant -> always Direct
+        assertThat(ws.effectiveProfile.appRules[dialerComponent]).isEqualTo(AppAccessState.Direct)
+        // Unspecified apps (whether in Base or additionalComponents) -> Blocked
+        assertThat(ws.blockedComponents).containsExactly(socialComponent, workComponent)
+        // Newly installed app not even in appRules -> still blocked by IntentGatekeeper via defaultAccess!
+        val newlyInstalled = ComponentKey("com.example.newapp", "Main", 0L)
+        val gatekeeper = com.garan.drytoast.core.gatekeeper.IntentGatekeeper()
+        assertThat(gatekeeper.resolveAccess(newlyInstalled, ws.effectiveProfile, dialerComponent.packageName))
+            .isEqualTo(AppAccessState.Blocked)
+        assertThat(gatekeeper.resolveAccess(dialerComponent, ws.effectiveProfile, dialerComponent.packageName))
+            .isEqualTo(AppAccessState.Direct)
+        assertThat(gatekeeper.resolveAccess(utilityComponent, ws.effectiveProfile, dialerComponent.packageName))
+            .isEqualTo(AppAccessState.Direct)
+    }
+
+    @Test
+    fun `defaultRule ALLOW_ALL overrides lower profiles and base while honoring own explicit Block`() {
+        val base = BaseProfileSettings(
+            appAssignments = mapOf(
+                socialComponent to AppAssignment.Blocked,
+                workComponent to AppAssignment.Guarded(),
+            ),
+        )
+        val vacation = CustomProfile(
+            id = "vacation",
+            name = "Vacation",
+            priority = 0,
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(8, 0),
+                    endTime = TimeOfDay(20, 0),
+                ),
+            ),
+            appAssignments = mapOf(
+                utilityComponent to AppAssignment.Blocked,
+            ),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL,
+        )
+        val strictLower = CustomProfile(
+            id = "strict-lower",
+            name = "Strict Lower",
+            priority = 1,
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(8, 0),
+                    endTime = TimeOfDay(20, 0),
+                ),
+            ),
+            appAssignments = mapOf(
+                socialComponent to AppAssignment.Blocked,
+            ),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+        )
+
+        val ws = engine.resolveWorkingSet(
+            baseProfile = base,
+            customProfiles = listOf(vacation, strictLower),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(12, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+        )
+
+        assertThat(ws.effectiveProfile.defaultAccess).isEqualTo(AppAccessState.Direct)
+        assertThat(ws.blockedComponents).containsExactly(utilityComponent)
+        assertThat(ws.guardedComponents).isEmpty()
+        assertThat(ws.effectiveProfile.appRules[socialComponent]).isEqualTo(AppAccessState.Direct)
+        assertThat(ws.effectiveProfile.appRules[workComponent]).isEqualTo(AppAccessState.Direct)
+    }
+
+    @Test
+    fun `defaultRule GUARD_ALL guards unspecified apps with profile friction override and keeps Dialer exempt`() {
+        val base = BaseProfileSettings(defaultFriction = FrictionChoice.TYPED_INTENTION)
+        val mindful = CustomProfile(
+            id = "mindful",
+            name = "Mindful",
+            priority = 0,
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(8, 0),
+                    endTime = TimeOfDay(20, 0),
+                ),
+            ),
+            appAssignments = mapOf(
+                utilityComponent to AppAssignment.Standard,
+            ),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL,
+            frictionOverride = FrictionChoice.CARET_TRACING,
+        )
+
+        val ws = engine.resolveWorkingSet(
+            baseProfile = base,
+            customProfiles = listOf(mindful),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(12, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            additionalComponents = listOf(socialComponent, dialerComponent),
+        )
+
+        assertThat(ws.effectiveProfile.defaultAccess)
+            .isEqualTo(AppAccessState.Guarded(FrictionPolicy.TimedDelay(FrictionChoice.CARET_DEFAULT_SECONDS)))
+        assertThat(ws.guardedComponents).containsExactly(socialComponent)
+        assertThat(ws.effectiveProfile.appRules[utilityComponent]).isEqualTo(AppAccessState.Direct)
+        assertThat(ws.effectiveProfile.appRules[dialerComponent]).isEqualTo(AppAccessState.Direct)
+    }
+
+    @Test
+    fun `multi-profile cascading precedence with FALLTHROUGH above BLOCK_ALL and BLOCK_ALL above ALLOW_ALL`() {
+        val schedule = ProfileTrigger.Schedule(
+            ScheduleTrigger(
+                days = setOf(DayOfWeek.MONDAY),
+                startTime = TimeOfDay(8, 0),
+                endTime = TimeOfDay(20, 0),
+            ),
+        )
+        // Case A: Priority 0 = FALLTHROUGH (allows social), Priority 1 = BLOCK_ALL (allows utility)
+        val p0Fallthrough = CustomProfile(
+            id = "p0",
+            name = "P0",
+            priority = 0,
+            enabled = true,
+            trigger = schedule,
+            appAssignments = mapOf(socialComponent to AppAssignment.Standard),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.FALLTHROUGH,
+        )
+        val p1BlockAll = CustomProfile(
+            id = "p1",
+            name = "P1",
+            priority = 1,
+            enabled = true,
+            trigger = schedule,
+            appAssignments = mapOf(utilityComponent to AppAssignment.Standard),
+            defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+        )
+
+        val wsA = engine.resolveWorkingSet(
+            baseProfile = BaseProfileSettings(),
+            customProfiles = listOf(p0Fallthrough, p1BlockAll),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(12, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            additionalComponents = listOf(workComponent),
+        )
+        assertThat(wsA.effectiveProfile.defaultAccess).isEqualTo(AppAccessState.Blocked)
+        assertThat(wsA.effectiveProfile.appRules[socialComponent]).isEqualTo(AppAccessState.Direct)
+        assertThat(wsA.effectiveProfile.appRules[utilityComponent]).isEqualTo(AppAccessState.Direct)
+        assertThat(wsA.blockedComponents).containsExactly(workComponent)
+
+        // Case B: Priority 0 = BLOCK_ALL (allows social), Priority 1 = ALLOW_ALL (allows utility)
+        // Priority 0's BLOCK_ALL stops cascading, so utility is BLOCKED (Priority 1 cannot override Priority 0)
+        val p0BlockAll = p0Fallthrough.copy(defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL)
+        val p1AllowAll = p1BlockAll.copy(defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL)
+        val wsB = engine.resolveWorkingSet(
+            baseProfile = BaseProfileSettings(),
+            customProfiles = listOf(p0BlockAll, p1AllowAll),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(12, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            additionalComponents = listOf(workComponent),
+        )
+        assertThat(wsB.effectiveProfile.defaultAccess).isEqualTo(AppAccessState.Blocked)
+        assertThat(wsB.effectiveProfile.appRules[socialComponent]).isEqualTo(AppAccessState.Direct)
+        assertThat(wsB.blockedComponents).containsExactly(utilityComponent, workComponent)
+
+        // Case C: Break-Glass active overrides even Priority 0 BLOCK_ALL
+        val wsBreakGlass = engine.resolveWorkingSet(
+            baseProfile = BaseProfileSettings(),
+            customProfiles = listOf(p0BlockAll),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(12, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            additionalComponents = listOf(workComponent),
+            isBreakGlassActive = true,
+        )
+        assertThat(wsBreakGlass.effectiveProfile.defaultAccess).isEqualTo(AppAccessState.Direct)
+        assertThat(wsBreakGlass.blockedComponents).isEmpty()
+    }
 }

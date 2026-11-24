@@ -1442,6 +1442,85 @@ class SearchViewModelTest {
             .isInstanceOf(AppAccessState.Guarded::class.java)
     }
 
+    @Test
+    fun profileDefaultRule_blockAll_hidesUnspecifiedAppsInSearchAndReconcilesDpcWhileAllowingExplicitAndDialer() =
+        runTest(testDispatcher) {
+            val reconciledBlocked = mutableListOf<Set<ComponentKey>>()
+            val recordingController = object : com.garan.drytoast.core.port.AppAccessController {
+                override val isDeviceOwnerFlow = kotlinx.coroutines.flow.MutableStateFlow(true)
+                override fun isDeviceOwner(): Boolean = true
+                override suspend fun reconcileBlockedPackages(
+                    blockedComponents: Set<ComponentKey>,
+                    defaultDialerPackage: String,
+                    guardedComponents: Set<ComponentKey>,
+                ): Set<String> {
+                    reconciledBlocked.add(blockedComponents)
+                    return blockedComponents.map { it.packageName }.toSet()
+                }
+            }
+
+            val strictProfile = com.garan.drytoast.core.model.CustomProfile(
+                id = "bedtime",
+                name = "Bedtime",
+                priority = 0,
+                enabled = true,
+                trigger = com.garan.drytoast.core.model.ProfileTrigger.Schedule(
+                    com.garan.drytoast.core.model.ScheduleTrigger(
+                        days = com.garan.drytoast.core.model.DayOfWeek.entries.toSet(),
+                        startTime = com.garan.drytoast.core.model.TimeOfDay(0, 0),
+                        endTime = com.garan.drytoast.core.model.TimeOfDay(23, 59),
+                    ),
+                ),
+                appAssignments = mapOf(
+                    calculatorComponent to com.garan.drytoast.core.model.AppAssignment.Standard,
+                ),
+                defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+            )
+
+            val fakeRepo = com.garan.drytoast.ui.settings.FakeSettingsRepository(
+                com.garan.drytoast.core.model.DryToastSettings(
+                    customProfiles = listOf(strictProfile),
+                ),
+            )
+
+            val vm = SearchViewModel(
+                packageIndexSource = fakePackageIndexSource,
+                defaultDialerPackage = dialerComponent.packageName,
+                settingsRepository = fakeRepo,
+                appAccessController = recordingController,
+                ioDispatcher = testDispatcher,
+            )
+            vm.reconcileForTesting()
+            advanceUntilIdle()
+
+            // Unspecified installed apps (Camera, Social Feed, Arcade Games) MUST be passed to DPC blockedComponents,
+            // while Calculator (explicit Allow) and Phone (Dialer invariant) MUST NOT be blocked!
+            assertThat(reconciledBlocked.last()).containsExactly(
+                cameraComponent,
+                socialComponent,
+                blockedComponent,
+            )
+
+            // Search for "Cam" -> hidden (blocked by BLOCK_ALL)
+            vm.onQueryChanged("Cam")
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.results).isEmpty()
+
+            // Search for "Calc" -> visible & Direct (explicitly Allowed)
+            vm.onQueryChanged("Calc")
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.results).hasSize(1)
+            assertThat((vm.uiState.value.results.first().item as SearchItem.App).accessState)
+                .isEqualTo(AppAccessState.Direct)
+
+            // Search for "Phone" -> visible & Direct (Dialer invariant)
+            vm.onQueryChanged("Phone")
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.results).hasSize(1)
+            assertThat((vm.uiState.value.results.first().item as SearchItem.App).accessState)
+                .isEqualTo(AppAccessState.Direct)
+        }
+
     private class FakePackageIndexSource(initialApps: List<InstalledApp> = emptyList()) : PackageIndexSource {
         private val apps = initialApps.toMutableList()
         private val changesFlow = MutableSharedFlow<PackageChangeEvent>()

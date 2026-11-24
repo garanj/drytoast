@@ -12,6 +12,7 @@ import com.garan.drytoast.core.model.NfcLatchState
 import com.garan.drytoast.core.model.NfcTagEntry
 import com.garan.drytoast.core.model.NfcTriggerMode
 import com.garan.drytoast.core.model.Profile
+import com.garan.drytoast.core.model.ProfileDefaultRule
 import com.garan.drytoast.core.model.ProfileTrigger
 import com.garan.drytoast.core.model.SavedTrigger
 import com.garan.drytoast.core.model.TimeOfDay
@@ -408,27 +409,13 @@ class CascadingResolutionEngine {
             nowEpochMillis = nowEpochMillis,
         )
 
-        for (profile in activeProfiles) {
-            val assignment = profile.appAssignments[component]
-                ?: profile.appAssignments.entries.firstOrNull { it.key.packageName == component.packageName }?.value
-
-            if (assignment != null) {
-                return when (assignment) {
-                    is AppAssignment.Standard -> AppAccessState.Direct
-                    is AppAssignment.Blocked -> AppAccessState.Blocked
-                    is AppAssignment.Guarded -> {
-                        // Friction precedence: App override -> Profile override -> Base default
-                        val frictionChoice = assignment.frictionOverride
-                            ?: profile.frictionOverride
-                            ?: baseProfile.defaultFriction
-                        AppAccessState.Guarded(frictionChoice.resolvePolicy(random))
-                    }
-                }
-            }
-        }
-
-        // Cascade down to Base Profile
-        return baseProfile.resolveAccess(component, isDefaultDialer = false, random = random)
+        return resolveWithActiveProfiles(
+            component = component,
+            baseProfile = baseProfile,
+            activeProfiles = activeProfiles,
+            isDefaultDialer = false,
+            random = random,
+        )
     }
 
     /**
@@ -525,10 +512,15 @@ class CascadingResolutionEngine {
         }
 
         val topProfile = activeProfiles.firstOrNull()
+        val effectiveDefaultAccess = resolveDefaultAccess(
+            activeProfiles = activeProfiles,
+            baseProfile = baseProfile,
+            random = random,
+        )
         val effectiveProfile = Profile(
             id = topProfile?.id ?: "base",
             name = topProfile?.name ?: "Base",
-            defaultAccess = AppAccessState.Direct,
+            defaultAccess = effectiveDefaultAccess,
             appRules = appRules,
         )
 
@@ -538,6 +530,25 @@ class CascadingResolutionEngine {
             activeTriggerIds = activeTriggerIds,
             activeNfcLatches = activeNfcLatches,
         )
+    }
+
+    private fun resolveDefaultAccess(
+        activeProfiles: List<CustomProfile>,
+        baseProfile: BaseProfileSettings,
+        random: Random,
+    ): AppAccessState {
+        for (profile in activeProfiles) {
+            when (profile.defaultRule) {
+                ProfileDefaultRule.FALLTHROUGH -> Unit
+                ProfileDefaultRule.ALLOW_ALL -> return AppAccessState.Direct
+                ProfileDefaultRule.BLOCK_ALL -> return AppAccessState.Blocked
+                ProfileDefaultRule.GUARD_ALL -> {
+                    val frictionChoice = profile.frictionOverride ?: baseProfile.defaultFriction
+                    return AppAccessState.Guarded(frictionChoice.resolvePolicy(random))
+                }
+            }
+        }
+        return AppAccessState.Direct
     }
 
     private fun resolveWithActiveProfiles(
@@ -565,6 +576,16 @@ class CascadingResolutionEngine {
                             ?: baseProfile.defaultFriction
                         AppAccessState.Guarded(frictionChoice.resolvePolicy(random))
                     }
+                }
+            }
+
+            when (profile.defaultRule) {
+                ProfileDefaultRule.FALLTHROUGH -> Unit
+                ProfileDefaultRule.ALLOW_ALL -> return AppAccessState.Direct
+                ProfileDefaultRule.BLOCK_ALL -> return AppAccessState.Blocked
+                ProfileDefaultRule.GUARD_ALL -> {
+                    val frictionChoice = profile.frictionOverride ?: baseProfile.defaultFriction
+                    return AppAccessState.Guarded(frictionChoice.resolvePolicy(random))
                 }
             }
         }
