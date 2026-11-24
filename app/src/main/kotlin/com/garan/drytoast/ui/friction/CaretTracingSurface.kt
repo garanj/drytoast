@@ -86,8 +86,6 @@ import com.garan.drytoast.ui.theme.ToasterBreadPoppedCrust
 import com.garan.drytoast.ui.theme.ToasterBreadPoppedCrustFill
 import com.garan.drytoast.ui.theme.ToasterBreadPoppedOutline
 import com.garan.drytoast.ui.theme.ToasterFloorShadow
-import com.garan.drytoast.ui.theme.ToasterLeverHaloFill
-import com.garan.drytoast.ui.theme.ToasterLeverHaloStroke
 import com.garan.drytoast.ui.theme.ToasterNameplateBorder
 import com.garan.drytoast.ui.theme.ToasterNameplateRule
 import com.garan.drytoast.ui.theme.ToasterSlotBorder
@@ -325,9 +323,7 @@ private class CachedToasterScene(width: Float, height: Float) {
     val leverTrackStrokeWidth = 3.4f * scale
     val leverArmStrokeWidth = 3.6f * scale
     val leverKnobRadius = 4.0f * scale
-    val leverHoldHaloRadius = 13.0f * scale
     val leverIdleRingRadius = 12.0f * scale
-    val leverRingStroke = Stroke(width = 1.2f * scale)
     val leverIdleRingStroke = Stroke(
         width = 1.2f * scale,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f * scale, 3f * scale), 0f),
@@ -616,19 +612,7 @@ private class CachedToasterScene(width: Float, height: Float) {
             val knobX = isoX(TOASTER_LENGTH + LEVER_KNOB_OFFSET, LEVER_Y_WORLD)
             val knobY = isoY(TOASTER_LENGTH + LEVER_KNOB_OFFSET, LEVER_Y_WORLD, leverZ)
 
-            if (isHolding) {
-                drawCircle(
-                    color = ToasterLeverHaloFill,
-                    radius = leverHoldHaloRadius,
-                    center = Offset(knobX, knobY),
-                )
-                drawCircle(
-                    color = ToasterLeverHaloStroke,
-                    radius = leverHoldHaloRadius,
-                    center = Offset(knobX, knobY),
-                    style = leverRingStroke,
-                )
-            } else if (poppedCount == 0) {
+            if (!isHolding && poppedCount == 0) {
                 drawCircle(
                     color = ToasterBreadIdleOutline,
                     radius = leverIdleRingRadius,

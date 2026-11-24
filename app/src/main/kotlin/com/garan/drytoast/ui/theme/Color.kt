@@ -44,8 +44,6 @@ val ToasterBreadPoppedCrustFill = Color(0xFF1A1A1A)
 val ToasterBreadNewestCrust = Color(0xFFC4C4C4)
 val ToasterBreadNewestCrustFill = Color(0xFF262626)
 val ToasterBreadNewestFace = Color(0xFF060606)
-val ToasterLeverHaloFill = Color(0x1FFFFFFF)
-val ToasterLeverHaloStroke = Color(0x73FFFFFF)
 
 // Profile Accent Palette (blended at low alpha over surface containers for dark/light adaptability)
 val ProfileAmber = Color(0xFFD97706)
