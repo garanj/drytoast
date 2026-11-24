@@ -260,4 +260,10 @@ class FakeSettingsRepository(initialSettings: DryToastSettings = DryToastSetting
             )
         }
     }
+
+    override suspend fun updateBreakGlassUntil(untilEpochMillis: Long?) {
+        _settings.update {
+            it.copy(breakGlassUntilEpochMillis = untilEpochMillis?.takeIf { ts -> ts > 0L })
+        }
+    }
 }

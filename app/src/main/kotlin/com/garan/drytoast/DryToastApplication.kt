@@ -156,6 +156,10 @@ class DryToastAppContainer(context: Context) {
         }
         val now = activeClockSource.now()
         val nowMillis = activeNowEpochMillisProvider()
+        val breakGlassActive = settings.isBreakGlassActive(nowMillis)
+        if (!breakGlassActive && settings.breakGlassUntilEpochMillis != null) {
+            settingsRepository.updateBreakGlassUntil(null)
+        }
         val currentLocation = locationSource.currentLocation.value
         val dialerPkg = dialerPackageResolver()
         val workingSet = dpcCascadingEngine.resolveWorkingSet(
@@ -169,13 +173,18 @@ class DryToastAppContainer(context: Context) {
             savedTriggers = settings.savedTriggers,
             nfcLatchStates = settings.nfcLatches,
             nowEpochMillis = nowMillis,
+            isBreakGlassActive = breakGlassActive,
         )
-        if (workingSet.activeNfcLatches != settings.nfcLatches) {
+        val latchesChanged = workingSet.activeNfcLatches != settings.nfcLatches
+        if (latchesChanged) {
             settingsRepository.updateNfcLatches(workingSet.activeNfcLatches)
+        }
+        if (latchesChanged || breakGlassActive || settings.breakGlassUntilEpochMillis != null) {
             scheduleAlarmScheduler.syncNextScheduleAlarm(
                 profiles = settings.customProfiles,
                 savedTriggers = settings.savedTriggers,
                 nfcLatches = workingSet.activeNfcLatches,
+                extraExpiryEpochMillis = if (breakGlassActive) settings.breakGlassUntilEpochMillis else null,
             )
         }
         if (appAccessController.isDeviceOwner()) {
@@ -195,6 +204,25 @@ class DryToastAppContainer(context: Context) {
     fun processBackgroundNfcTagScan(rawUid: String) {
         backgroundScope.launch {
             val settings = settingsRepository.getSettings()
+            val nowMillis = activeNowEpochMillisProvider()
+            if (dpcCascadingEngine.matchesBreakGlassTag(rawUid, settings.general.breakGlassTagUid)) {
+                val nextUntil = if (settings.isBreakGlassActive(nowMillis)) {
+                    null
+                } else {
+                    nowMillis + settings.general.breakGlassDurationMinutes.coerceAtLeast(1) * 60_000L
+                }
+                settingsRepository.updateBreakGlassUntil(nextUntil)
+                hapticEngine.relaySnap()
+                scheduleAlarmScheduler.syncNextScheduleAlarm(
+                    profiles = settings.customProfiles,
+                    savedTriggers = settings.savedTriggers,
+                    nfcLatches = settings.nfcLatches,
+                    extraExpiryEpochMillis = nextUntil,
+                )
+                ScheduleTransitionNotifier.notifyTransition()
+                reconcileDpcFromSettings()
+                return@launch
+            }
             val triggersById = settings.savedTriggersById
             val hasEnabledGeoProfiles = settings.customProfiles.any { profile ->
                 profile.enabled && profile.resolvedTriggers(triggersById).any { it is ProfileTrigger.Geo }
@@ -203,7 +231,6 @@ class DryToastAppContainer(context: Context) {
                 locationSource.refreshLocation()
             }
             val now = activeClockSource.now()
-            val nowMillis = activeNowEpochMillisProvider()
             val currentLocation = locationSource.currentLocation.value
             val tapResult = dpcCascadingEngine.processNfcTagTap(
                 rawTagUid = rawUid,
@@ -238,6 +265,7 @@ class DryToastAppContainer(context: Context) {
                 profiles = settings.customProfiles,
                 savedTriggers = settings.savedTriggers,
                 nfcLatches = tapResult.updatedLatches,
+                extraExpiryEpochMillis = settings.breakGlassUntilEpochMillis?.takeIf { it > nowMillis },
             )
             ScheduleTransitionNotifier.notifyTransition()
             reconcileDpcFromSettings()

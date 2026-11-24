@@ -290,4 +290,35 @@
         <item>Pausing before I begin</item>
         <item>Keeping it plain and simple</item>
     </string-array>
+
+    <!-- Break-Glass NFC Override -->
+    <string name="status_break_glass_format">BREAK-GLASS · %1$dM LEFT</string>
+    <string name="setting_break_glass">Break-Glass Card</string>
+    <string name="setting_break_glass_unconfigured">Not configured</string>
+    <string name="setting_break_glass_configured_summary">Card registered · %1$d min override</string>
+    <string name="setting_break_glass_active_summary">Active · %1$d min remaining</string>
+    <string name="break_glass_title">Break-Glass Card</string>
+    <string name="break_glass_description">Register a single physical NFC card (keep it in your wallet or with someone you trust). Tapping it temporarily allows all apps and new app installs, then automatically relocks. Settings Lock and Hardened Mode remain enforced.</string>
+    <string name="break_glass_active_banner_title">BREAK-GLASS ACTIVE</string>
+    <string name="break_glass_active_banner_body">All apps and new app installs are temporarily allowed (%1$d min remaining). Tap your Break-Glass card again or relock below to end early.</string>
+    <string name="break_glass_action_relock_now">Relock now</string>
+    <string name="break_glass_section_card">REGISTERED CARD</string>
+    <string name="break_glass_no_card_headline">No Break-Glass card registered</string>
+    <string name="break_glass_no_card_supporting">One physical NFC card may be registered.</string>
+    <string name="break_glass_card_registered_headline">Break-Glass NFC card</string>
+    <string name="break_glass_card_uid_format">UID: %1$s</string>
+    <string name="break_glass_action_register">Register NFC card</string>
+    <string name="break_glass_action_replace">Replace card</string>
+    <string name="break_glass_action_remove">Remove</string>
+    <string name="break_glass_action_cancel_scan">Cancel scan</string>
+    <string name="break_glass_scanning_prompt">Hold an NFC card against the back of your phone…</string>
+    <string name="break_glass_section_duration">OVERRIDE DURATION</string>
+    <string name="break_glass_duration_supporting">Automatically relocks after this window expires.</string>
+    <string name="break_glass_duration_option_format">%1$d min</string>
+    <string name="break_glass_error_collision">This card is already assigned to a Profile NFC trigger. Use a separate card for Break-Glass.</string>
+    <string name="break_glass_error_unsupported">Card does not support NDEF. Use a writable NFC sticker or card.</string>
+    <string name="break_glass_error_read_only">Card is read-only and cannot be provisioned for Dry Toast.</string>
+    <string name="break_glass_error_too_small">Card memory is too small for Dry Toast\'s NDEF tag.</string>
+    <string name="break_glass_error_write_failed">Could not write to card. Hold it steady and try again.</string>
+    <string name="break_glass_locked_notice">Settings Lock is active. Unlock Settings to register, replace, or remove the Break-Glass card.</string>
 </resources>

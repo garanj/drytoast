@@ -63,13 +63,19 @@ class AndroidScheduleAlarmScheduler(
     }
 
     override fun syncNextScheduleAlarm(profiles: List<CustomProfile>) {
-        syncNextScheduleAlarm(profiles = profiles, savedTriggers = emptyList(), nfcLatches = emptyMap())
+        syncNextScheduleAlarm(
+            profiles = profiles,
+            savedTriggers = emptyList(),
+            nfcLatches = emptyMap(),
+            extraExpiryEpochMillis = null,
+        )
     }
 
     override fun syncNextScheduleAlarm(
         profiles: List<CustomProfile>,
         savedTriggers: List<SavedTrigger>,
         nfcLatches: Map<String, NfcLatchState>,
+        extraExpiryEpochMillis: Long?,
     ) {
         val manager = alarmManager ?: return
         val pendingIntent = createAlarmPendingIntent(context)
@@ -90,8 +96,13 @@ class AndroidScheduleAlarmScheduler(
             .mapNotNull { it.expiresAtEpochMillis }
             .filter { it > exactNowMillis }
             .minOrNull()
+        val activeExtraExpiryMillis = extraExpiryEpochMillis?.takeIf { it > exactNowMillis }
 
-        val triggerAtMillis = listOfNotNull(scheduleTriggerAtMillis, earliestNfcExpiryMillis).minOrNull()
+        val triggerAtMillis = listOfNotNull(
+            scheduleTriggerAtMillis,
+            earliestNfcExpiryMillis,
+            activeExtraExpiryMillis,
+        ).minOrNull()
         if (triggerAtMillis == null) {
             manager.cancel(pendingIntent)
             return

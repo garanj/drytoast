@@ -71,6 +71,7 @@ object SettingsTestTags {
     const val TOGGLE_SHOW_DIALER_ICON = "settings_toggle_show_dialer_icon"
     const val TOGGLE_REQUIRE_REBOOT = "settings_toggle_require_reboot"
     const val NAV_HARDENED_MODE = "settings_nav_hardened_mode"
+    const val NAV_BREAK_GLASS = "settings_nav_break_glass"
     const val GUARDED_GRACE_PERIOD_ROW = "settings_guarded_grace_period_row"
     const val GUARDED_GRACE_PERIOD_SHEET = "settings_guarded_grace_period_sheet"
     const val CONFIRM_REQUIRE_REBOOT_DIALOG = "settings_confirm_require_reboot_dialog"
@@ -102,6 +103,7 @@ fun DryToastSettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToProfiles: () -> Unit = {},
     onNavigateToHardenedMode: () -> Unit = {},
+    onNavigateToBreakGlass: () -> Unit = {},
     onUpdateShowDialerIcon: (Boolean) -> Unit = {},
     onUpdateRequireReboot: (Boolean) -> Unit = {},
     onUpdateGuardedSessionGraceMinutes: (Int) -> Unit = {},
@@ -449,6 +451,49 @@ fun DryToastSettingsScreen(
                         .fillMaxWidth()
                         .testTag(SettingsTestTags.NAV_HARDENED_MODE)
                         .clickable(onClick = onNavigateToHardenedMode),
+                )
+            }
+
+            item(key = "nav_break_glass") {
+                val nowMillis = System.currentTimeMillis()
+                val breakGlassRemainingMin = uiState.breakGlassUntilEpochMillis?.let { until ->
+                    val diff = until - nowMillis
+                    if (diff > 0L) ((diff + 59_999L) / 60_000L).toInt().coerceAtLeast(1) else 0
+                } ?: 0
+                val summary = when {
+                    breakGlassRemainingMin > 0 ->
+                        stringResource(R.string.setting_break_glass_active_summary, breakGlassRemainingMin)
+                    uiState.general.normalizedBreakGlassTagUid() != null ->
+                        stringResource(
+                            R.string.setting_break_glass_configured_summary,
+                            uiState.general.breakGlassDurationMinutes,
+                        )
+                    else -> stringResource(R.string.setting_break_glass_unconfigured)
+                }
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_break_glass),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = DryToastIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.NAV_BREAK_GLASS)
+                        .clickable(onClick = onNavigateToBreakGlass),
                 )
             }
 

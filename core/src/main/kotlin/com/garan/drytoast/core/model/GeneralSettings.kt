@@ -21,6 +21,10 @@ package com.garan.drytoast.core.model
  *   (`"This device belongs to <name>"`) in Hardened Mode. Defaults to `"Dry Toast"`.
  * @property hardenedLockScreenInfo Optional additional line displayed on the Android lock screen
  *   via `DevicePolicyManager.setDeviceOwnerLockScreenInfo` in Hardened Mode. Blank clears the line.
+ * @property breakGlassTagUid Canonical uppercase colon-separated NFC hardware UID for the single
+ *   physical Break-Glass override card, or `null` if not configured.
+ * @property breakGlassDurationMinutes Auto-relock duration in minutes (`15`, `30`, or `60`) for a
+ *   Break-Glass NFC override session. Defaults to `30`.
  */
 data class GeneralSettings(
     val showUnlocks: Boolean = true,
@@ -34,7 +38,15 @@ data class GeneralSettings(
     val blockNewAppInstalls: Boolean = false,
     val hardenedOwnerName: String = DEFAULT_HARDENED_OWNER_NAME,
     val hardenedLockScreenInfo: String = "",
+    val breakGlassTagUid: String? = null,
+    val breakGlassDurationMinutes: Int = DEFAULT_BREAK_GLASS_DURATION_MINUTES,
 ) {
+    /**
+     * Returns the normalized Break-Glass NFC UID, or `null` if unset/blank.
+     */
+    fun normalizedBreakGlassTagUid(): String? =
+        breakGlassTagUid?.let(NfcTagEntry::normalizeUid)?.takeIf { it.isNotBlank() }
+
     /**
      * Returns the trimmed owner name for Android's Device Owner lock screen disclosure,
      * falling back to [DEFAULT_HARDENED_OWNER_NAME] if blank.
@@ -53,11 +65,15 @@ data class GeneralSettings(
         guardedSessionGraceMinutes == other.guardedSessionGraceMinutes &&
         blockNewAppInstalls == other.blockNewAppInstalls &&
         effectiveHardenedOwnerName() == other.effectiveHardenedOwnerName() &&
-        hardenedLockScreenInfo.trim() == other.hardenedLockScreenInfo.trim()
+        hardenedLockScreenInfo.trim() == other.hardenedLockScreenInfo.trim() &&
+        normalizedBreakGlassTagUid() == other.normalizedBreakGlassTagUid() &&
+        breakGlassDurationMinutes == other.breakGlassDurationMinutes
 
     companion object {
         const val DEFAULT_GUARDED_SESSION_GRACE_MINUTES = 5
         const val DEFAULT_HARDENED_OWNER_NAME = "Dry Toast"
+        const val DEFAULT_BREAK_GLASS_DURATION_MINUTES = 30
         val GUARDED_SESSION_GRACE_OPTIONS_MINUTES = listOf(0, 1, 5, 15, 30)
+        val BREAK_GLASS_DURATION_OPTIONS_MINUTES = listOf(15, 30, 60)
     }
 }

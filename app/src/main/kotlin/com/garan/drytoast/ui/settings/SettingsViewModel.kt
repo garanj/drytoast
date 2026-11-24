@@ -40,6 +40,7 @@ data class SettingsUiState(
     val isSettingsLocked: Boolean = false,
     val showRoleRequiredWarning: Boolean = false,
     val isHardenedModeActive: Boolean = false,
+    val breakGlassUntilEpochMillis: Long? = null,
 )
 
 class SettingsViewModel(
@@ -82,6 +83,7 @@ class SettingsViewModel(
                         hasPendingRebootChanges = settings.hasPendingRebootChanges,
                         isRequireRebootActiveOnLive = settings.general.requireRebootForSettingsChange,
                         isSettingsLocked = settings.isSettingsLocked,
+                        breakGlassUntilEpochMillis = settings.breakGlassUntilEpochMillis,
                     )
                 }
             }
@@ -200,6 +202,30 @@ class SettingsViewModel(
                 ),
             )
             appAccessController.enforceHardenedSelfProtection()
+        }
+    }
+
+    fun updateBreakGlassTagUid(uid: String?) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            val normalized = uid?.let(com.garan.drytoast.core.model.NfcTagEntry::normalizeUid)?.takeIf {
+                it.isNotBlank()
+            }
+            settingsRepository.updateGeneralSettings(current.copy(breakGlassTagUid = normalized))
+        }
+    }
+
+    fun updateBreakGlassDurationMinutes(minutes: Int) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = settingsRepository.getSettings().editableSnapshot.general
+            settingsRepository.updateGeneralSettings(current.copy(breakGlassDurationMinutes = minutes))
+        }
+    }
+
+    fun endBreakGlassEarly() {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.updateBreakGlassUntil(null)
+            com.garan.drytoast.schedule.ScheduleTransitionNotifier.notifyTransition()
         }
     }
 

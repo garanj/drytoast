@@ -29,7 +29,26 @@ data class DryToastSettings(
     val stagedShadow: StagedSettingsSnapshot? = null,
     val isSettingsLocked: Boolean = false,
     val dpcSuspendedPackages: Set<String> = emptySet(),
+    val breakGlassUntilEpochMillis: Long? = null,
 ) {
+    /**
+     * Returns `true` when an NFC Break-Glass override session is currently active at [nowEpochMillis].
+     */
+    fun isBreakGlassActive(nowEpochMillis: Long): Boolean {
+        val until = breakGlassUntilEpochMillis ?: return false
+        return nowEpochMillis < until
+    }
+
+    /**
+     * Returns the remaining whole minutes (rounded up, minimum `1`) while Break-Glass is active,
+     * or `0` when inactive/expired.
+     */
+    fun breakGlassRemainingMinutes(nowEpochMillis: Long): Int {
+        val until = breakGlassUntilEpochMillis ?: return 0
+        val remainingMillis = until - nowEpochMillis
+        if (remainingMillis <= 0L) return 0
+        return ((remainingMillis + 59_999L) / 60_000L).toInt().coerceAtLeast(1)
+    }
     val savedTriggersById: Map<String, SavedTrigger> =
         savedTriggers.associateBy { it.id }
 

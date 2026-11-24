@@ -1221,4 +1221,51 @@ class CascadingResolutionEngineTest {
         assertThat(ws.blockedComponents).containsExactly(socialComponent)
         assertThat(ws.guardedComponents).containsExactly(workComponent)
     }
+
+    @Test
+    fun `matchesBreakGlassTag normalizes hex UIDs and rejects null or blank`() {
+        assertThat(engine.matchesBreakGlassTag("04a1b2c3", "04:A1:B2:C3")).isTrue()
+        assertThat(engine.matchesBreakGlassTag("04:A1:B2:C3", "04:a1:b2:c3")).isTrue()
+        assertThat(engine.matchesBreakGlassTag("04:A1:B2:C4", "04:A1:B2:C3")).isFalse()
+        assertThat(engine.matchesBreakGlassTag("04:A1:B2:C3", null)).isFalse()
+        assertThat(engine.matchesBreakGlassTag("", "04:A1:B2:C3")).isFalse()
+    }
+
+    @Test
+    fun `resolveWorkingSet with isBreakGlassActive overrides blocked and guarded apps across all tiers`() {
+        val base = BaseProfileSettings(
+            appAssignments = mapOf(
+                socialComponent to AppAssignment.Blocked,
+                workComponent to AppAssignment.Guarded(),
+            ),
+        )
+        val profile = CustomProfile(
+            id = "strict",
+            name = "Strict",
+            priority = 0,
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(8, 0),
+                    endTime = TimeOfDay(18, 0),
+                ),
+            ),
+            appAssignments = mapOf(utilityComponent to AppAssignment.Blocked),
+        )
+
+        val ws = engine.resolveWorkingSet(
+            baseProfile = base,
+            customProfiles = listOf(profile),
+            currentDay = DayOfWeek.MONDAY,
+            currentTime = TimeOfDay(10, 0),
+            defaultDialerPackage = dialerComponent.packageName,
+            isBreakGlassActive = true,
+        )
+
+        assertThat(ws.effectiveProfile.id).isEqualTo("break-glass")
+        assertThat(ws.activeProfiles).isEmpty()
+        assertThat(ws.blockedComponents).isEmpty()
+        assertThat(ws.guardedComponents).isEmpty()
+    }
 }

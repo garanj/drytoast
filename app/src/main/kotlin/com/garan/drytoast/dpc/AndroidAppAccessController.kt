@@ -243,10 +243,12 @@ class AndroidAppAccessController(
             applySelfProtectionLocked(ownerName = currentSettings.general.effectiveHardenedOwnerName())
         }
 
-        syncInstallAppsRestrictionLocked(currentSettings.general.blockNewAppInstalls)
-        syncLockScreenBrandingLocked(currentSettings.general)
-
         val now = nowEpochMillisProvider()
+
+        val effectiveBlockNewAppInstalls =
+            currentSettings.general.blockNewAppInstalls && !currentSettings.isBreakGlassActive(now)
+        syncInstallAppsRestrictionLocked(effectiveBlockNewAppInstalls)
+        syncLockScreenBrandingLocked(currentSettings.general)
 
         // O(1) fast-path short-circuit when no guarded session lease has expired, no prior partial
         // OS failure needs retrying, and the resolved blocked/guarded component sets are unchanged.
