@@ -1330,6 +1330,118 @@ class SearchViewModelTest {
         }
     }
 
+    @Test
+    fun breakGlassNfcTap_togglesOverrideUnblocksAppsSyncsAlarmAndAutoRelocksOnExpiry() = runTest(testDispatcher) {
+        var nowMillis = 1_700_000_000_000L
+        val fakeHaptic = TestHapticEngine()
+        val recordedExtraExpiries = mutableListOf<Long?>()
+        val fakeAlarmScheduler = object : com.garan.drytoast.core.port.ScheduleAlarmScheduler {
+            override fun canScheduleExactAlarms(): Boolean = true
+            override fun syncNextScheduleAlarm(profiles: List<com.garan.drytoast.core.model.CustomProfile>) = Unit
+            override fun syncNextScheduleAlarm(
+                profiles: List<com.garan.drytoast.core.model.CustomProfile>,
+                savedTriggers: List<com.garan.drytoast.core.model.SavedTrigger>,
+                nfcLatches: Map<String, com.garan.drytoast.core.model.NfcLatchState>,
+                extraExpiryEpochMillis: Long?,
+            ) {
+                recordedExtraExpiries.add(extraExpiryEpochMillis)
+            }
+        }
+
+        val fakeRepo = com.garan.drytoast.ui.settings.FakeSettingsRepository(
+            com.garan.drytoast.core.model.DryToastSettings(
+                general = com.garan.drytoast.core.model.GeneralSettings(
+                    breakGlassTagUid = "04:BB:CC:01",
+                    breakGlassDurationMinutes = 30,
+                ),
+                baseProfile = com.garan.drytoast.core.model.BaseProfileSettings(
+                    quickActions = listOf(
+                        InstalledApp(blockedComponent, "Arcade Games"),
+                        InstalledApp(socialComponent, "Social Feed"),
+                    ),
+                    appAssignments = mapOf(
+                        blockedComponent to com.garan.drytoast.core.model.AppAssignment.Blocked,
+                        socialComponent to com.garan.drytoast.core.model.AppAssignment.Guarded(),
+                    ),
+                ),
+                isSettingsLocked = true,
+            ),
+        )
+        val nfcScansFlow = MutableSharedFlow<String>(extraBufferCapacity = 4)
+        val fakeNfcReader = object : com.garan.drytoast.core.port.NfcReaderSource {
+            override val tagScans = nfcScansFlow
+        }
+
+        val vm = SearchViewModel(
+            packageIndexSource = fakePackageIndexSource,
+            hapticEngine = fakeHaptic,
+            settingsRepository = fakeRepo,
+            scheduleAlarmScheduler = fakeAlarmScheduler,
+            nfcReaderSource = fakeNfcReader,
+            nowEpochMillisProvider = { nowMillis },
+            ioDispatcher = testDispatcher,
+        )
+        vm.reconcileForTesting()
+        advanceUntilIdle()
+
+        // 0. Baseline: Arcade Games is Blocked, Social Feed is Guarded, Break-Glass inactive
+        assertThat(vm.uiState.value.isBreakGlassActive).isFalse()
+        assertThat(vm.uiState.value.quickActions.first { it.component == blockedComponent }.accessState)
+            .isEqualTo(AppAccessState.Blocked)
+        assertThat(vm.uiState.value.quickActions.first { it.component == socialComponent }.accessState)
+            .isInstanceOf(AppAccessState.Guarded::class.java)
+
+        // 1. Tap Break-Glass card (lowercase without colons) -> activates 30-min override even while Settings Locked!
+        recordedExtraExpiries.clear()
+        vm.processScannedNfcTag("04bbcc01")
+        advanceUntilIdle()
+
+        val expectedExpiry = nowMillis + 30 * 60_000L
+        assertThat(fakeHaptic.relaySnapCount).isEqualTo(1)
+        assertThat(vm.uiState.value.isBreakGlassActive).isTrue()
+        assertThat(vm.uiState.value.breakGlassRemainingMinutes).isEqualTo(30)
+        assertThat(fakeRepo.getSettings().breakGlassUntilEpochMillis).isEqualTo(expectedExpiry)
+        assertThat(recordedExtraExpiries).contains(expectedExpiry)
+        assertThat(vm.uiState.value.quickActions.first { it.component == blockedComponent }.accessState)
+            .isEqualTo(AppAccessState.Direct)
+        assertThat(vm.uiState.value.quickActions.first { it.component == socialComponent }.accessState)
+            .isEqualTo(AppAccessState.Direct)
+
+        // 2. Advance 10 minutes -> remaining readout updates to 20 min, still Direct
+        nowMillis += 10 * 60_000L
+        vm.refreshScheduleEvaluation()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.breakGlassRemainingMinutes).isEqualTo(20)
+
+        // 3. Tap Break-Glass card again -> ends early, relocks immediately, clears alarm extraExpiry
+        recordedExtraExpiries.clear()
+        vm.processScannedNfcTag("04:BB:CC:01")
+        advanceUntilIdle()
+
+        assertThat(fakeHaptic.relaySnapCount).isEqualTo(2)
+        assertThat(vm.uiState.value.isBreakGlassActive).isFalse()
+        assertThat(vm.uiState.value.breakGlassRemainingMinutes).isEqualTo(0)
+        assertThat(fakeRepo.getSettings().breakGlassUntilEpochMillis).isNull()
+        assertThat(recordedExtraExpiries).contains(null)
+        assertThat(vm.uiState.value.quickActions.first { it.component == blockedComponent }.accessState)
+            .isEqualTo(AppAccessState.Blocked)
+
+        // 4. Tap Break-Glass card again, then advance 31 minutes -> auto-relocks and clears persisted expiry!
+        vm.processScannedNfcTag("04:BB:CC:01")
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.isBreakGlassActive).isTrue()
+
+        nowMillis += 31 * 60_000L
+        vm.refreshScheduleEvaluation()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.isBreakGlassActive).isFalse()
+        assertThat(fakeRepo.getSettings().breakGlassUntilEpochMillis).isNull()
+        assertThat(vm.uiState.value.quickActions.first { it.component == blockedComponent }.accessState)
+            .isEqualTo(AppAccessState.Blocked)
+        assertThat(vm.uiState.value.quickActions.first { it.component == socialComponent }.accessState)
+            .isInstanceOf(AppAccessState.Guarded::class.java)
+    }
+
     private class FakePackageIndexSource(initialApps: List<InstalledApp> = emptyList()) : PackageIndexSource {
         private val apps = initialApps.toMutableList()
         private val changesFlow = MutableSharedFlow<PackageChangeEvent>()

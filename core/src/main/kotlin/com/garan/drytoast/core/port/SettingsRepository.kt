@@ -106,4 +106,11 @@ interface SettingsRepository {
      * Hardened Mode (Device Owner) controller so they can be unsuspended across process restarts.
      */
     suspend fun updateDpcSuspendedPackages(packages: Set<String>) {}
+
+    /**
+     * Persists or clears the active NFC Break-Glass expiry timestamp ([untilEpochMillis]).
+     * This is runtime session state and intentionally bypasses Settings Lock and Reboot-to-Apply
+     * so tapping the registered physical Break-Glass card always works immediately.
+     */
+    suspend fun updateBreakGlassUntil(untilEpochMillis: Long?) {}
 }

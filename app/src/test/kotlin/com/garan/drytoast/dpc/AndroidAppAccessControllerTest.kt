@@ -195,6 +195,40 @@ class AndroidAppAccessControllerTest {
     }
 
     @Test
+    fun hardenedMode_breakGlassActive_temporarilyLiftsDisallowInstallAppsAndRestoresOnExpiry() = runTest {
+        recordingBridge.isDeviceOwner = true
+
+        // Enable blockNewAppInstalls -> DISALLOW_INSTALL_APPS added
+        val currentGeneral = fakeRepository.getSettings().general
+        fakeRepository.updateGeneralSettings(currentGeneral.copy(blockNewAppInstalls = true))
+        controller.reconcileBlockedPackages(
+            blockedComponents = setOf(instagramKey),
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        assertThat(recordingBridge.addedUserRestrictions).contains(UserManager.DISALLOW_INSTALL_APPS)
+
+        // Activate Break-Glass for 30 minutes -> clears DISALLOW_INSTALL_APPS without mutating general setting
+        recordingBridge.clearedUserRestrictions.clear()
+        recordingBridge.addedUserRestrictions.clear()
+        fakeRepository.updateBreakGlassUntil(currentNowMillis + 30 * 60_000L)
+        controller.reconcileBlockedPackages(
+            blockedComponents = emptySet(),
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        assertThat(recordingBridge.clearedUserRestrictions).contains(UserManager.DISALLOW_INSTALL_APPS)
+        assertThat(fakeRepository.getSettings().general.blockNewAppInstalls).isTrue()
+
+        // Advance past Break-Glass expiry -> DISALLOW_INSTALL_APPS is automatically restored
+        recordingBridge.addedUserRestrictions.clear()
+        currentNowMillis += 31 * 60_000L
+        controller.reconcileBlockedPackages(
+            blockedComponents = setOf(instagramKey),
+            defaultDialerPackage = dialerKey.packageName,
+        )
+        assertThat(recordingBridge.addedUserRestrictions).contains(UserManager.DISALLOW_INSTALL_APPS)
+    }
+
+    @Test
     fun hardenedMode_customLockScreenText_appliesOwnerNameAndOptionalInfoAndClearsWhenBlank() = runTest {
         recordingBridge.isDeviceOwner = true
 

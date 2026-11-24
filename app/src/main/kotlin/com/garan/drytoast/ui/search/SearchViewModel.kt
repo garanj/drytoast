@@ -75,7 +75,10 @@ data class SearchUiState(
     val generalSettings: GeneralSettings = GeneralSettings(),
     val activeProfiles: ImmutableList<CustomProfile> = persistentListOf(),
     val capabilityIssues: ImmutableList<ProfileCapabilityIssue> = persistentListOf(),
-)
+    val breakGlassRemainingMinutes: Int = 0,
+) {
+    val isBreakGlassActive: Boolean get() = breakGlassRemainingMinutes > 0
+}
 
 class SearchViewModel(
     private val packageIndexSource: PackageIndexSource,
@@ -247,8 +250,27 @@ class SearchViewModel(
         }
         reconcileMutex.withLock {
             lastObservedSettings = effective
-            val now = clockSource.now()
             val nowMillis = nowEpochMillisProvider()
+            if (cascadingEngine.matchesBreakGlassTag(rawUid, effective.general.breakGlassTagUid)) {
+                val nextUntil = if (effective.isBreakGlassActive(nowMillis)) {
+                    null
+                } else {
+                    nowMillis + effective.general.breakGlassDurationMinutes.coerceAtLeast(1) * 60_000L
+                }
+                val updatedSettings = effective.copy(breakGlassUntilEpochMillis = nextUntil)
+                lastObservedSettings = updatedSettings
+                settingsRepository?.updateBreakGlassUntil(nextUntil)
+                hapticEngine.relaySnap()
+                scheduleAlarmScheduler.syncNextScheduleAlarm(
+                    profiles = updatedSettings.customProfiles,
+                    savedTriggers = updatedSettings.savedTriggers,
+                    nfcLatches = currentNfcLatches,
+                    extraExpiryEpochMillis = nextUntil,
+                )
+                reconcileWorkingSetLocked(updatedSettings)
+                return
+            }
+            val now = clockSource.now()
             val currentLocation = locationSource?.currentLocation?.value
             val tapResult = cascadingEngine.processNfcTagTap(
                 rawTagUid = rawUid,
@@ -292,6 +314,7 @@ class SearchViewModel(
                 profiles = updatedSettings.customProfiles,
                 savedTriggers = updatedSettings.savedTriggers,
                 nfcLatches = currentNfcLatches,
+                extraExpiryEpochMillis = updatedSettings.breakGlassUntilEpochMillis?.takeIf { it > nowMillis },
             )
             reconcileWorkingSetLocked(updatedSettings)
         }
@@ -457,6 +480,7 @@ class SearchViewModel(
                 profiles = settings.customProfiles,
                 savedTriggers = settings.savedTriggers,
                 nfcLatches = currentNfcLatches,
+                extraExpiryEpochMillis = settings.breakGlassUntilEpochMillis,
             )
         }
     }
@@ -464,34 +488,44 @@ class SearchViewModel(
     private suspend fun reconcileWorkingSetLocked(settings: DryToastSettings) {
         val now = clockSource.now()
         val nowMillis = nowEpochMillisProvider()
+        val breakGlassActive = settings.isBreakGlassActive(nowMillis)
+        val breakGlassRemainingMinutes = settings.breakGlassRemainingMinutes(nowMillis)
+        val effectiveSettings = if (!breakGlassActive && settings.breakGlassUntilEpochMillis != null) {
+            settingsRepository?.updateBreakGlassUntil(null)
+            settings.copy(breakGlassUntilEpochMillis = null).also { lastObservedSettings = it }
+        } else {
+            settings
+        }
         val currentLocation = locationSource?.currentLocation?.value
         val previousLatches = currentNfcLatches
         val workingSet = cascadingEngine.resolveWorkingSet(
-            baseProfile = settings.baseProfile,
-            customProfiles = settings.customProfiles,
+            baseProfile = effectiveSettings.baseProfile,
+            customProfiles = effectiveSettings.customProfiles,
             currentDay = now.dayOfWeek,
             currentTime = now.timeOfDay,
             defaultDialerPackage = resolvedDialerPackage,
-            additionalComponents = settings.baseProfile.quickActions.map { it.component },
+            additionalComponents = effectiveSettings.baseProfile.quickActions.map { it.component },
             currentLocation = currentLocation,
             previouslyActiveProfileIds = previouslyActiveProfileIds,
-            savedTriggers = settings.savedTriggers,
+            savedTriggers = effectiveSettings.savedTriggers,
             previouslyActiveTriggerIds = previouslyActiveTriggerIds,
             nfcLatchStates = previousLatches,
             nowEpochMillis = nowMillis,
             random = random,
+            isBreakGlassActive = breakGlassActive,
         )
         activeProfile = workingSet.effectiveProfile
         previouslyActiveProfileIds = workingSet.activeProfiles.map { it.id }.toSet()
         previouslyActiveTriggerIds = workingSet.activeTriggerIds
         currentNfcLatches = workingSet.activeNfcLatches
         if (currentNfcLatches != previousLatches) {
-            lastObservedSettings = settings.copy(nfcLatches = currentNfcLatches)
+            lastObservedSettings = effectiveSettings.copy(nfcLatches = currentNfcLatches)
             settingsRepository?.updateNfcLatches(currentNfcLatches)
             scheduleAlarmScheduler.syncNextScheduleAlarm(
-                profiles = settings.customProfiles,
-                savedTriggers = settings.savedTriggers,
+                profiles = effectiveSettings.customProfiles,
+                savedTriggers = effectiveSettings.savedTriggers,
                 nfcLatches = currentNfcLatches,
+                extraExpiryEpochMillis = if (breakGlassActive) effectiveSettings.breakGlassUntilEpochMillis else null,
             )
         }
         appAccessController.reconcileBlockedPackages(
@@ -500,25 +534,29 @@ class SearchViewModel(
             guardedComponents = workingSet.guardedComponents,
         )
 
-        val quickApps = settings.baseProfile.quickActions
+        val quickApps = effectiveSettings.baseProfile.quickActions
         val quickItems = quickApps.mapIndexed { index, quickApp ->
             val comp = quickApp.component
-            val access = workingSet.effectiveProfile.appRules[comp]
-                ?: cascadingEngine.resolveAppAccess(
-                    component = comp,
-                    baseProfile = settings.baseProfile,
-                    customProfiles = settings.customProfiles,
-                    currentDay = now.dayOfWeek,
-                    currentTime = now.timeOfDay,
-                    isDefaultDialer = (comp.packageName == resolvedDialerPackage),
-                    currentLocation = currentLocation,
-                    previouslyActiveProfileIds = previouslyActiveProfileIds,
-                    savedTriggers = settings.savedTriggers,
-                    previouslyActiveTriggerIds = previouslyActiveTriggerIds,
-                    nfcLatchStates = currentNfcLatches,
-                    nowEpochMillis = nowMillis,
-                    random = random,
-                )
+            val access = if (breakGlassActive) {
+                AppAccessState.Direct
+            } else {
+                workingSet.effectiveProfile.appRules[comp]
+                    ?: cascadingEngine.resolveAppAccess(
+                        component = comp,
+                        baseProfile = effectiveSettings.baseProfile,
+                        customProfiles = effectiveSettings.customProfiles,
+                        currentDay = now.dayOfWeek,
+                        currentTime = now.timeOfDay,
+                        isDefaultDialer = (comp.packageName == resolvedDialerPackage),
+                        currentLocation = currentLocation,
+                        previouslyActiveProfileIds = previouslyActiveProfileIds,
+                        savedTriggers = effectiveSettings.savedTriggers,
+                        previouslyActiveTriggerIds = previouslyActiveTriggerIds,
+                        nfcLatchStates = currentNfcLatches,
+                        nowEpochMillis = nowMillis,
+                        random = random,
+                    )
+            }
             QuickActionUiItem(
                 slotNumber = index + 1,
                 component = comp,
@@ -528,7 +566,7 @@ class SearchViewModel(
         }.toImmutableList()
 
         val capabilityIssues = capabilityChecker
-            .findCapabilityIssues(settings.customProfiles, settings.savedTriggers)
+            .findCapabilityIssues(effectiveSettings.customProfiles, effectiveSettings.savedTriggers)
             .toImmutableList()
 
         val snapshotCandidates = candidates
@@ -543,19 +581,21 @@ class SearchViewModel(
                     defaultDialerPackage = resolvedDialerPackage,
                 )
                 current.copy(
-                    generalSettings = settings.general,
+                    generalSettings = effectiveSettings.general,
                     quickActions = quickItems,
                     activeProfiles = workingSet.activeProfiles.toImmutableList(),
                     capabilityIssues = capabilityIssues,
+                    breakGlassRemainingMinutes = breakGlassRemainingMinutes,
                     results = response.results.toImmutableList(),
                     autoLaunchCandidate = response.autoLaunchCandidate,
                 )
             } else {
                 current.copy(
-                    generalSettings = settings.general,
+                    generalSettings = effectiveSettings.general,
                     quickActions = quickItems,
                     activeProfiles = workingSet.activeProfiles.toImmutableList(),
                     capabilityIssues = capabilityIssues,
+                    breakGlassRemainingMinutes = breakGlassRemainingMinutes,
                     results = persistentListOf(),
                     autoLaunchCandidate = null,
                 )

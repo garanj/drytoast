@@ -18,13 +18,15 @@ interface ScheduleAlarmScheduler {
     fun syncNextScheduleAlarm(profiles: List<CustomProfile>)
 
     /**
-     * Computes the next transition boundary from [profiles], [savedTriggers], and [nfcLatches]
+     * Computes the next transition boundary from [profiles], [savedTriggers], [nfcLatches],
+     * and any optional [extraExpiryEpochMillis] (e.g. an active Break-Glass auto-relock timestamp)
      * and schedules (or cancels) the system alarm accordingly.
      */
     fun syncNextScheduleAlarm(
         profiles: List<CustomProfile>,
         savedTriggers: List<SavedTrigger>,
         nfcLatches: Map<String, NfcLatchState> = emptyMap(),
+        extraExpiryEpochMillis: Long? = null,
     ) {
         syncNextScheduleAlarm(profiles)
     }

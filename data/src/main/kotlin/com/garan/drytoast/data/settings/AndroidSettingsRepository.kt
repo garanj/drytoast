@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.garan.drytoast.core.model.AppAssignment
@@ -81,6 +82,9 @@ class AndroidSettingsRepository(
         val BLOCK_NEW_APP_INSTALLS = booleanPreferencesKey("block_new_app_installs")
         val HARDENED_OWNER_NAME = stringPreferencesKey("hardened_owner_name")
         val HARDENED_LOCK_SCREEN_INFO = stringPreferencesKey("hardened_lock_screen_info")
+        val BREAK_GLASS_TAG_UID = stringPreferencesKey("break_glass_tag_uid")
+        val BREAK_GLASS_DURATION_MINUTES = intPreferencesKey("break_glass_duration_minutes")
+        val BREAK_GLASS_UNTIL_EPOCH_MILLIS = longPreferencesKey("break_glass_until_epoch_millis")
         val DEFAULT_FRICTION = stringPreferencesKey("default_friction")
         val QUICK_ACTIONS = stringPreferencesKey("quick_actions")
         val APP_ASSIGNMENTS = stringPreferencesKey("app_assignments")
@@ -277,6 +281,18 @@ class AndroidSettingsRepository(
         }
     }
 
+    override suspend fun updateBreakGlassUntil(untilEpochMillis: Long?) {
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                if (untilEpochMillis == null || untilEpochMillis <= 0L) {
+                    prefs.remove(Keys.BREAK_GLASS_UNTIL_EPOCH_MILLIS)
+                } else {
+                    prefs[Keys.BREAK_GLASS_UNTIL_EPOCH_MILLIS] = untilEpochMillis
+                }
+            }
+        }
+    }
+
     private fun promoteStagedShadowInPrefs(prefs: MutablePreferences): Boolean {
         val rawShadow = prefs[Keys.STAGED_SHADOW].orEmpty()
         if (rawShadow.isBlank()) return false
@@ -349,6 +365,13 @@ class AndroidSettingsRepository(
         prefs[Keys.BLOCK_NEW_APP_INSTALLS] = updated.general.blockNewAppInstalls
         prefs[Keys.HARDENED_OWNER_NAME] = updated.general.effectiveHardenedOwnerName()
         prefs[Keys.HARDENED_LOCK_SCREEN_INFO] = updated.general.hardenedLockScreenInfo.trim()
+        val normalizedBreakGlassUid = updated.general.normalizedBreakGlassTagUid()
+        if (normalizedBreakGlassUid == null) {
+            prefs.remove(Keys.BREAK_GLASS_TAG_UID)
+        } else {
+            prefs[Keys.BREAK_GLASS_TAG_UID] = normalizedBreakGlassUid
+        }
+        prefs[Keys.BREAK_GLASS_DURATION_MINUTES] = updated.general.breakGlassDurationMinutes
         prefs[Keys.DEFAULT_FRICTION] = updated.baseProfile.defaultFriction.name
         prefs[Keys.QUICK_ACTIONS] = serializeQuickActions(updated.baseProfile.quickActions)
         prefs[Keys.APP_ASSIGNMENTS] = serializeAppAssignments(updated.baseProfile.appAssignments)
@@ -522,6 +545,12 @@ class AndroidSettingsRepository(
             ?.takeIf { it.isNotBlank() }
             ?: GeneralSettings.DEFAULT_HARDENED_OWNER_NAME
         val hardenedLockScreenInfo = prefs[Keys.HARDENED_LOCK_SCREEN_INFO].orEmpty()
+        val breakGlassTagUid = prefs[Keys.BREAK_GLASS_TAG_UID]?.let(NfcTagEntry::normalizeUid)?.takeIf {
+            it.isNotBlank()
+        }
+        val breakGlassDurationMinutes = prefs[Keys.BREAK_GLASS_DURATION_MINUTES]
+            ?: GeneralSettings.DEFAULT_BREAK_GLASS_DURATION_MINUTES
+        val breakGlassUntilEpochMillis = prefs[Keys.BREAK_GLASS_UNTIL_EPOCH_MILLIS]?.takeIf { it > 0L }
         val isSettingsLocked = prefs[Keys.SETTINGS_LOCKED] ?: false
         val dpcSuspendedPackagesRaw = prefs[Keys.DPC_SUSPENDED_PACKAGES].orEmpty()
         val dpcSuspendedPackages = if (dpcSuspendedPackagesRaw.isBlank()) {
@@ -639,6 +668,8 @@ class AndroidSettingsRepository(
                 blockNewAppInstalls = blockNewAppInstalls,
                 hardenedOwnerName = hardenedOwnerName,
                 hardenedLockScreenInfo = hardenedLockScreenInfo,
+                breakGlassTagUid = breakGlassTagUid,
+                breakGlassDurationMinutes = breakGlassDurationMinutes,
             ),
             baseProfile = BaseProfileSettings(
                 defaultFriction = defaultFriction,
@@ -651,6 +682,7 @@ class AndroidSettingsRepository(
             nfcDailyUsage = nfcDailyUsage,
             isSettingsLocked = isSettingsLocked,
             dpcSuspendedPackages = dpcSuspendedPackages,
+            breakGlassUntilEpochMillis = breakGlassUntilEpochMillis,
         )
     }
 
@@ -665,6 +697,8 @@ class AndroidSettingsRepository(
         obj.put("blockNewAppInstalls", snapshot.general.blockNewAppInstalls)
         obj.put("hardenedOwnerName", snapshot.general.effectiveHardenedOwnerName())
         obj.put("hardenedLockScreenInfo", snapshot.general.hardenedLockScreenInfo.trim())
+        obj.put("breakGlassTagUid", snapshot.general.normalizedBreakGlassTagUid().orEmpty())
+        obj.put("breakGlassDurationMinutes", snapshot.general.breakGlassDurationMinutes)
         obj.put("defaultFriction", snapshot.baseProfile.defaultFriction.name)
         obj.put(
             "quickActions",
@@ -699,6 +733,13 @@ class AndroidSettingsRepository(
                 GeneralSettings.DEFAULT_HARDENED_OWNER_NAME,
             ).takeIf { it.isNotBlank() } ?: GeneralSettings.DEFAULT_HARDENED_OWNER_NAME
             val hardenedLockScreenInfo = obj.optString("hardenedLockScreenInfo", "")
+            val breakGlassTagUid = obj.optString("breakGlassTagUid", "")
+                .let(NfcTagEntry::normalizeUid)
+                .takeIf { it.isNotBlank() }
+            val breakGlassDurationMinutes = obj.optInt(
+                "breakGlassDurationMinutes",
+                GeneralSettings.DEFAULT_BREAK_GLASS_DURATION_MINUTES,
+            )
             val defaultFriction = runCatching {
                 FrictionChoice.valueOf(
                     obj.optString("defaultFriction", FrictionChoice.TYPED_INTENTION.name),
@@ -721,6 +762,8 @@ class AndroidSettingsRepository(
                     blockNewAppInstalls = blockNewAppInstalls,
                     hardenedOwnerName = hardenedOwnerName,
                     hardenedLockScreenInfo = hardenedLockScreenInfo,
+                    breakGlassTagUid = breakGlassTagUid,
+                    breakGlassDurationMinutes = breakGlassDurationMinutes,
                 ),
                 baseProfile = BaseProfileSettings(
                     defaultFriction = defaultFriction,

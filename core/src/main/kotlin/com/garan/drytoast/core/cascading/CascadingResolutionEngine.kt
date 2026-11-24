@@ -432,6 +432,17 @@ class CascadingResolutionEngine {
     }
 
     /**
+     * Returns `true` if [rawTagUid] matches the registered [registeredBreakGlassUid] after canonical
+     * UID normalization.
+     */
+    fun matchesBreakGlassTag(rawTagUid: String, registeredBreakGlassUid: String?): Boolean {
+        val registered = registeredBreakGlassUid?.let(NfcTagEntry::normalizeUid)?.takeIf { it.isNotBlank() }
+            ?: return false
+        val tapped = NfcTagEntry.normalizeUid(rawTagUid)
+        return tapped.isNotBlank() && tapped == registered
+    }
+
+    /**
      * Computes the complete [ResolvedWorkingSet] (active custom profiles, active trigger IDs, and
      * merged effective [Profile] across all configured components in [baseProfile] and [customProfiles]).
      */
@@ -449,6 +460,7 @@ class CascadingResolutionEngine {
         nfcLatchStates: Map<String, NfcLatchState>? = null,
         nowEpochMillis: Long = 0L,
         random: Random = Random.Default,
+        isBreakGlassActive: Boolean = false,
     ): ResolvedWorkingSet {
         val activeTriggerIds = evaluateActiveTriggerIds(
             savedTriggers = savedTriggers,
@@ -467,6 +479,20 @@ class CascadingResolutionEngine {
             nfcLatchStates = nfcLatchStates,
             nowEpochMillis = nowEpochMillis,
         )
+
+        if (isBreakGlassActive) {
+            return ResolvedWorkingSet(
+                activeProfiles = emptyList(),
+                effectiveProfile = Profile(
+                    id = "break-glass",
+                    name = "Break-Glass",
+                    defaultAccess = AppAccessState.Direct,
+                    appRules = emptyMap(),
+                ),
+                activeTriggerIds = activeTriggerIds,
+                activeNfcLatches = activeNfcLatches,
+            )
+        }
 
         val activeProfiles = customProfiles
             .filter {

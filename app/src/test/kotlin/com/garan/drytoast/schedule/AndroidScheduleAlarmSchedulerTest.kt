@@ -283,4 +283,55 @@ class AndroidScheduleAlarmSchedulerTest {
         val shadowAlarmManager = shadowOf(alarmManager)
         assertThat(shadowAlarmManager.scheduledAlarms).isEmpty()
     }
+
+    @Test
+    fun syncNextScheduleAlarm_withBreakGlassExtraExpiry_schedulesEarliestWakeupAndIgnoresPastExpiry() {
+        val baseMillis = 1_700_000_000_000L
+        val scheduler = AndroidScheduleAlarmScheduler(
+            context = context,
+            clockSource = {
+                LocalDayTime(
+                    dayOfWeek = DayOfWeek.MONDAY,
+                    timeOfDay = TimeOfDay(8, 30),
+                )
+            },
+            nowEpochMillisProvider = { baseMillis },
+            exactNowEpochMillisProvider = { baseMillis },
+        )
+
+        // Schedule profile boundary is 30 minutes away (09:00); Break-Glass expires in 15 minutes
+        val scheduleProfile = CustomProfile(
+            id = "work",
+            name = "Work",
+            enabled = true,
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(9, 0),
+                    endTime = TimeOfDay(17, 0),
+                ),
+            ),
+        )
+        val breakGlassExpiryMillis = baseMillis + 15 * 60_000L
+
+        scheduler.syncNextScheduleAlarm(
+            profiles = listOf(scheduleProfile),
+            savedTriggers = emptyList(),
+            nfcLatches = emptyMap(),
+            extraExpiryEpochMillis = breakGlassExpiryMillis,
+        )
+
+        val shadowAlarmManager = shadowOf(alarmManager)
+        assertThat(shadowAlarmManager.scheduledAlarms).hasSize(1)
+        assertThat(shadowAlarmManager.scheduledAlarms.first().triggerAtMs).isEqualTo(breakGlassExpiryMillis)
+
+        // Past extraExpiryEpochMillis with no profiles must not schedule an alarm
+        scheduler.syncNextScheduleAlarm(
+            profiles = emptyList(),
+            savedTriggers = emptyList(),
+            nfcLatches = emptyMap(),
+            extraExpiryEpochMillis = baseMillis - 1_000L,
+        )
+        assertThat(shadowAlarmManager.scheduledAlarms).isEmpty()
+    }
 }

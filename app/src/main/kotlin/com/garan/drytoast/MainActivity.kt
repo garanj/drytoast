@@ -48,6 +48,7 @@ import com.garan.drytoast.ui.launcher.AndroidAppLauncher
 import com.garan.drytoast.ui.motion.DryToastMotion
 import com.garan.drytoast.ui.onboarding.OnboardingScreen
 import com.garan.drytoast.ui.search.SearchViewModel
+import com.garan.drytoast.ui.settings.BreakGlassScreen
 import com.garan.drytoast.ui.settings.ConfigureAppsScreen
 import com.garan.drytoast.ui.settings.DisableHardenedModeScreen
 import com.garan.drytoast.ui.settings.DryToastSettingsScreen
@@ -81,6 +82,9 @@ sealed interface DryToastRoute : NavKey {
 
     @Serializable
     data object SettingsLock : DryToastRoute
+
+    @Serializable
+    data object BreakGlass : DryToastRoute
 
     @Serializable
     data object Profiles : DryToastRoute
@@ -691,6 +695,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToHardenedMode = {
                                     backStack.add(DryToastRoute.HardenedMode)
                                 },
+                                onNavigateToBreakGlass = {
+                                    backStack.add(DryToastRoute.BreakGlass)
+                                },
                                 onUpdateShowUnlocks = settingsViewModel::updateShowUnlocks,
                                 onUpdateShowRest = settingsViewModel::updateShowRest,
                                 onUpdateShowDialerIcon = settingsViewModel::updateShowDialerIcon,
@@ -719,6 +726,26 @@ class MainActivity : ComponentActivity() {
                                 isSettingsLocked = settingsUiState.isSettingsLocked,
                                 onToggleBlockNewAppInstalls = settingsViewModel::updateBlockNewAppInstalls,
                                 onSaveLockScreenText = settingsViewModel::updateHardenedLockScreenText,
+                                onBack = {
+                                    if (backStack.size > 1) backStack.removeLastOrNull()
+                                },
+                            )
+                        }
+
+                        entry<DryToastRoute.BreakGlass> {
+                            BreakGlassScreen(
+                                breakGlassTagUid = settingsUiState.general.normalizedBreakGlassTagUid(),
+                                breakGlassDurationMinutes = settingsUiState.general.breakGlassDurationMinutes,
+                                breakGlassUntilEpochMillis = settingsUiState.breakGlassUntilEpochMillis,
+                                savedTriggers = settingsUiState.savedTriggers,
+                                isSettingsLocked = settingsUiState.isSettingsLocked,
+                                onSaveBreakGlassTagUid = settingsViewModel::updateBreakGlassTagUid,
+                                onUpdateDurationMinutes = settingsViewModel::updateBreakGlassDurationMinutes,
+                                onEndBreakGlassEarly = settingsViewModel::endBreakGlassEarly,
+                                onSetNfcRegistrationListener = { listener ->
+                                    container.nfcReaderSource.setRegistrationResultListener(this@MainActivity, listener)
+                                },
+                                nowEpochMillisProvider = container.activeNowEpochMillisProvider,
                                 onBack = {
                                     if (backStack.size > 1) backStack.removeLastOrNull()
                                 },

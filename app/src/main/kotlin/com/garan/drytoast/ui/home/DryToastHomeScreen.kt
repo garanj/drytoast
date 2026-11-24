@@ -120,7 +120,9 @@ fun DryToastHomeScreen(
     val showUnlocks = uiState.generalSettings.showUnlocks
     val showRest = uiState.generalSettings.showRest
     val effectiveStatusText = statusText
-        ?: if (!showUnlocks && !showRest) {
+        ?: if (uiState.isBreakGlassActive) {
+            stringResource(R.string.status_break_glass_format, uiState.breakGlassRemainingMinutes)
+        } else if (!showUnlocks && !showRest) {
             stringResource(R.string.app_name)
         } else {
             metrics?.let { AntiMetricsFormatter.formatStatus(it, showUnlocks = showUnlocks, showRest = showRest) }
