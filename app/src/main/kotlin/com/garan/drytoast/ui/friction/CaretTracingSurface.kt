@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -1000,27 +1003,64 @@ fun CaretTracingSurface(
             .testTag("caret_tracing_surface")
     }
 
-    val toasterSize = if (embedded) 172.dp else 264.dp
-    val leverHitSize = if (embedded) 80.dp else 116.dp
     val leverCd = stringResource(R.string.cd_toaster_lever)
-    val hintText = when {
+    val idleHintText = stringResource(R.string.toaster_hint_idle)
+    val stateDesc = when {
         isComplete -> stringResource(R.string.toaster_hint_ready, SLICE_COUNT)
         isHolding -> stringResource(R.string.toaster_hint_holding, poppedCount, SLICE_COUNT)
-        else -> stringResource(R.string.toaster_hint_idle)
+        else -> idleHintText
+    }
+    val showIdleHint = !isHolding && !isComplete
+
+    val toasterBoxModifier = if (embedded) {
+        Modifier.size(216.dp)
+    } else {
+        Modifier
+            .widthIn(max = 420.dp)
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .aspectRatio(1f)
     }
 
     Column(modifier = rootModifier) {
-        // Centered Isometric Dualit Toaster Stage
+        // Centered Isometric Dualit Toaster Stage — entire middle area acts as the hold-to-toast lever zone
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("caret_tracing_lever")
+                .semantics {
+                    role = Role.Button
+                    contentDescription = leverCd
+                    stateDescription = stateDesc
+                }
+                .pointerInput(isComplete) {
+                    if (isComplete) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        isHolding = true
+                        currentOnInteractionActiveChanged(true)
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    break
+                                }
+                                change.consume()
+                            }
+                        } finally {
+                            isHolding = false
+                            currentOnInteractionActiveChanged(false)
+                        }
+                    }
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Box(
-                modifier = Modifier
-                    .size(toasterSize)
+                modifier = toasterBoxModifier
                     .testTag("caret_tracing_canvas")
                     .drawWithCache {
                         if (size.width <= 0f || size.height <= 0f) {
@@ -1038,52 +1078,20 @@ fun CaretTracingSurface(
                             )
                         }
                     },
-            ) {
-                // Generous invisible touch target centered over the front-right carriage lever
-                Box(
-                    modifier = Modifier
-                        .size(leverHitSize)
-                        .align(Alignment.BottomEnd)
-                        .testTag("caret_tracing_lever")
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = leverCd
-                            stateDescription = hintText
-                        }
-                        .pointerInput(isComplete) {
-                            if (isComplete) return@pointerInput
-                            awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                down.consume()
-                                isHolding = true
-                                currentOnInteractionActiveChanged(true)
-                                try {
-                                    while (true) {
-                                        val event = awaitPointerEvent()
-                                        val change = event.changes.firstOrNull { it.id == down.id }
-                                        if (change == null || !change.pressed) {
-                                            break
-                                        }
-                                        change.consume()
-                                    }
-                                } finally {
-                                    isHolding = false
-                                    currentOnInteractionActiveChanged(false)
-                                }
-                            }
-                        },
-                )
-            }
+            )
 
             if (!embedded) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
+            // Show only the idle "Hold lever down to toast" cue; keep space reserved so the toaster never jumps
             Text(
-                text = hintText,
+                text = idleHintText,
                 style = MaterialTheme.typography.labelMedium,
-                color = if (isComplete || isHolding) colorScheme.onSurface else colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("caret_tracing_status_hint"),
+                color = colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .alpha(if (showIdleHint) 1f else 0f)
+                    .testTag("caret_tracing_status_hint"),
             )
         }
 

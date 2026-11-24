@@ -581,7 +581,7 @@ private fun IntentionalFrictionPage(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(292.dp),
+                                .height(312.dp),
                         ) {
                             CaretTracingSurface(
                                 onConfirmOpen = { demoResetNonce++ },

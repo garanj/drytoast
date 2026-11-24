@@ -108,7 +108,6 @@ class CaretTracingSurfaceTest {
         }
         composeTestRule.mainClock.advanceTimeBy(DryToastMotion.SHUTTER_OPEN_DURATION_MS.toLong() + 50L)
 
-        composeTestRule.onNodeWithText("All 8 slices toasted").assertIsDisplayed()
         composeTestRule.onNodeWithText("Open").assertIsDisplayed()
         composeTestRule.onNodeWithText("Open").performClick()
 
