@@ -65,12 +65,12 @@ import kotlin.math.hypot
 import kotlin.random.Random
 
 private val GLYPH_DRAWABLES = listOf(
-    R.drawable.ic_glyph_hexagon,
-    R.drawable.ic_glyph_diamond,
-    R.drawable.ic_glyph_triangle,
-    R.drawable.ic_glyph_cross,
-    R.drawable.ic_glyph_circle,
-    R.drawable.ic_glyph_star,
+    R.drawable.ic_glyph_toast,
+    R.drawable.ic_glyph_plate,
+    R.drawable.ic_glyph_jam_jar,
+    R.drawable.ic_glyph_egg_cup,
+    R.drawable.ic_glyph_knife,
+    R.drawable.ic_glyph_mug,
 )
 
 private val TARGET_COLOR_FILTER = ColorFilter.tint(SubtleGray.copy(alpha = 0.45f))
