@@ -39,6 +39,29 @@
       <a href="https://github.com/garanj/drytoast/releases/latest" class="cta-secondary">Direct APK &amp; source on GitHub</a>
     </div>
 
+    <figure class="demo-video">
+      <a
+        class="video-facade"
+        href="https://youtu.be/b8EM4EcKwLw"
+        data-video-id="b8EM4EcKwLw"
+        aria-label="Play the 2 minute 26 second Dry Toast walkthrough video"
+      >
+        <img
+          src="/images/demo-poster.jpg"
+          alt="Overhead desk view of Dry Toast running on an Android phone with an analog clock and NFC card"
+          width="1280"
+          height="720"
+        >
+        <span class="video-play-pill" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+            <path d="M4 2.5v11l9-5.5-9-5.5z"/>
+          </svg>
+          <span>Watch walkthrough &middot; 2:26</span>
+        </span>
+      </a>
+      <figcaption>Walkthrough &middot; Standard Mode, NFC triggers, and Hardened Mode (YouTube loads only when played)</figcaption>
+    </figure>
+
     <div class="shots-grid">
       <figure class="shot-card">
         <img src="/images/home.png" alt="Dry Toast typographic home screen" loading="lazy">
@@ -66,5 +89,23 @@
       <a href="https://github.com/garanj/drytoast">GitHub</a>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      var facade = document.querySelector('.video-facade');
+      if (!facade) return;
+      facade.addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        var id = facade.getAttribute('data-video-id');
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0';
+        iframe.title = 'Dry Toast product walkthrough';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        facade.replaceWith(iframe);
+      });
+    })();
+  </script>
 </body>
 </html>
