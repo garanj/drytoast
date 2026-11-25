@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +19,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
@@ -30,6 +35,8 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.garan.drytoast.core.backup.ConfigBackupCodec
+import com.garan.drytoast.core.backup.ConfigImportError
 import com.garan.drytoast.core.model.BaseProfileSettings
 import com.garan.drytoast.core.model.CustomProfile
 import com.garan.drytoast.core.model.DayOfWeek
@@ -49,6 +56,7 @@ import com.garan.drytoast.ui.motion.DryToastMotion
 import com.garan.drytoast.ui.onboarding.OnboardingScreen
 import com.garan.drytoast.ui.search.SearchViewModel
 import com.garan.drytoast.ui.settings.BreakGlassScreen
+import com.garan.drytoast.ui.settings.ConfigImportOutcome
 import com.garan.drytoast.ui.settings.ConfigureAppsScreen
 import com.garan.drytoast.ui.settings.DisableHardenedModeScreen
 import com.garan.drytoast.ui.settings.DryToastSettingsScreen
@@ -60,8 +68,11 @@ import com.garan.drytoast.ui.settings.SettingsLockScreen
 import com.garan.drytoast.ui.settings.SettingsViewModel
 import com.garan.drytoast.ui.theme.DryToastTheme
 import com.garan.drytoast.ui.util.ImeUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import java.io.InputStreamReader
 
 @Serializable
 sealed interface DryToastRoute : NavKey {
@@ -474,6 +485,10 @@ class MainActivity : ComponentActivity() {
                     settingsRepository = container.settingsRepository,
                     dialerPackageResolver = container.dialerPackageResolver,
                     appAccessController = container.appAccessController,
+                    onConfigurationImported = {
+                        container.reconcileDpcFromSettings()
+                        ScheduleTransitionNotifier.notifyTransition()
+                    },
                 ) as T
             },
         )[SettingsViewModel::class.java]
@@ -681,6 +696,73 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(Unit) {
                                 settingsViewModel.ensureLoaded()
                             }
+                            val coroutineScope = rememberCoroutineScope()
+                            var pendingExportPassphrase by remember { mutableStateOf<String?>(null) }
+                            var pendingEncryptedImportJson by remember { mutableStateOf<String?>(null) }
+                            var importPassphraseError by remember { mutableStateOf<String?>(null) }
+                            var isImportWorking by remember { mutableStateOf(false) }
+                            var backupStatusMessage by remember { mutableStateOf<String?>(null) }
+
+                            val exportDocumentLauncher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.CreateDocument("application/json"),
+                            ) { uri ->
+                                val passphrase = pendingExportPassphrase
+                                pendingExportPassphrase = null
+                                if (uri == null) return@rememberLauncherForActivityResult
+                                coroutineScope.launch {
+                                    val result = runCatching {
+                                        val encoded = settingsViewModel.exportConfigurationJson(passphrase)
+                                        withContext(Dispatchers.IO) {
+                                            contentResolver.openOutputStream(uri)?.use { stream ->
+                                                stream.write(encoded.toByteArray(Charsets.UTF_8))
+                                                stream.flush()
+                                            } ?: error("Unable to open destination file")
+                                        }
+                                    }
+                                    backupStatusMessage = if (result.isSuccess) {
+                                        getString(R.string.backup_export_success)
+                                    } else {
+                                        getString(R.string.backup_export_failed)
+                                    }
+                                }
+                            }
+
+                            val importDocumentLauncher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.OpenDocument(),
+                            ) { uri ->
+                                if (uri == null) return@rememberLauncherForActivityResult
+                                coroutineScope.launch {
+                                    val rawJson = withContext(Dispatchers.IO) {
+                                        runCatching { readBoundedUtf8Text(uri) }.getOrNull()
+                                    }
+                                    if (rawJson == null) {
+                                        backupStatusMessage = getString(R.string.backup_import_read_failed)
+                                        return@launch
+                                    }
+                                    when (val outcome = settingsViewModel.importConfigurationJson(rawJson, null)) {
+                                        is ConfigImportOutcome.Success -> {
+                                            backupStatusMessage = getString(
+                                                if (outcome.stagedForReboot) {
+                                                    R.string.backup_import_staged
+                                                } else {
+                                                    R.string.backup_import_success
+                                                },
+                                            )
+                                        }
+                                        is ConfigImportOutcome.PassphraseRequired -> {
+                                            importPassphraseError = null
+                                            pendingEncryptedImportJson = rawJson
+                                        }
+                                        is ConfigImportOutcome.SettingsLocked -> {
+                                            backupStatusMessage = getString(R.string.backup_import_locked)
+                                        }
+                                        is ConfigImportOutcome.Error -> {
+                                            backupStatusMessage = formatImportError(outcome.reason, outcome.detail)
+                                        }
+                                    }
+                                }
+                            }
+
                             DryToastSettingsScreen(
                                 uiState = settingsUiState,
                                 onBack = {
@@ -711,6 +793,66 @@ class MainActivity : ComponentActivity() {
                                 onDiscardPendingChanges = settingsViewModel::discardPendingChanges,
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 onSendFeedback = ::launchFeedbackEmail,
+                                onRequestExport = { passphrase ->
+                                    pendingExportPassphrase = passphrase
+                                    exportDocumentLauncher.launch(getString(R.string.backup_default_filename))
+                                },
+                                onRequestImport = {
+                                    importDocumentLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                                },
+                                showImportPassphraseSheet = pendingEncryptedImportJson != null,
+                                importPassphraseError = importPassphraseError,
+                                isImportWorking = isImportWorking,
+                                onSubmitImportPassphrase = { passphrase ->
+                                    val rawJson = pendingEncryptedImportJson ?: return@DryToastSettingsScreen
+                                    isImportWorking = true
+                                    importPassphraseError = null
+                                    coroutineScope.launch {
+                                        val outcome = settingsViewModel.importConfigurationJson(rawJson, passphrase)
+                                        isImportWorking = false
+                                        when (outcome) {
+                                            is ConfigImportOutcome.Success -> {
+                                                pendingEncryptedImportJson = null
+                                                importPassphraseError = null
+                                                backupStatusMessage = getString(
+                                                    if (outcome.stagedForReboot) {
+                                                        R.string.backup_import_staged
+                                                    } else {
+                                                        R.string.backup_import_success
+                                                    },
+                                                )
+                                            }
+                                            is ConfigImportOutcome.PassphraseRequired -> {
+                                                importPassphraseError =
+                                                    getString(R.string.backup_import_wrong_passphrase)
+                                            }
+                                            is ConfigImportOutcome.SettingsLocked -> {
+                                                pendingEncryptedImportJson = null
+                                                importPassphraseError = null
+                                                backupStatusMessage = getString(R.string.backup_import_locked)
+                                            }
+                                            is ConfigImportOutcome.Error -> {
+                                                if (outcome.reason ==
+                                                    ConfigImportError.INVALID_PASSPHRASE_OR_TAMPERED
+                                                ) {
+                                                    importPassphraseError =
+                                                        getString(R.string.backup_import_wrong_passphrase)
+                                                } else {
+                                                    pendingEncryptedImportJson = null
+                                                    importPassphraseError = null
+                                                    backupStatusMessage =
+                                                        formatImportError(outcome.reason, outcome.detail)
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                onDismissImportPassphraseSheet = {
+                                    pendingEncryptedImportJson = null
+                                    importPassphraseError = null
+                                },
+                                backupStatusMessage = backupStatusMessage,
+                                onClearBackupStatusMessage = { backupStatusMessage = null },
                             )
                         }
 
@@ -895,5 +1037,35 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun readBoundedUtf8Text(uri: Uri): String? {
+        val stream = contentResolver.openInputStream(uri) ?: return null
+        val maxReadChars = ConfigBackupCodec.MAX_INPUT_CHARS + 1
+        val sb = StringBuilder()
+        val buffer = CharArray(8192)
+        InputStreamReader(stream, Charsets.UTF_8).use { reader ->
+            while (sb.length < maxReadChars) {
+                val read = reader.read(buffer, 0, minOf(buffer.size, maxReadChars - sb.length))
+                if (read < 0) break
+                sb.append(buffer, 0, read)
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun formatImportError(reason: ConfigImportError, detail: String): String = when (reason) {
+        ConfigImportError.INPUT_TOO_LARGE -> getString(R.string.backup_import_too_large)
+        ConfigImportError.UNSUPPORTED_VERSION -> getString(R.string.backup_import_unsupported_version)
+        ConfigImportError.INVALID_PASSPHRASE_OR_TAMPERED -> getString(R.string.backup_import_wrong_passphrase)
+        ConfigImportError.INVALID_CONFIG_VALUES -> getString(R.string.backup_import_invalid_values_format, detail)
+        ConfigImportError.EMPTY_INPUT,
+        ConfigImportError.INVALID_JSON,
+        ConfigImportError.UNSUPPORTED_FORMAT,
+        ConfigImportError.MISSING_CONFIG_PAYLOAD,
+        ConfigImportError.MISSING_CRYPTO_PAYLOAD,
+        ConfigImportError.UNSUPPORTED_CRYPTO_PARAMETERS,
+        ConfigImportError.CORRUPT_CRYPTO_DATA,
+        -> getString(R.string.backup_import_invalid_format)
     }
 }

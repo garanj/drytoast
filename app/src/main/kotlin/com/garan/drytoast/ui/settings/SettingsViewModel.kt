@@ -3,6 +3,9 @@ package com.garan.drytoast.ui.settings
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.garan.drytoast.core.backup.ConfigBackupCodec
+import com.garan.drytoast.core.backup.ConfigImportError
+import com.garan.drytoast.core.backup.ConfigImportResult
 import com.garan.drytoast.core.model.AppAssignment
 import com.garan.drytoast.core.model.BaseProfileSettings
 import com.garan.drytoast.core.model.ComponentKey
@@ -25,6 +28,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed interface ConfigImportOutcome {
+    data class Success(val stagedForReboot: Boolean) : ConfigImportOutcome
+    data object PassphraseRequired : ConfigImportOutcome
+    data object SettingsLocked : ConfigImportOutcome
+    data class Error(val reason: ConfigImportError, val detail: String) : ConfigImportOutcome
+}
 
 @Immutable
 data class SettingsUiState(
@@ -49,6 +60,8 @@ class SettingsViewModel(
     private val dialerPackageResolver: () -> String,
     private val appAccessController: AppAccessController = NoOpAppAccessController,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val configBackupCodec: ConfigBackupCodec = ConfigBackupCodec(),
+    private val onConfigurationImported: suspend () -> Unit = {},
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -377,4 +390,41 @@ class SettingsViewModel(
             settingsRepository.deleteTrigger(triggerId)
         }
     }
+
+    /**
+     * Serializes the currently editable configuration snapshot to JSON (encrypted when
+     * [passphrase] is non-empty, plaintext otherwise).
+     */
+    suspend fun exportConfigurationJson(passphrase: String?): String = withContext(ioDispatcher) {
+        val snapshot = settingsRepository.getSettings().editableSnapshot
+        configBackupCodec.encode(snapshot, passphrase?.takeIf { it.isNotEmpty() })
+    }
+
+    /**
+     * Decodes and imports a Dry Toast JSON backup string.
+     *
+     * Respects Settings Lock and Reboot-to-Apply. Invokes [onConfigurationImported] on success
+     * so schedule alarms and Hardened Mode suspension reconcile immediately.
+     */
+    suspend fun importConfigurationJson(rawJson: String, passphrase: String? = null): ConfigImportOutcome =
+        withContext(ioDispatcher) {
+            val current = settingsRepository.getSettings()
+            if (current.isSettingsLocked) {
+                return@withContext ConfigImportOutcome.SettingsLocked
+            }
+            when (val decoded = configBackupCodec.decode(rawJson, passphrase)) {
+                is ConfigImportResult.PassphraseRequired -> ConfigImportOutcome.PassphraseRequired
+                is ConfigImportResult.Error -> ConfigImportOutcome.Error(decoded.reason, decoded.detail)
+                is ConfigImportResult.Success -> {
+                    val applied = settingsRepository.importConfiguration(decoded.snapshot)
+                    if (!applied) {
+                        ConfigImportOutcome.SettingsLocked
+                    } else {
+                        val updated = settingsRepository.getSettings()
+                        onConfigurationImported()
+                        ConfigImportOutcome.Success(stagedForReboot = updated.hasPendingRebootChanges)
+                    }
+                }
+            }
+        }
 }
