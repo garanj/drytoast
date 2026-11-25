@@ -21,7 +21,7 @@
       -webkit-font-smoothing: antialiased;
     }
     main {
-      max-width: 600px;
+      max-width: 620px;
       margin: 0 auto;
       padding: 48px 24px 72px;
     }
@@ -127,7 +127,7 @@
       grid-template-columns: repeat(2, 1fr);
       border: 1px solid #2e2e2e;
       border-radius: 2px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       background: #0c0c0c;
     }
     @media (max-width: 540px) {
@@ -163,6 +163,66 @@
       background: #ffffff;
       color: #000000;
     }
+    /* Method Switcher inside Enable Tab */
+    .method-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 520px) {
+      .method-switcher {
+        grid-template-columns: 1fr;
+      }
+    }
+    .method-btn {
+      appearance: none;
+      text-align: left;
+      background: #0c0c0c;
+      border: 1px solid #262626;
+      border-radius: 2px;
+      padding: 14px;
+      color: #b0b0b0;
+      cursor: pointer;
+      transition: border-color 120ms ease, background-color 120ms ease;
+    }
+    .method-btn:hover {
+      border-color: #666666;
+      color: #ffffff;
+    }
+    .method-btn.active {
+      background: #141414;
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+    .method-btn-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      color: inherit;
+    }
+    .method-btn-desc {
+      display: block;
+      font-size: 0.8rem;
+      color: #888888;
+      line-height: 1.38;
+    }
+    .method-btn.active .method-btn-desc {
+      color: #c2c2c2;
+    }
+    .method-pane {
+      display: none;
+    }
+    .method-pane.active {
+      display: block;
+    }
     .backup-checklist {
       list-style: none;
       margin: 14px 0 0;
@@ -186,6 +246,19 @@
       margin-top: 4px;
       accent-color: #ffffff;
       flex-shrink: 0;
+    }
+    .warning-box {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border: 1px solid #6b4e16;
+      background: #141008;
+      border-radius: 2px;
+      font-size: 0.86rem;
+      color: #e8d5a8;
+      line-height: 1.5;
+    }
+    .warning-box strong {
+      color: #ffffff;
     }
     .expect-box {
       margin-top: 16px;
@@ -218,6 +291,9 @@
       padding: 24px;
       margin-bottom: 20px;
     }
+    .step-card.is-muted {
+      opacity: 0.55;
+    }
     .step-header {
       display: flex;
       align-items: center;
@@ -244,6 +320,11 @@
       background: #ffffff;
       color: #000000;
       border-radius: 2px;
+      white-space: nowrap;
+    }
+    .badge.subtle {
+      background: #1f1f1f;
+      color: #b8b8b8;
     }
     h2 {
       font-size: 1.15rem;
@@ -256,13 +337,170 @@
       margin: 0 0 16px;
     }
     .steps-list {
-      margin: 0 0 22px;
+      margin: 0 0 20px;
       padding-left: 20px;
       color: #d0d0d0;
       font-size: 0.92rem;
     }
     .steps-list li {
       margin-bottom: 8px;
+    }
+    /* Buttons & Interactive Controls */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn {
+      appearance: none;
+      border-radius: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 11px 16px;
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+    }
+    .btn-primary {
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #ffffff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #dedede;
+      border-color: #dedede;
+    }
+    .btn-secondary {
+      background: #141414;
+      color: #ffffff;
+      border: 1px solid #383838;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      border-color: #ffffff;
+    }
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .conn-pill {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #8e8e8e;
+    }
+    .conn-pill.connected {
+      color: #86efac;
+    }
+    .conn-pill.waiting {
+      color: #fde68a;
+    }
+    /* Live Status Board */
+    .status-list {
+      list-style: none;
+      margin: 14px 0 0;
+      padding: 0;
+      border-top: 1px solid #222222;
+    }
+    .status-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .status-row-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .status-row-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+    .status-row-detail {
+      font-size: 0.82rem;
+      color: #9a9a9a;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .status-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      border: 1px solid #333333;
+      color: #8e8e8e;
+      background: #141414;
+    }
+    .status-tag.ok {
+      border-color: #1f5133;
+      background: #0a1f13;
+      color: #86efac;
+    }
+    .status-tag.warn {
+      border-color: #6b4e16;
+      background: #1c1507;
+      color: #fde68a;
+    }
+    .status-tag.err {
+      border-color: #6b1d1d;
+      background: #1d0909;
+      color: #fca5a5;
+    }
+    .account-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .account-chip {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      color: #e5e5e5;
+      background: #161616;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      padding: 3px 8px;
+    }
+    .alert-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 2px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .alert-box.error {
+      border: 1px solid #6b1d1d;
+      background: #180909;
+      color: #fca5a5;
+    }
+    .alert-box.success {
+      border: 1px solid #1f5133;
+      background: #08180f;
+      color: #bbf7d0;
+    }
+    .alert-box.info {
+      border: 1px solid #333333;
+      background: #111111;
+      color: #d4d4d4;
+    }
+    .alert-box strong {
+      color: #ffffff;
+    }
+    .hidden {
+      display: none !important;
     }
     .qr-wrap {
       display: flex;
@@ -354,12 +592,17 @@
       color: #888888;
       margin: 14px 0 0;
     }
-    .note a, .step-desc a {
+    .note a, .step-desc a, .steps-list a, .status-row-detail a, .alert-box a {
       color: #ffffff;
       text-decoration: underline;
     }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88em;
+      color: #e5e5e5;
+    }
     details {
-      margin-top: 24px;
+      margin-top: 20px;
       border-top: 1px solid #1f1f1f;
       padding-top: 16px;
       color: #8e8e8e;
@@ -407,10 +650,10 @@
     </nav>
 
     <h1>Hardened Mode (Device Owner)</h1>
-    <p class="subtitle">Provision OS-level Device Owner protection on a fresh install, or deactivate Hardened Mode on an enrolled phone.</p>
+    <p class="subtitle">Enable OS-level Device Owner protection on an existing phone without a factory reset, provision a fresh device via 6-Tap QR, or deactivate cleanly anytime.</p>
 
     <div class="mobile-second-device-note" role="note">
-      <strong>Viewing on your phone?</strong> Open <code>drytoast.app/hardened-mode</code> on a computer or second screen so you can scan the QR code.
+      <strong>Viewing on your phone?</strong> Open <code>drytoast.app/console/hardening</code> on a computer (Chrome, Edge, or Brave for USB setup, or any screen for the 6-Tap QR code).
     </div>
 
     <div class="action-tabs" role="tablist" aria-label="Hardened Mode action">
@@ -418,77 +661,227 @@
       <button type="button" class="action-tab" role="tab" aria-selected="false" data-tab-btn="disable">Disable Hardened Mode</button>
     </div>
 
-    <!-- TAB 1: ENABLE HARDENED MODE (6-TAP QR) -->
+    <!-- TAB 1: ENABLE HARDENED MODE -->
     <div class="tab-pane active" data-tab-pane="enable">
-      <section class="step-card">
-        <div class="step-header">
-          <p class="step-label">Step 01 · Pre-Reset Checklist</p>
-        </div>
-        <h2>Back up your phone before resetting</h2>
-        <p class="step-desc">
-          If you are setting up Hardened Mode on an existing phone, you will factory reset it first. Take two minutes to confirm these backups before wiping:
-        </p>
-        <ul class="backup-checklist">
-          <li>
-            <label class="backup-check-label">
-              <input type="checkbox" />
-              <span><strong>Photos &amp; Local Files:</strong> Confirm Google Photos (or a USB copy to your computer) has finished backing up <code>DCIM/</code> and <code>Downloads/</code>.</span>
-            </label>
-          </li>
-          <li>
-            <label class="backup-check-label">
-              <input type="checkbox" />
-              <span><strong>2FA Authenticators &amp; Passkeys:</strong> Confirm Google Authenticator, 1Password, Bitwarden, or Aegis is synced or recovery codes are saved.</span>
-            </label>
-          </li>
-          <li>
-            <label class="backup-check-label">
-              <input type="checkbox" />
-              <span><strong>Messaging Backups:</strong> Trigger a fresh backup in WhatsApp (<em>Settings → Chats → Chat backup</em>) or Signal (<em>Settings → Chats → Chat backups</em>).</span>
-            </label>
-          </li>
-          <li>
-            <label class="backup-check-label">
-              <input type="checkbox" />
-              <span><strong>SMS &amp; Call History (Optional):</strong> Android's 6-Tap managed setup skips the consumer "Copy apps &amp; data" restore screen. Back up texts/calls with an app like <em>SMS Backup &amp; Restore</em> if you want to keep old history.</span>
-            </label>
-          </li>
-        </ul>
+      <div class="method-switcher" role="tablist" aria-label="Hardened Mode setup method">
+        <button type="button" class="method-btn active" role="tab" aria-selected="true" data-method-btn="usb">
+          <span class="method-btn-title">
+            <span>Keep Your Data (USB)</span>
+            <span class="badge">No Reset</span>
+          </span>
+          <span class="method-btn-desc">Existing phone. Connects directly over USB in Chrome, Edge, or Brave. Takes ~3 minutes.</span>
+        </button>
+        <button type="button" class="method-btn" role="tab" aria-selected="false" data-method-btn="qr">
+          <span class="method-btn-title">
+            <span>Fresh Phone (6-Tap QR)</span>
+            <span class="badge subtle">No PC</span>
+          </span>
+          <span class="method-btn-desc">Brand-new or factory-reset Android phone. Scan a QR code on Android's Welcome screen.</span>
+        </button>
+      </div>
 
-        <div class="expect-box">
-          <p><strong>What comes back automatically:</strong> After setup finishes and you sign into Google Play, your Contacts, Calendar, Gmail, Photos, Chrome, Play Store app library, and app-native cloud backups (WhatsApp, 2FA, password manager) sync right back.</p>
-          <p><strong>What to expect in Device Owner mode:</strong> Android displays a small "Managed by Dry Toast" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate Hardened Mode cleanly anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
+      <!-- METHOD 1: EXISTING PHONE VIA WEBUSB (NO FACTORY RESET) -->
+      <div class="method-pane active" data-method-pane="usb">
+        <div id="webusb-unsupported" class="alert-box info hidden" role="status">
+          <strong>Direct USB setup requires Chrome, Edge, or Brave on a computer.</strong> Your current browser does not expose WebUSB. Open this page in Chrome/Edge on a computer, or use the terminal ADB commands below.
         </div>
-      </section>
 
-      <section class="step-card">
-        <div class="step-header">
-          <p class="step-label">Step 02 · Fresh Install Setup</p>
-          <span class="badge">6-Tap QR</span>
-        </div>
-        <h2>Scan on Android's Welcome screen</h2>
-        <p class="step-desc">
-          Hardened Mode is provisioned on a brand-new or freshly factory-reset phone <strong>before</strong> signing into Google accounts.
-        </p>
-        <ol class="steps-list">
-          <li>Turn on a brand-new or freshly factory-reset Android phone.</li>
-          <li>On Android's very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android's built-in QR scanner.</li>
-          <li>Connect to Wi-Fi when prompted, then scan the QR code below.</li>
-          <li>Android will download the signed Dry Toast APK, verify its SHA-256 checksum, and set Dry Toast as Device Owner automatically.</li>
-        </ol>
-        <div class="qr-wrap">
-          <div id="provision-qr-box" class="qr-box" role="img" aria-label="6-Tap Welcome Screen Provisioning QR code">
-            
+        <section class="step-card">
+          <div class="step-header">
+            <p class="step-label">Step 01 · Credentials Safety Check</p>
+            <span class="badge">Required</span>
           </div>
-          <span class="qr-caption">6-Tap Welcome Screen Setup QR</span>
-        </div>
-      </section>
+          <h2>Confirm you can sign back into your accounts</h2>
+          <p class="step-desc">
+            Android only allows Device Owner setup when zero accounts are signed in. You will temporarily remove your accounts, enable Hardened Mode, and sign right back in. <strong>No apps, photos, messages, or local files are wiped.</strong>
+          </p>
+          <div class="warning-box">
+            <strong>Important:</strong> Before removing any account, be 100% certain you know your Google password (and any work, email, or messaging logins) and have your 2FA authenticator, passkey, or backup codes ready on a second device or written down.
+          </div>
+          <ul class="backup-checklist">
+            <li>
+              <label class="backup-check-label">
+                <input id="usb-safety-check" type="checkbox" />
+                <span><strong>I have my account passwords and 2FA recovery ready</strong> to sign back in after Hardened Mode is enabled.</span>
+              </label>
+            </li>
+          </ul>
+          <div class="expect-box">
+            <p><strong>100% local in your browser:</strong> USB commands run directly from this browser tab over your cable to your phone. Nothing is uploaded or sent to any server.</p>
+            <p><strong>What to expect in Device Owner mode:</strong> Android shows a small "Managed by Dry Toast" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
+          </div>
+        </section>
 
-      <details>
-        <summary>USB / ADB command alternative (fresh device with zero accounts)</summary>
-        <pre># If Dry Toast is already installed on a fresh device with no accounts added:
+        <section class="step-card" id="usb-step-connect">
+          <div class="step-header">
+            <p class="step-label">Step 02 · USB Debugging</p>
+            <span id="usb-conn-pill" class="conn-pill">Not connected</span>
+          </div>
+          <h2>Connect your phone via USB</h2>
+          <ol class="steps-list">
+            <li>Make sure <strong>Dry Toast</strong> is installed on your phone (<a href="https://play.google.com/store/apps/details?id=com.garan.drytoast">Google Play</a> or <a href="https://github.com/garanj/drytoast/releases/latest">GitHub Release</a>).</li>
+            <li>On your phone, open <strong>Settings → About phone</strong> and tap <strong>Build number</strong> 7 times to enable Developer options.</li>
+            <li>Open <strong>Settings → System → Developer options</strong>, turn on <strong>USB debugging</strong>, and plug your phone into this computer with a USB data cable.</li>
+          </ol>
+          <div class="btn-row">
+            <button type="button" id="usb-connect-btn" class="btn btn-primary" disabled>Connect Phone via USB</button>
+            <button type="button" id="usb-disconnect-btn" class="btn btn-secondary hidden">Disconnect</button>
+          </div>
+          <div id="usb-connect-error" class="alert-box error hidden" role="alert"></div>
+        </section>
+
+        <section class="step-card is-muted" id="usb-step-ready">
+          <div class="step-header">
+            <p class="step-label">Step 03 · Live Readiness Check</p>
+            <span id="usb-poll-pill" class="conn-pill">Waiting for phone</span>
+          </div>
+          <h2>Temporarily remove accounts until all checks pass</h2>
+          <p class="step-desc">
+            Once connected, this page checks your phone automatically every 2 seconds. Remove every account in Android's <strong>Passwords &amp; accounts</strong> screen, then wait a moment for the counter below to hit <strong>0</strong>.
+          </p>
+
+          <ul class="status-list" aria-live="polite">
+            <li class="status-row">
+              <div class="status-row-main">
+                <div class="status-row-title">Dry Toast installed</div>
+                <div id="check-installed-detail" class="status-row-detail">Connect your phone to verify.</div>
+              </div>
+              <span id="check-installed-tag" class="status-tag">Waiting</span>
+            </li>
+            <li class="status-row">
+              <div class="status-row-main">
+                <div class="status-row-title">Accounts removed</div>
+                <div id="check-accounts-detail" class="status-row-detail">Android requires 0 signed-in accounts during activation.</div>
+                <div id="check-accounts-chips" class="account-chips hidden"></div>
+              </div>
+              <span id="check-accounts-tag" class="status-tag">Waiting</span>
+            </li>
+            <li class="status-row">
+              <div class="status-row-main">
+                <div class="status-row-title">Single user (no Work Profile or Private Space)</div>
+                <div id="check-users-detail" class="status-row-detail">Android blocks Device Owner if secondary users exist.</div>
+              </div>
+              <span id="check-users-tag" class="status-tag">Waiting</span>
+            </li>
+          </ul>
+
+          <div class="btn-row">
+            <button type="button" id="usb-open-accounts-btn" class="btn btn-secondary" disabled>Open Accounts on Phone</button>
+            <button type="button" id="usb-recheck-btn" class="btn btn-secondary" disabled>Recheck Now</button>
+          </div>
+        </section>
+
+        <section class="step-card is-muted" id="usb-step-activate">
+          <div class="step-header">
+            <p class="step-label">Step 04 · Activate &amp; Confirm</p>
+            <span id="usb-activate-badge" class="badge subtle">Locked</span>
+          </div>
+          <h2>Enable Hardened Mode</h2>
+          <p class="step-desc" id="usb-activate-desc">
+            This button unlocks automatically as soon as all three checks above are green.
+          </p>
+          <div class="btn-row">
+            <button type="button" id="usb-enable-btn" class="btn btn-primary" disabled>Enable Hardened Mode</button>
+          </div>
+
+          <div id="usb-enable-error" class="alert-box error hidden" role="alert"></div>
+
+          <div id="usb-success-panel" class="alert-box success hidden" role="status">
+            <strong>Hardened Mode is active on your phone.</strong>
+            <p style="margin: 8px 0 12px;">Dry Toast now holds Android Device Owner privileges. Complete these final steps:</p>
+            <ol class="steps-list" style="margin-bottom: 14px; color: #dcfce7;">
+              <li>Open <strong>Dry Toast → Settings → Hardened Mode</strong> and confirm <strong>STATUS: HARDENED MODE ACTIVE</strong>.</li>
+              <li>Sign back into your Google account and any other accounts you removed. Your apps, photos, and local data are still intact.</li>
+              <li>Turn <strong>USB debugging</strong> back <strong>off</strong> in Developer options, then unplug your USB cable.</li>
+            </ol>
+            <div class="btn-row" style="margin-top: 0;">
+              <button type="button" id="usb-open-drytoast-btn" class="btn btn-primary">Open Dry Toast on Phone</button>
+            </div>
+          </div>
+        </section>
+
+        <details id="terminal-adb-fallback">
+          <summary>Using Firefox/Safari or prefer terminal ADB?</summary>
+          <pre># 1. Confirm your phone is connected and authorized
+adb devices
+
+# 2. Open Passwords &amp; accounts on your phone and remove all accounts
+adb shell am start -a android.settings.SYNC_SETTINGS
+
+# 3. Verify 0 accounts and only 1 user remain
+adb shell dumpsys account | grep "Accounts:" &amp;&amp; adb shell pm list users
+
+# 4. Grant Device Owner to Dry Toast (then sign back into your accounts)
 adb shell dpm set-device-owner com.garan.drytoast/.dpc.DryToastDeviceAdminReceiver</pre>
-      </details>
+        </details>
+      </div>
+
+      <!-- METHOD 2: FRESH PHONE (6-TAP QR) -->
+      <div class="method-pane" data-method-pane="qr">
+        <section class="step-card">
+          <div class="step-header">
+            <p class="step-label">Step 01 · Pre-Reset Checklist</p>
+          </div>
+          <h2>Back up your phone before resetting</h2>
+          <p class="step-desc">
+            If you are setting up Hardened Mode on an existing phone via 6-Tap QR, you will factory reset it first. Take two minutes to confirm these backups before wiping:
+          </p>
+          <ul class="backup-checklist">
+            <li>
+              <label class="backup-check-label">
+                <input type="checkbox" />
+                <span><strong>Photos &amp; Local Files:</strong> Confirm Google Photos (or a USB copy to your computer) has finished backing up <code>DCIM/</code> and <code>Downloads/</code>.</span>
+              </label>
+            </li>
+            <li>
+              <label class="backup-check-label">
+                <input type="checkbox" />
+                <span><strong>2FA Authenticators &amp; Passkeys:</strong> Confirm Google Authenticator, 1Password, Bitwarden, or Aegis is synced or recovery codes are saved.</span>
+              </label>
+            </li>
+            <li>
+              <label class="backup-check-label">
+                <input type="checkbox" />
+                <span><strong>Messaging Backups:</strong> Trigger a fresh backup in WhatsApp (<em>Settings → Chats → Chat backup</em>) or Signal (<em>Settings → Chats → Chat backups</em>).</span>
+              </label>
+            </li>
+            <li>
+              <label class="backup-check-label">
+                <input type="checkbox" />
+                <span><strong>SMS &amp; Call History (Optional):</strong> Android's 6-Tap managed setup skips the consumer "Copy apps &amp; data" restore screen. Back up texts/calls with an app like <em>SMS Backup &amp; Restore</em> if you want to keep old history.</span>
+              </label>
+            </li>
+          </ul>
+
+          <div class="expect-box">
+            <p><strong>What comes back automatically:</strong> After setup finishes and you sign into Google Play, your Contacts, Calendar, Gmail, Photos, Chrome, Play Store app library, and app-native cloud backups (WhatsApp, 2FA, password manager) sync right back.</p>
+            <p><strong>What to expect in Device Owner mode:</strong> Android displays a small "Managed by Dry Toast" notice in Quick Settings and does not allow Work Profiles (such as Microsoft Intune), Private Space, or Samsung Secure Folder on the same device. You can deactivate Hardened Mode cleanly anytime from the <strong>Disable</strong> tab without wiping your phone.</p>
+          </div>
+        </section>
+
+        <section class="step-card">
+          <div class="step-header">
+            <p class="step-label">Step 02 · Fresh Install Setup</p>
+            <span class="badge">6-Tap QR</span>
+          </div>
+          <h2>Scan on Android's Welcome screen</h2>
+          <p class="step-desc">
+            Hardened Mode is provisioned on a brand-new or freshly factory-reset phone <strong>before</strong> signing into Google accounts.
+          </p>
+          <ol class="steps-list">
+            <li>Turn on a brand-new or freshly factory-reset Android phone.</li>
+            <li>On Android's very first <strong>Welcome</strong> screen, <strong>tap the screen 6 times rapidly in the same spot</strong> to open Android's built-in QR scanner.</li>
+            <li>Connect to Wi-Fi when prompted, then scan the QR code below.</li>
+            <li>Android will download the signed Dry Toast APK, verify its SHA-256 checksum, and set Dry Toast as Device Owner automatically.</li>
+          </ol>
+          <div class="qr-wrap">
+            <div id="provision-qr-box" class="qr-box" role="img" aria-label="6-Tap Welcome Screen Provisioning QR code">
+
+            </div>
+            <span class="qr-caption">6-Tap Welcome Screen Setup QR</span>
+          </div>
+        </section>
+      </div>
     </div>
 
     <!-- TAB 2: DISABLE HARDENED MODE (QR + CHALLENGE) -->
@@ -543,9 +936,10 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
   </main>
 
   <script src="/console/qrcode.js?v=2"></script>
+  <script src="/console/webadb.bundle.js?v=1"></script>
   <script>
     (function () {
-      // Tab switching (Enable vs Disable)
+      // Top-level tab switching (Enable vs Disable)
       const tabBtns = document.querySelectorAll("[data-tab-btn]");
       const tabPanes = document.querySelectorAll("[data-tab-pane]");
       function activateTab(name) {
@@ -567,6 +961,28 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
         activateTab("disable");
       }
 
+      // Setup method switching inside Enable tab (USB vs 6-Tap QR)
+      const methodBtns = document.querySelectorAll("[data-method-btn]");
+      const methodPanes = document.querySelectorAll("[data-method-pane]");
+      function activateMethod(name) {
+        methodBtns.forEach(function (btn) {
+          const isMatch = btn.getAttribute("data-method-btn") === name;
+          btn.classList.toggle("active", isMatch);
+          btn.setAttribute("aria-selected", isMatch ? "true" : "false");
+        });
+        methodPanes.forEach(function (pane) {
+          pane.classList.toggle("active", pane.getAttribute("data-method-pane") === name);
+        });
+      }
+      methodBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          activateMethod(btn.getAttribute("data-method-btn"));
+        });
+      });
+      if (window.location.hash === "#qr") {
+        activateMethod("qr");
+      }
+
       // Dynamically refresh 6-Tap QR from /provisioning-qr-payload.json so it always matches the latest release
       const qrBox = document.getElementById("provision-qr-box");
       if (qrBox && window.DryToastQr) {
@@ -577,12 +993,312 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
               qrBox.innerHTML = window.DryToastQr.renderQrSvg(JSON.stringify(data), 4);
             }
           })
-          .catch(function () {
-            // Keep pre-rendered SVG fallback if offline
-          });
+          .catch(function () {});
       }
 
+      // =========================================================================
+      // WebUSB Zero-Reset Hardened Mode Wizard
+      // =========================================================================
+      const webAdb = window.DryToastWebAdb;
+      const supported = Boolean(webAdb && webAdb.isSupported());
+
+      const unsupportedEl = document.getElementById("webusb-unsupported");
+      const fallbackDetails = document.getElementById("terminal-adb-fallback");
+      const safetyCheck = document.getElementById("usb-safety-check");
+      const connectBtn = document.getElementById("usb-connect-btn");
+      const disconnectBtn = document.getElementById("usb-disconnect-btn");
+      const connPill = document.getElementById("usb-conn-pill");
+      const connectErr = document.getElementById("usb-connect-error");
+
+      const stepReady = document.getElementById("usb-step-ready");
+      const pollPill = document.getElementById("usb-poll-pill");
+      const openAccountsBtn = document.getElementById("usb-open-accounts-btn");
+      const recheckBtn = document.getElementById("usb-recheck-btn");
+
+      const installedTag = document.getElementById("check-installed-tag");
+      const installedDetail = document.getElementById("check-installed-detail");
+      const accountsTag = document.getElementById("check-accounts-tag");
+      const accountsDetail = document.getElementById("check-accounts-detail");
+      const accountsChips = document.getElementById("check-accounts-chips");
+      const usersTag = document.getElementById("check-users-tag");
+      const usersDetail = document.getElementById("check-users-detail");
+
+      const stepActivate = document.getElementById("usb-step-activate");
+      const activateBadge = document.getElementById("usb-activate-badge");
+      const activateDesc = document.getElementById("usb-activate-desc");
+      const enableBtn = document.getElementById("usb-enable-btn");
+      const enableErr = document.getElementById("usb-enable-error");
+      const successPanel = document.getElementById("usb-success-panel");
+      const openDryToastBtn = document.getElementById("usb-open-drytoast-btn");
+
+      let client = webAdb ? webAdb.createClient() : null;
+      let isConnected = false;
+      let isChecking = false;
+      let pollTimer = null;
+      let lastInspect = null;
+
+      if (!supported) {
+        unsupportedEl.classList.remove("hidden");
+        if (fallbackDetails) fallbackDetails.open = true;
+      }
+
+      function setTag(el, cls, text) {
+        el.className = "status-tag" + (cls ? " " + cls : "");
+        el.textContent = text;
+      }
+
+      function updateConnectButtonState() {
+        connectBtn.disabled = !supported || !safetyCheck.checked || isConnected;
+        if (lastInspect) {
+          enableBtn.disabled = !isConnected || !safetyCheck.checked || !lastInspect.ready;
+        }
+      }
+
+      safetyCheck.addEventListener("change", updateConnectButtonState);
+
+      function stopPolling() {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      function resetDisconnectedUi(reasonText) {
+        stopPolling();
+        isConnected = false;
+        lastInspect = null;
+        connPill.className = "conn-pill";
+        connPill.textContent = reasonText || "Not connected";
+        connectBtn.classList.remove("hidden");
+        disconnectBtn.classList.add("hidden");
+        stepReady.classList.add("is-muted");
+        stepActivate.classList.add("is-muted");
+        pollPill.className = "conn-pill";
+        pollPill.textContent = "Waiting for phone";
+        openAccountsBtn.disabled = true;
+        recheckBtn.disabled = true;
+        enableBtn.disabled = true;
+        activateBadge.className = "badge subtle";
+        activateBadge.textContent = "Locked";
+        setTag(installedTag, "", "Waiting");
+        installedDetail.textContent = "Connect your phone to verify.";
+        setTag(accountsTag, "", "Waiting");
+        accountsDetail.textContent = "Android requires 0 signed-in accounts during activation.";
+        accountsChips.classList.add("hidden");
+        accountsChips.innerHTML = "";
+        setTag(usersTag, "", "Waiting");
+        usersDetail.textContent = "Android blocks Device Owner if secondary users exist.";
+        updateConnectButtonState();
+      }
+
+      function renderInspect(state) {
+        lastInspect = state;
+        stepReady.classList.remove("is-muted");
+        stepActivate.classList.remove("is-muted");
+        openAccountsBtn.disabled = false;
+        recheckBtn.disabled = false;
+
+        // 1. Dry Toast installed
+        if (state.installed) {
+          setTag(installedTag, "ok", "Ready");
+          installedDetail.textContent = "Dry Toast (com.garan.drytoast) is installed.";
+        } else {
+          setTag(installedTag, "err", "Missing");
+          installedDetail.innerHTML = 'Dry Toast is not installed on this phone. Install it from <a href="https://play.google.com/store/apps/details?id=com.garan.drytoast">Google Play</a> or <a href="https://github.com/garanj/drytoast/releases/latest">GitHub Releases</a>, then click Recheck.';
+        }
+
+        // 2. Accounts removed
+        if (state.alreadyDeviceOwner) {
+          setTag(accountsTag, "ok", "Done");
+          accountsDetail.textContent = "Hardened Mode is already active, so signed-in accounts are fine.";
+          accountsChips.classList.add("hidden");
+          accountsChips.innerHTML = "";
+        } else if (state.accountCount === 0) {
+          setTag(accountsTag, "ok", "0 Accounts");
+          accountsDetail.textContent = "All accounts removed. Ready for Device Owner activation.";
+          accountsChips.classList.add("hidden");
+          accountsChips.innerHTML = "";
+        } else {
+          setTag(accountsTag, "warn", state.accountCount + " Remaining");
+          accountsDetail.textContent = "Remove " + (state.accountCount === 1 ? "this account" : "these " + state.accountCount + " accounts") + " in Passwords & accounts:";
+          accountsChips.innerHTML = "";
+          state.accounts.forEach(function (acct) {
+            const chip = document.createElement("span");
+            chip.className = "account-chip";
+            chip.textContent = acct.name + " (" + acct.type + ")";
+            accountsChips.appendChild(chip);
+          });
+          accountsChips.classList.toggle("hidden", state.accounts.length === 0);
+        }
+
+        // 3. Single user
+        if (state.singleUser) {
+          setTag(usersTag, "ok", "Ready");
+          usersDetail.textContent = "Single user detected (" + (state.users[0] ? state.users[0].name : "Owner") + ").";
+        } else {
+          const extras = state.users.filter(function (u) { return u.id !== 0; }).map(function (u) { return u.name; });
+          setTag(usersTag, "err", state.users.length + " Users");
+          usersDetail.textContent = "Remove secondary users before continuing: " + extras.join(", ") + " (check Work Profile, Private Space, Guest, or Dual Messenger).";
+        }
+
+        // 4. Activation step state
+        if (state.alreadyDeviceOwner) {
+          stopPolling();
+          pollPill.className = "conn-pill connected";
+          pollPill.textContent = "Active";
+          activateBadge.className = "badge";
+          activateBadge.textContent = "Active";
+          activateDesc.textContent = "Dry Toast is already set as Device Owner on this phone.";
+          enableBtn.classList.add("hidden");
+          enableErr.classList.add("hidden");
+          successPanel.classList.remove("hidden");
+        } else if (state.ready) {
+          pollPill.className = "conn-pill connected";
+          pollPill.textContent = "All checks passed";
+          activateBadge.className = "badge";
+          activateBadge.textContent = "Ready";
+          activateDesc.textContent = "All checks passed. Click below to grant Device Owner to Dry Toast.";
+          enableBtn.classList.remove("hidden");
+          enableBtn.disabled = !safetyCheck.checked;
+        } else {
+          pollPill.className = "conn-pill waiting";
+          pollPill.textContent = "Auto-checking every 2s";
+          activateBadge.className = "badge subtle";
+          activateBadge.textContent = "Locked";
+          activateDesc.textContent = "Finish the highlighted check(s) above to unlock activation.";
+          enableBtn.classList.remove("hidden");
+          enableBtn.disabled = true;
+        }
+      }
+
+      async function runInspect() {
+        if (!isConnected || isChecking) return;
+        isChecking = true;
+        try {
+          const state = await client.inspect();
+          renderInspect(state);
+        } catch (err) {
+          if (isConnected) {
+            pollPill.className = "conn-pill";
+            pollPill.textContent = "Check paused";
+          }
+        } finally {
+          isChecking = false;
+        }
+      }
+
+      function formatUsbError(err) {
+        const msg = (err && err.message) ? err.message : String(err || "Unknown USB error");
+        if (/claim|busy|in use|Access denied/i.test(msg)) {
+          return "<strong>USB interface is busy.</strong> Another program (such as local ADB or Android Studio) is holding the connection. Close it or run <code>adb kill-server</code> in a terminal, then click Connect again.";
+        }
+        if (/No device selected|CANCELLED/i.test(msg)) {
+          return "";
+        }
+        return "<strong>Could not connect:</strong> " + msg + ". Make sure USB debugging is enabled and tap <strong>Allow</strong> on your phone.";
+      }
+
+      connectBtn.addEventListener("click", async function () {
+        if (!client || !supported) return;
+        connectErr.classList.add("hidden");
+        enableErr.classList.add("hidden");
+        successPanel.classList.add("hidden");
+        connectBtn.disabled = true;
+        try {
+          const info = await client.connect(function (stage) {
+            if (stage === "selecting") {
+              connPill.className = "conn-pill waiting";
+              connPill.textContent = "Select phone in browser prompt...";
+            } else if (stage === "authorizing") {
+              connPill.className = "conn-pill waiting";
+              connPill.textContent = 'Tap "Allow" on your phone...';
+            }
+          });
+          isConnected = true;
+          connPill.className = "conn-pill connected";
+          connPill.textContent = "Connected · " + info.name;
+          connectBtn.classList.add("hidden");
+          disconnectBtn.classList.remove("hidden");
+          info.disconnected.then(function () {
+            if (isConnected) {
+              resetDisconnectedUi("Disconnected");
+            }
+          });
+          await runInspect();
+          stopPolling();
+          if (lastInspect && !lastInspect.alreadyDeviceOwner) {
+            pollTimer = setInterval(runInspect, 2000);
+          }
+        } catch (err) {
+          const html = formatUsbError(err);
+          if (html) {
+            connectErr.innerHTML = html;
+            connectErr.classList.remove("hidden");
+          }
+          resetDisconnectedUi("Not connected");
+        }
+      });
+
+      disconnectBtn.addEventListener("click", async function () {
+        if (client) await client.disconnect();
+        resetDisconnectedUi("Disconnected");
+      });
+
+      openAccountsBtn.addEventListener("click", async function () {
+        if (!isConnected) return;
+        try {
+          await client.openAccountsSettings();
+        } catch (_) {}
+      });
+
+      recheckBtn.addEventListener("click", function () {
+        runInspect();
+      });
+
+      enableBtn.addEventListener("click", async function () {
+        if (!isConnected) return;
+        enableBtn.disabled = true;
+        enableBtn.textContent = "Activating...";
+        enableErr.classList.add("hidden");
+        try {
+          const res = await client.enableHardenedMode();
+          if (res.ok) {
+            stopPolling();
+            await runInspect();
+            activateBadge.className = "badge";
+            activateBadge.textContent = "Active";
+            enableBtn.classList.add("hidden");
+            successPanel.classList.remove("hidden");
+          } else {
+            let hint = "Activation did not succeed.";
+            if (/already some accounts/i.test(res.output)) {
+              hint = "Android still sees a signed-in account. Check Step 03 and remove any remaining accounts.";
+            } else if (/several users/i.test(res.output)) {
+              hint = "Android detects a secondary user (Work Profile, Private Space, or Guest). Remove it first.";
+            }
+            enableErr.innerHTML = "<strong>" + hint + "</strong><pre>" + res.output.replace(/</g, "&lt;") + "</pre>";
+            enableErr.classList.remove("hidden");
+            enableBtn.disabled = false;
+            enableBtn.textContent = "Enable Hardened Mode";
+          }
+        } catch (err) {
+          enableErr.textContent = "Failed to run activation command: " + (err.message || err);
+          enableErr.classList.remove("hidden");
+          enableBtn.disabled = false;
+          enableBtn.textContent = "Enable Hardened Mode";
+        }
+      });
+
+      openDryToastBtn.addEventListener("click", async function () {
+        if (!isConnected) return;
+        try {
+          await client.openDryToast();
+        } catch (_) {}
+      });
+
+      // =========================================================================
       // Challenge-Response HMAC-SHA256 generator for domain "hardened-disable"
+      // =========================================================================
       const SECRET = "drytoast-v1-shared-totp-key-9f4b2c8e1d7a6053c8b4e2f1a9d07635";
       const DOMAIN = "hardened-disable";
       const input = document.getElementById("challenge-input");
