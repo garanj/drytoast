@@ -498,12 +498,14 @@ class SearchViewModel(
         }
         val currentLocation = locationSource?.currentLocation?.value
         val previousLatches = currentNfcLatches
-        val hasRestrictiveDefaultProfile = !breakGlassActive && effectiveSettings.customProfiles.any { profile ->
-            profile.enabled && (
-                profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL ||
-                    profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL
-                )
-        }
+        val hasRestrictiveDefaultProfile = !breakGlassActive &&
+            effectiveSettings.customProfiles.any { profile ->
+                profile.enabled &&
+                    (
+                        profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL ||
+                            profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL
+                        )
+            }
         if (hasRestrictiveDefaultProfile && candidates.isEmpty()) {
             val apps = packageIndexSource.getInstalledApps()
             isIndexInitialized.set(true)

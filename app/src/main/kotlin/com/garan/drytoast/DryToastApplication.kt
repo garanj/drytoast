@@ -162,12 +162,14 @@ class DryToastAppContainer(context: Context) {
         }
         val currentLocation = locationSource.currentLocation.value
         val dialerPkg = dialerPackageResolver()
-        val hasRestrictiveDefaultProfile = !breakGlassActive && settings.customProfiles.any { profile ->
-            profile.enabled && (
-                profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL ||
-                    profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL
-                )
-        }
+        val hasRestrictiveDefaultProfile = !breakGlassActive &&
+            settings.customProfiles.any { profile ->
+                profile.enabled &&
+                    (
+                        profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL ||
+                            profile.defaultRule == com.garan.drytoast.core.model.ProfileDefaultRule.GUARD_ALL
+                        )
+            }
         val additionalComponents = if (hasRestrictiveDefaultProfile) {
             buildSet {
                 addAll(settings.baseProfile.quickActions.map { it.component })
