@@ -294,6 +294,23 @@ class AndroidSettingsRepository(
         }
     }
 
+    override suspend fun importConfiguration(snapshot: StagedSettingsSnapshot): Boolean = withContext(ioDispatcher) {
+        var applied = false
+        dataStore.edit { prefs ->
+            if (prefs[Keys.SETTINGS_LOCKED] == true) return@edit
+            mutateConfiguration(prefs) { current ->
+                snapshot.copy(
+                    general = snapshot.general.copy(
+                        hasSeenFirstRunHint = current.general.hasSeenFirstRunHint,
+                        hasCompletedOnboarding = current.general.hasCompletedOnboarding,
+                    ),
+                )
+            }
+            applied = true
+        }
+        applied
+    }
+
     private fun promoteStagedShadowInPrefs(prefs: MutablePreferences): Boolean {
         val rawShadow = prefs[Keys.STAGED_SHADOW].orEmpty()
         if (rawShadow.isBlank()) return false

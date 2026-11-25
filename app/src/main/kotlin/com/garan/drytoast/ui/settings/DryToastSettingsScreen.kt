@@ -30,6 +30,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +39,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,6 +87,18 @@ object SettingsTestTags {
     const val DOCS_LINK_ROW = "settings_docs_link_row"
     const val CONSOLE_LINK_ROW = "settings_console_link_row"
     const val FEEDBACK_BUTTON = "settings_feedback_button"
+    const val EXPORT_CONFIG_ACTION = "settings_export_config_action"
+    const val IMPORT_CONFIG_ACTION = "settings_import_config_action"
+    const val EXPORT_CONFIG_SHEET = "settings_export_config_sheet"
+    const val EXPORT_PASSPHRASE_INPUT = "settings_export_passphrase_input"
+    const val EXPORT_CONFIRM_PASSPHRASE_INPUT = "settings_export_confirm_passphrase_input"
+    const val EXPORT_CONFIRM_BUTTON = "settings_export_confirm_button"
+    const val EXPORT_CANCEL_BUTTON = "settings_export_cancel_button"
+    const val IMPORT_PASSPHRASE_SHEET = "settings_import_passphrase_sheet"
+    const val IMPORT_PASSPHRASE_INPUT = "settings_import_passphrase_input"
+    const val IMPORT_PASSPHRASE_ERROR = "settings_import_passphrase_error"
+    const val IMPORT_UNLOCK_BUTTON = "settings_import_unlock_button"
+    const val IMPORT_CANCEL_BUTTON = "settings_import_cancel_button"
 
     fun guardedGraceOptionTag(minutes: Int): String = "settings_guarded_grace_option_$minutes"
 }
@@ -111,6 +126,15 @@ fun DryToastSettingsScreen(
     onApplyPureBlackWallpaper: () -> Unit = {},
     onSendFeedback: () -> Unit = {},
     onOpenWebsite: ((String) -> Unit)? = null,
+    onRequestExport: (passphrase: String?) -> Unit = {},
+    onRequestImport: () -> Unit = {},
+    showImportPassphraseSheet: Boolean = false,
+    importPassphraseError: String? = null,
+    isImportWorking: Boolean = false,
+    onSubmitImportPassphrase: (String) -> Unit = {},
+    onDismissImportPassphraseSheet: () -> Unit = {},
+    backupStatusMessage: String? = null,
+    onClearBackupStatusMessage: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
@@ -124,10 +148,19 @@ fun DryToastSettingsScreen(
 
     var showAddQuickActionSheet by remember { mutableStateOf(false) }
     var showGuardedGraceSheet by remember { mutableStateOf(false) }
+    var showExportConfigSheet by remember { mutableStateOf(false) }
     var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
     var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
     var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(backupStatusMessage) {
+        if (backupStatusMessage != null) {
+            snackbarHostState.showSnackbar(backupStatusMessage)
+            onClearBackupStatusMessage()
+        }
+    }
 
     val guardedCount = uiState.baseProfile.appAssignments.values.count { it is AppAssignment.Guarded }
     val blockedCount = uiState.baseProfile.appAssignments.values.count { it is AppAssignment.Blocked }
@@ -137,6 +170,7 @@ fun DryToastSettingsScreen(
             .fillMaxSize()
             .semantics { testTagsAsResourceId = true }
             .nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -604,7 +638,88 @@ fun DryToastSettingsScreen(
                 )
             }
 
-            // SECTION 5: GUIDE & CONSOLE
+            // SECTION 5: BACKUP & RESTORE
+            item(key = "header_backup_and_restore") {
+                SettingsSectionHeader(title = stringResource(R.string.section_backup_and_restore))
+            }
+
+            item(key = "action_export_config") {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_export_config_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.setting_export_config_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = DryToastIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.EXPORT_CONFIG_ACTION)
+                        .clickable { showExportConfigSheet = true },
+                )
+            }
+
+            item(key = "action_import_config") {
+                val importEnabled = !uiState.isSettingsLocked
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.setting_import_config_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (importEnabled) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(
+                                if (importEnabled) {
+                                    R.string.setting_import_config_summary
+                                } else {
+                                    R.string.setting_import_config_locked_summary
+                                },
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = DryToastIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SettingsTestTags.IMPORT_CONFIG_ACTION)
+                        .clickable(enabled = importEnabled, onClick = onRequestImport),
+                )
+            }
+
+            item(key = "divider_5") {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            // SECTION 6: GUIDE & CONSOLE
             item(key = "header_guide_and_console") {
                 SettingsSectionHeader(title = stringResource(R.string.section_guide_and_console))
             }
@@ -829,6 +944,25 @@ fun DryToastSettingsScreen(
                 }
             },
             modifier = Modifier.testTag(SettingsTestTags.CONFIRM_REQUIRE_REBOOT_DIALOG),
+        )
+    }
+
+    if (showExportConfigSheet) {
+        ExportConfigBottomSheet(
+            onDismiss = { showExportConfigSheet = false },
+            onConfirmExport = { passphrase ->
+                showExportConfigSheet = false
+                onRequestExport(passphrase)
+            },
+        )
+    }
+
+    if (showImportPassphraseSheet) {
+        ImportPassphraseBottomSheet(
+            errorMessage = importPassphraseError,
+            isWorking = isImportWorking,
+            onDismiss = onDismissImportPassphraseSheet,
+            onSubmitPassphrase = onSubmitImportPassphrase,
         )
     }
 

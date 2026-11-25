@@ -335,4 +335,34 @@
     <string name="profile_default_rule_summary_allow_all">Default: Allow all</string>
     <string name="profile_default_rule_summary_guard_all">Default: Guard all</string>
     <string name="profile_default_rule_summary_block_all">Default: Block all</string>
+
+    <!-- Local JSON configuration export & import -->
+    <string name="section_backup_and_restore">Backup &amp; restore</string>
+    <string name="setting_export_config_title">Export configuration</string>
+    <string name="setting_export_config_summary">Save profiles, triggers, and rules to a local JSON file</string>
+    <string name="setting_import_config_title">Import configuration</string>
+    <string name="setting_import_config_summary">Restore profiles, triggers, and rules from a local JSON file</string>
+    <string name="setting_import_config_locked_summary">Locked while Settings Lock is active</string>
+    <string name="sheet_export_config_title">Export configuration</string>
+    <string name="sheet_export_config_desc">Leave the passphrase blank for a plain JSON file, or enter a passphrase to encrypt the backup with AES-256-GCM.</string>
+    <string name="sheet_export_passphrase_label">Passphrase (optional)</string>
+    <string name="sheet_export_confirm_passphrase_label">Confirm passphrase</string>
+    <string name="sheet_export_passphrase_mismatch">Passphrases do not match</string>
+    <string name="sheet_export_save_action">Save backup file</string>
+    <string name="sheet_import_passphrase_title">Encrypted backup</string>
+    <string name="sheet_import_passphrase_desc">Enter the passphrase used when exporting this configuration.</string>
+    <string name="sheet_import_passphrase_label">Passphrase</string>
+    <string name="sheet_import_unlock_action">Decrypt &amp; import</string>
+    <string name="backup_export_success">Configuration exported</string>
+    <string name="backup_export_failed">Could not save backup file</string>
+    <string name="backup_import_success">Configuration imported</string>
+    <string name="backup_import_staged">Configuration staged — reboot to apply</string>
+    <string name="backup_import_locked">Settings Lock is active. Unlock Settings before importing.</string>
+    <string name="backup_import_read_failed">Could not read the selected file</string>
+    <string name="backup_import_wrong_passphrase">Incorrect passphrase or modified backup file</string>
+    <string name="backup_import_too_large">Backup file is too large to import</string>
+    <string name="backup_import_invalid_format">Selected file is not a valid Dry Toast backup</string>
+    <string name="backup_import_unsupported_version">Backup file version is not supported</string>
+    <string name="backup_import_invalid_values_format">Invalid configuration: %1$s</string>
+    <string name="backup_default_filename">drytoast-config.json</string>
 </resources>

@@ -266,4 +266,17 @@ class FakeSettingsRepository(initialSettings: DryToastSettings = DryToastSetting
             it.copy(breakGlassUntilEpochMillis = untilEpochMillis?.takeIf { ts -> ts > 0L })
         }
     }
+
+    override suspend fun importConfiguration(snapshot: StagedSettingsSnapshot): Boolean {
+        if (_settings.value.isSettingsLocked) return false
+        mutateConfiguration { current ->
+            snapshot.copy(
+                general = snapshot.general.copy(
+                    hasSeenFirstRunHint = current.general.hasSeenFirstRunHint,
+                    hasCompletedOnboarding = current.general.hasCompletedOnboarding,
+                ),
+            )
+        }
+        return true
+    }
 }

@@ -6,4 +6,16 @@
     <uses-permission
         android:name="android.permission.ACCESS_MOCK_LOCATION"
         tools:ignore="MockLocation,ProtectedPermissions" />
+
+    <application>
+        <!-- Debug-only ADB config import receiver (completely absent from release builds) -->
+        <receiver
+            android:name=".debug.DebugConfigImportReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.garan.drytoast.debug.IMPORT_CONFIG" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>

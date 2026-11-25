@@ -925,4 +925,118 @@ class AndroidSettingsRepositoryTest {
         assertThat(repository.getSettings().customProfiles.first { it.id == "strict" }.defaultRule)
             .isEqualTo(com.garan.drytoast.core.model.ProfileDefaultRule.ALLOW_ALL)
     }
+
+    @Test
+    fun importConfiguration_replacesConfigAndPreservesRuntimeFlags() = runTest(testDispatcher) {
+        repository.setHasSeenFirstRunHint(true)
+        repository.setHasCompletedOnboarding(true)
+        repository.updateBreakGlassUntil(999_999L)
+        repository.updateDpcSuspendedPackages(setOf("com.example.suspended"))
+
+        val importedSnapshot = com.garan.drytoast.core.model.StagedSettingsSnapshot(
+            general = GeneralSettings(
+                showUnlocks = false,
+                showRest = false,
+                showDialerIcon = false,
+                requireFullTypingOfGuardedApps = true,
+                hasSeenFirstRunHint = false,
+                hasCompletedOnboarding = false,
+                guardedSessionGraceMinutes = 15,
+                blockNewAppInstalls = true,
+                hardenedOwnerName = "Imported Owner",
+                hardenedLockScreenInfo = "Imported Info",
+                breakGlassTagUid = "AA:BB:CC:DD",
+                breakGlassDurationMinutes = 60,
+            ),
+            baseProfile = BaseProfileSettings(
+                defaultFriction = FrictionChoice.CARET_TRACING,
+                appAssignments = mapOf(socialKey to AppAssignment.Blocked),
+                quickActions = listOf(chromeApp),
+            ),
+            customProfiles = listOf(
+                com.garan.drytoast.core.model.CustomProfile(
+                    id = "work",
+                    name = "Work",
+                    enabled = true,
+                    priority = 0,
+                    trigger = null,
+                    activationRules = listOf(com.garan.drytoast.core.model.TriggerRule(listOf("t1"))),
+                    defaultRule = com.garan.drytoast.core.model.ProfileDefaultRule.BLOCK_ALL,
+                ),
+            ),
+            savedTriggers = listOf(
+                com.garan.drytoast.core.model.SavedTrigger(
+                    id = "t1",
+                    name = "Morning",
+                    trigger = com.garan.drytoast.core.model.ProfileTrigger.Schedule(),
+                ),
+            ),
+        )
+
+        val applied = repository.importConfiguration(importedSnapshot)
+        assertThat(applied).isTrue()
+
+        val loaded = repository.getSettings()
+        assertThat(loaded.general.showUnlocks).isFalse()
+        assertThat(loaded.general.hardenedOwnerName).isEqualTo("Imported Owner")
+        assertThat(loaded.general.breakGlassTagUid).isEqualTo("AA:BB:CC:DD")
+        assertThat(loaded.baseProfile).isEqualTo(importedSnapshot.baseProfile)
+        assertThat(loaded.customProfiles).isEqualTo(importedSnapshot.customProfiles)
+        assertThat(loaded.savedTriggers).isEqualTo(importedSnapshot.savedTriggers)
+
+        // Runtime-only flags preserved
+        assertThat(loaded.general.hasSeenFirstRunHint).isTrue()
+        assertThat(loaded.general.hasCompletedOnboarding).isTrue()
+        assertThat(loaded.breakGlassUntilEpochMillis).isEqualTo(999_999L)
+        assertThat(loaded.dpcSuspendedPackages).containsExactly("com.example.suspended")
+    }
+
+    @Test
+    fun importConfiguration_rejectedWhenSettingsLocked() = runTest(testDispatcher) {
+        repository.updateGeneralSettings(GeneralSettings(showUnlocks = true))
+        repository.setSettingsLocked(true)
+
+        val applied = repository.importConfiguration(
+            com.garan.drytoast.core.model.StagedSettingsSnapshot(
+                general = GeneralSettings(showUnlocks = false),
+                baseProfile = BaseProfileSettings(appAssignments = mapOf(socialKey to AppAssignment.Blocked)),
+            ),
+        )
+
+        assertThat(applied).isFalse()
+        val loaded = repository.getSettings()
+        assertThat(loaded.general.showUnlocks).isTrue()
+        assertThat(loaded.baseProfile.appAssignments).isEmpty()
+        assertThat(loaded.isSettingsLocked).isTrue()
+    }
+
+    @Test
+    fun importConfiguration_stagesWhenRequireRebootActiveAndPromotesOnBoot() = runTest(testDispatcher) {
+        repository.updateGeneralSettings(GeneralSettings(showUnlocks = true, requireRebootForSettingsChange = true))
+
+        val applied = repository.importConfiguration(
+            com.garan.drytoast.core.model.StagedSettingsSnapshot(
+                general = GeneralSettings(showUnlocks = false, requireRebootForSettingsChange = true),
+                baseProfile = BaseProfileSettings(
+                    defaultFriction = FrictionChoice.DRAG_SORT,
+                    appAssignments = mapOf(socialKey to AppAssignment.Blocked),
+                ),
+            ),
+        )
+
+        assertThat(applied).isTrue()
+        val staged = repository.getSettings()
+        assertThat(staged.hasPendingRebootChanges).isTrue()
+        assertThat(staged.general.showUnlocks).isTrue()
+        assertThat(staged.baseProfile.appAssignments).isEmpty()
+        assertThat(staged.editableSnapshot.general.showUnlocks).isFalse()
+        assertThat(staged.editableSnapshot.baseProfile.defaultFriction).isEqualTo(FrictionChoice.DRAG_SORT)
+
+        repository.promotePendingSettingsOnBoot()
+        val promoted = repository.getSettings()
+        assertThat(promoted.hasPendingRebootChanges).isFalse()
+        assertThat(promoted.general.showUnlocks).isFalse()
+        assertThat(promoted.baseProfile.defaultFriction).isEqualTo(FrictionChoice.DRAG_SORT)
+        assertThat(promoted.baseProfile.appAssignments).containsEntry(socialKey, AppAssignment.Blocked)
+    }
 }

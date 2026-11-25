@@ -8,6 +8,7 @@ import com.garan.drytoast.core.model.GeneralSettings
 import com.garan.drytoast.core.model.NfcDailyUsage
 import com.garan.drytoast.core.model.NfcLatchState
 import com.garan.drytoast.core.model.SavedTrigger
+import com.garan.drytoast.core.model.StagedSettingsSnapshot
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -113,4 +114,17 @@ interface SettingsRepository {
      * so tapping the registered physical Break-Glass card always works immediately.
      */
     suspend fun updateBreakGlassUntil(untilEpochMillis: Long?) {}
+
+    /**
+     * Atomically replaces the user-configurable settings (`general`, `baseProfile`,
+     * `customProfiles`, `savedTriggers`) with [snapshot], preserving runtime-only flags
+     * (`hasSeenFirstRunHint`, `hasCompletedOnboarding`, `isSettingsLocked`,
+     * `breakGlassUntilEpochMillis`, `dpcSuspendedPackages`).
+     *
+     * Respects Settings Lock (returns `false` without mutating when locked) and
+     * Reboot-to-Apply (stages into `stagedShadow` when active on live settings).
+     *
+     * @return `true` if the configuration was applied or staged, `false` if rejected (e.g. Settings Lock active).
+     */
+    suspend fun importConfiguration(snapshot: StagedSettingsSnapshot): Boolean = false
 }
