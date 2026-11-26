@@ -664,24 +664,24 @@
     <!-- TAB 1: ENABLE HARDENED MODE -->
     <div class="tab-pane active" data-tab-pane="enable">
       <div class="method-switcher" role="tablist" aria-label="Hardened Mode setup method">
-        <button type="button" class="method-btn active" role="tab" aria-selected="true" data-method-btn="usb">
-          <span class="method-btn-title">
-            <span>Keep Your Data (USB)</span>
-            <span class="badge">No Reset</span>
-          </span>
-          <span class="method-btn-desc">Existing phone. Connects directly over USB in Chrome, Edge, or Brave. Takes ~3 minutes.</span>
-        </button>
-        <button type="button" class="method-btn" role="tab" aria-selected="false" data-method-btn="qr">
+        <button type="button" class="method-btn active" role="tab" aria-selected="true" data-method-btn="qr">
           <span class="method-btn-title">
             <span>Fresh Phone (6-Tap QR)</span>
-            <span class="badge subtle">No PC</span>
+            <span class="badge">Recommended</span>
           </span>
           <span class="method-btn-desc">Brand-new or factory-reset Android phone. Scan a QR code on Android's Welcome screen.</span>
+        </button>
+        <button type="button" class="method-btn" role="tab" aria-selected="false" data-method-btn="usb">
+          <span class="method-btn-title">
+            <span>Keep Your Data (USB)</span>
+            <span class="badge subtle">Advanced</span>
+          </span>
+          <span class="method-btn-desc">Existing phone, no factory reset. Connects directly over USB in Chrome, Edge, or Brave.</span>
         </button>
       </div>
 
       <!-- METHOD 1: EXISTING PHONE VIA WEBUSB (NO FACTORY RESET) -->
-      <div class="method-pane active" data-method-pane="usb">
+      <div class="method-pane" data-method-pane="usb">
         <div id="webusb-unsupported" class="alert-box info hidden" role="status">
           <strong>Direct USB setup requires Chrome, Edge, or Brave on a computer.</strong> Your current browser does not expose WebUSB. Open this page in Chrome/Edge on a computer, or use the terminal ADB commands below.
         </div>
@@ -703,6 +703,12 @@
               <label class="backup-check-label">
                 <input id="usb-safety-check" type="checkbox" />
                 <span><strong>I have my account passwords and 2FA recovery ready</strong> to sign back in after Hardened Mode is enabled.</span>
+              </label>
+            </li>
+            <li>
+              <label class="backup-check-label">
+                <input id="usb-risk-check" type="checkbox" />
+                <span><strong>I understand this is an advanced USB setup and carries some risk.</strong> Removing accounts can temporarily disrupt synced apps or sign-ins, and I'm comfortable troubleshooting if needed.</span>
               </label>
             </li>
           </ul>
@@ -817,7 +823,7 @@ adb shell dpm set-device-owner com.garan.drytoast/.dpc.DryToastDeviceAdminReceiv
       </div>
 
       <!-- METHOD 2: FRESH PHONE (6-TAP QR) -->
-      <div class="method-pane" data-method-pane="qr">
+      <div class="method-pane active" data-method-pane="qr">
         <section class="step-card">
           <div class="step-header">
             <p class="step-label">Step 01 · Pre-Reset Checklist</p>
@@ -979,7 +985,9 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
           activateMethod(btn.getAttribute("data-method-btn"));
         });
       });
-      if (window.location.hash === "#qr") {
+      if (window.location.hash === "#usb") {
+        activateMethod("usb");
+      } else if (window.location.hash === "#qr") {
         activateMethod("qr");
       }
 
@@ -1005,6 +1013,7 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
       const unsupportedEl = document.getElementById("webusb-unsupported");
       const fallbackDetails = document.getElementById("terminal-adb-fallback");
       const safetyCheck = document.getElementById("usb-safety-check");
+      const riskCheck = document.getElementById("usb-risk-check");
       const connectBtn = document.getElementById("usb-connect-btn");
       const disconnectBtn = document.getElementById("usb-disconnect-btn");
       const connPill = document.getElementById("usb-conn-pill");
@@ -1047,14 +1056,19 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
         el.textContent = text;
       }
 
+      function acknowledgmentsComplete() {
+        return safetyCheck.checked && riskCheck.checked;
+      }
+
       function updateConnectButtonState() {
-        connectBtn.disabled = !supported || !safetyCheck.checked || isConnected;
+        connectBtn.disabled = !supported || !acknowledgmentsComplete() || isConnected;
         if (lastInspect) {
-          enableBtn.disabled = !isConnected || !safetyCheck.checked || !lastInspect.ready;
+          enableBtn.disabled = !isConnected || !acknowledgmentsComplete() || !lastInspect.ready;
         }
       }
 
       safetyCheck.addEventListener("change", updateConnectButtonState);
+      riskCheck.addEventListener("change", updateConnectButtonState);
 
       function stopPolling() {
         if (pollTimer) {
@@ -1159,7 +1173,7 @@ adb shell am broadcast -a com.garan.drytoast.action.DISABLE_HARDENED_MODE -n com
           activateBadge.textContent = "Ready";
           activateDesc.textContent = "All checks passed. Click below to grant Device Owner to Dry Toast.";
           enableBtn.classList.remove("hidden");
-          enableBtn.disabled = !safetyCheck.checked;
+          enableBtn.disabled = !acknowledgmentsComplete();
         } else {
           pollPill.className = "conn-pill waiting";
           pollPill.textContent = "Auto-checking every 2s";
