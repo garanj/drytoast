@@ -319,6 +319,78 @@ code {
   margin-top: 0.75rem;
 }
 
+/* Long-form Essay (/why) */
+.essay {
+  max-width: 720px;
+}
+
+.essay h2 {
+  font-size: 1.38rem;
+  font-weight: 700;
+  margin: 3rem 0 0.85rem;
+}
+
+.essay h3 {
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 2.2rem 0 0.65rem;
+  color: var(--text);
+}
+
+.essay ul,
+.essay ol {
+  margin: 0 0 1.4rem;
+  padding-left: 1.35rem;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+
+.essay li {
+  margin-bottom: 0.7rem;
+  line-height: 1.62;
+}
+
+.essay li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.essay pre {
+  margin: 1.4rem 0 1.6rem;
+  padding: 1rem 1.15rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: #e0e0e0;
+}
+
+.essay pre code {
+  font-size: inherit;
+  color: inherit;
+}
+
+.essay hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2.8rem 0 2rem;
+}
+
+.essay-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 210px));
+  gap: 1.1rem;
+  margin: 1.8rem 0 2rem;
+}
+
+.essay-figures.single {
+  grid-template-columns: minmax(0, 210px);
+}
+
 /* Footer */
 footer {
   max-width: 900px;

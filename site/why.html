@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Dry Toast? | Dry Toast</title>
+  <meta name="description" content="Why I built Dry Toast: a plain-text Android launcher with intentional friction, zero internet permission, no Accessibility Service spyware, and optional Device Owner hardening.">
+  <link rel="canonical" href="https://drytoast.app/why">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Dry Toast">
+  <meta property="og:title" content="Why Dry Toast?">
+  <meta property="og:description" content="Why I built Dry Toast: a plain-text Android launcher with intentional friction, zero internet permission, no Accessibility Service spyware, and optional Device Owner hardening.">
+  <meta property="og:url" content="https://drytoast.app/why">
+  <meta property="og:image" content="https://drytoast.app/images/demo-poster.jpg">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="720">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Why Dry Toast?">
+  <meta name="twitter:description" content="Why I built Dry Toast: a plain-text Android launcher with intentional friction, zero internet permission, no Accessibility Service spyware, and optional Device Owner hardening.">
+  <meta name="twitter:image" content="https://drytoast.app/images/demo-poster.jpg">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="logo-link">
+      <svg class="logo-caret" viewBox="22 25 64 56" aria-hidden="true">
+        <path fill="none" stroke="#ffffff" stroke-width="6.5" stroke-linejoin="round" d="M35,77 C33.3,77 32,75.7 32,74 L32,48 C27.5,46.8 25.5,43 26.5,38.5 C27.8,32.5 36.5,29 54,29 C71.5,29 80.2,32.5 81.5,38.5 C82.5,43 80.5,46.8 76,48 L76,74 C76,75.7 74.7,77 73,77 Z"/>
+      </svg>
+      <span>Dry Toast</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="/why" class="active" aria-current="page">Why</a>
+      <a href="/features">Features</a>
+      <a href="/configuration">Configuration</a>
+      <a href="/hardened">Hardened Mode</a>
+      <a href="/console">Console</a>
+      <a href="https://play.google.com/store/apps/details?id=com.garan.drytoast" class="nav-cta">Get it on Play</a>
+    </nav>
+  </header>
+
+  <main class="essay">
+    <article>
+      <h1>Why Dry Toast?</h1>
+
+      <h2>Motivation</h2>
+      <p>
+        I built Dry Toast for myself. I wanted to actually use it. When creating an app, that's always a good starting point.
+      </p>
+      <p>
+        In recent years I became disappointed with how pervasive my smartphone use had become. I have no problem with the help it provides day to day, from banking to directions, parking to payments, or just listening to music. Those are all useful things I wanted to keep. However, it had also become a constant source of distraction: apps that thrive on engagement, games, endless notifications. Phones have evolved from useful tools into something we reach for in every idle moment, pulling us away from the present.
+      </p>
+      <p>
+        As someone who remembers their first Nokia, I yearned for my phone to go back to being nothing more than a helpful tool. I wanted to take back control.
+      </p>
+      <p>
+        Alternatives to a smartphone exist, such as feature phones or "dumbphones", but each is a compromise - none can run the range of genuinely useful utilities that a modern smartphone can, and none match the camera or hardware quality. I had no desire to give up the genuine utility of a smartphone just to avoid its downsides. Instead, I decided to drastically customise my own.
+      </p>
+      <p>
+        Of course, this is nothing new - there are countless digital wellbeing apps and minimalist launchers out there. Why reinvent the wheel?
+      </p>
+      <p>Well, a few reasons:</p>
+      <ol>
+        <li><strong>Fitting my exact needs:</strong> I had a clear picture of what I wanted, or rather what I thought was necessary for it to actually work on me. I wanted to build it to my exact spec.</li>
+        <li><strong>Architecture:</strong> I had strong views on how an app like this should be architected, particularly around background services, battery life, and Android permissions.</li>
+        <li><strong>Security and privacy:</strong> Related to that, I had firm red lines on whether my launcher should store any PII (no), include analytics (no), or even request <code>android.permission.INTERNET</code> (no).</li>
+        <li><strong>Combining interventions:</strong> I had some ideas on how to <em>combine</em> mechanisms - some borrowed, some my own - to tackle impulse phone use from several angles at once.</li>
+        <li><strong>Curiosity:</strong> It was a great excuse to get my hands dirty with Android APIs I hadn't used before, particularly NFC and Android's Device Owner mode (<code>DevicePolicyManager</code>).</li>
+      </ol>
+
+      <h2>Landing on a launcher</h2>
+      <p>
+        So why build a launcher? I'd toyed with standalone utility apps to help with digital wellbeing, but it was only when I started reading about how to write an Android launcher (<code>CATEGORY_HOME</code>) that it clicked: here is a way to fundamentally change the interaction model with my smartphone.
+      </p>
+      <p>
+        Most of the time when we interact with our phones and the Android OS, we go through the launcher - typically the stock one that ships with the device, like the Pixel Launcher. It is the front door to every installed app, notification badge, and home-screen widget.
+      </p>
+      <p>
+        The modern launcher is a colourful array of glossy icons. Scrolling the launcher is like perusing the pick'n'mix to pick out your next sweet - there is always <em>something</em> engineered to attract your attention.
+      </p>
+      <p>
+        So for me, the core of Dry Toast had to be the complete opposite. And I recognise this part is nothing new: a minimalist, text-only launcher. To open an app, you type a couple of letters into an instant fuzzy search (or the full name, if you want extra friction on distracting apps) and pick it from a plain-text list. For convenience, a handful of everyday tools can be pinned to the pure black home screen as simple numbered text labels, alongside a quiet readout of how long you have left the phone alone (<code>REST</code>) and how many times you have unlocked it today.
+      </p>
+
+      <div class="essay-figures">
+        <figure class="shot-card">
+          <img src="/images/home.png" alt="Dry Toast typographic home screen" loading="lazy">
+          <figcaption>Home</figcaption>
+        </figure>
+        <figure class="shot-card">
+          <img src="/images/search.png" alt="Dry Toast instant fuzzy search" loading="lazy">
+          <figcaption>Search</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        It was distinctly boring, and had been done plenty of times before. Yet even on its own, it worked surprisingly well. In the early days of developing Dry Toast, I was genuinely surprised at how effective it was just replacing that colourful wall of icons with a deeply unexciting list of labels.
+      </p>
+
+      <h2>Intent-based principles</h2>
+      <p>
+        Early on, I landed on a core architectural boundary. Most digital wellbeing tools try to police what apps are <em>running</em>, when, and for how long. I decided instead that Dry Toast (in its standard mode) would act strictly as an <strong>Intent Gatekeeper</strong>: it would only govern what apps can <em>launch</em> from the launcher itself.
+      </p>
+      <p>
+        That distinction dramatically changes which Android APIs you touch. To control what can be launched from the home screen or search index, Dry Toast simply filters what it presents. If you restrict Instagram, it disappears from both the home screen and fuzzy search.
+      </p>
+      <p>
+        Policing <em>running</em> apps in standard Android, by contrast, almost always means registering an <code>AccessibilityService</code> to inspect active window titles, scrape screen events, and draw blocking overlays on top of third-party apps. Not only does that carry an ongoing performance and battery cost, it crosses a privacy line I wasn't willing to cross: my launcher has no business watching what happens inside my banking or messaging apps. Refusing to use <code>AccessibilityService</code> became Rule #1.
+      </p>
+      <p>
+        Rule #2 was safety: whatever rules or schedules you configure, you must never be able to accidentally lock yourself out of making a phone call. Right at the top of the resolution engine, whichever package holds <code>android.app.role.DIALER</code> is unconditionally allowed:
+      </p>
+      <pre><code>fun resolveAppAccess(
+    component: ComponentKey,
+    baseProfile: BaseProfileSettings,
+    customProfiles: List&lt;CustomProfile&gt;,
+    currentDay: DayOfWeek,
+    currentTime: TimeOfDay,
+    isDefaultDialer: Boolean,
+    // ...
+): AppAccessState {
+    // Prime Invariant: Universal Dialer Safety Invariant
+    if (isDefaultDialer) {
+        return AppAccessState.Direct
+    }
+    // ...
+}</code></pre>
+      <p>
+        "Hold on," I hear you say, "a launch-only approach is full of holes, like Swiss cheese." And you are completely right. If Dry Toast hides Chrome, you can't open it from the home screen, yet tapping a web link in a chat message will still open it. Nor does a launch gatekeeper kick you out of an app once it's already open, or stop you hopping back into it via Android's Recent Apps switcher.
+      </p>
+      <p>
+        On paper those look like fatal flaws, yet I was surprised at how effective simply removing the front door was. Even when I <em>could</em> technically sneak into an app via Recents or a link, taking it off the launcher broke 90% of the mindless muscle-memory habit. And for the remaining 10%, I eventually found a clean, non-invasive way to close those loopholes too - more on that shortly.
+      </p>
+
+      <h2>Architecture, permissions, and footprint</h2>
+      <p>
+        Because a launcher sits permanently in the background of your daily phone use, I wanted to keep its footprint and permissions as small as possible:
+      </p>
+      <ul>
+        <li><strong>No internet access:</strong> Dry Toast does not request <code>android.permission.INTERNET</code>. There are no accounts, no analytics, no crash reporting, and no cloud sync - everything stays locally on the device. (Settings can still be backed up and restored as a local JSON file, optionally encrypted with a passphrase.)</li>
+        <li><strong>Minimal permissions and no Play Services:</strong> Beyond <code>QUERY_ALL_PACKAGES</code> (which a launcher needs in order to list your installed apps), every permission in <code>AndroidManifest.xml</code> maps directly to an optional feature - with no background location (<code>ACCESS_BACKGROUND_LOCATION</code>), no screen overlays (<code>SYSTEM_ALERT_WINDOW</code>), and no dependency on Google Play Services:</li>
+      </ul>
+      <pre><code>&lt;uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" /&gt;
+&lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
+&lt;uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" /&gt;
+&lt;uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /&gt;
+&lt;uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /&gt;
+&lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
+&lt;uses-permission android:name="android.permission.NFC" /&gt;
+&lt;uses-permission android:name="android.permission.SET_WALLPAPER" /&gt;</code></pre>
+      <ul>
+        <li><strong>Pure-Kotlin core:</strong> All of the rule evaluation - profiles, fuzzy search, friction checkpoints, and NFC triggers - lives in a pure-Kotlin <code>:core</code> module with zero <code>android.*</code> imports. Android framework services (<code>LauncherApps</code>, <code>LocationManager</code>, <code>NfcAdapter</code>, <code>DevicePolicyManager</code>) sit behind simple interfaces, which made it straightforward to test all the edge cases quickly on a standard JVM without spinning up an emulator.</li>
+        <li><strong>Light memory footprint:</strong> Because Dry Toast renders plain text rather than caching hundreds of high-resolution app icons in memory, its footprint stays small - under 35 MB in our automated tests - with understated animations and subtle haptic clicks so it stays responsive and out of your way.</li>
+      </ul>
+
+      <h2>Introducing friction</h2>
+      <p>
+        Another idea that isn't new is introducing intentional friction before launching an app - Google's Pause Point illustrates this. The premise is simple: when you try to open a distracting app through Dry Toast, an extra step gets in the way. If opening it takes a little deliberate effort, you're much more likely to only bother when you actually have a reason to go in.
+      </p>
+      <p>I built three different friction checkpoints:</p>
+      <ul>
+        <li><strong>Toaster Timer:</strong> Holding a toaster lever down continuously for 16 seconds while waiting for the toast to toast (or is that bread to toast?) - let go early and it resets, so you can't just tap and look away.</li>
+        <li><strong>Typed Intention:</strong> Typing out a short prompt phrase accurately before the app will open.</li>
+        <li><strong>Drag-to-Match:</strong> Dragging and matching six pairs of plain monochrome breakfast icons across the screen.</li>
+      </ul>
+
+      <div class="essay-figures">
+        <figure class="shot-card">
+          <img src="/images/toaster.png" alt="Dry Toast Toaster Timer checkpoint" loading="lazy">
+          <figcaption>Toaster Timer</figcaption>
+        </figure>
+        <figure class="shot-card">
+          <img src="/images/friction.png" alt="Dry Toast Drag-to-Match checkpoint" loading="lazy">
+          <figcaption>Drag-to-Match</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        You can pick your preferred style globally or per app, or set it to <strong>Random</strong> so your thumbs don't get too good at sleepwalking through the same screen.
+      </p>
+      <p>
+        Apps subject to these checkpoints in Dry Toast are called <em>Guarded</em>, sitting neatly between <em>Allowed</em> and <em>Blocked</em>.
+      </p>
+
+      <h2>Profiles</h2>
+      <p>
+        So far, so fairly ordinary - a deliberately plain text-based launcher with intentional friction points. These are well-worn ideas. What I then wanted was for Dry Toast to apply different rules automatically under different circumstances, using ordered <strong>Profiles</strong> that layer on top of your base configuration (either overriding specific apps, or setting a blanket default rule to allow, guard, or block everything else).
+      </p>
+      <p>I introduced three separate trigger types:</p>
+      <ol>
+        <li><strong>Time-based:</strong> Configure different behaviour for different days and times of day. For example, Instagram might be <em>Blocked</em> by default, <em>Allowed</em> in the evenings, or <em>Guarded</em> at weekends. Under the hood this uses Android's <code>AlarmManager</code>, scheduling a single alarm for the exact next boundary when a rule changes. When that time arrives, the alarm fires and the active apps are recalculated - no background polling or running service required.</li>
+        <li><strong>Location-based:</strong> Apply different rules in different places, such as Home versus Work. Getting this right without hurting battery life took careful work. Dry Toast never tracks location in the background - it only checks when the launcher itself comes to the foreground. First, it checks <code>LocationManager.getLastKnownLocation</code> to piggyback off recent fixes from the OS with zero radio wake-up. Only if that cached fix is stale does it ask <code>LocationManager</code> for a single low-power update (favouring Wi-Fi and cell-tower triangulation over GPS, throttled and hard-capped at five seconds):</li>
+      </ol>
+      <pre><code>val request = LocationRequest.Builder(0L)
+    .setQuality(LocationRequest.QUALITY_BALANCED_POWER_ACCURACY)
+    .setMaxUpdates(1)
+    .setDurationMillis(5_000L) // ACTIVE_REQUEST_TIMEOUT_MS
+    .build()</code></pre>
+      <ol start="3">
+        <li><strong>NFC-based:</strong> Finally, physical NFC cards or tags. This opens up some surprisingly tactile workflows: you can stick a tag by the door to tap in and out of a study, or hand an NFC card to a friend or partner that grants a timed 15-minute session per tap, capped at a set number of taps per day.</li>
+      </ol>
+      <p>
+        Crucially, reusable triggers can also be combined. You can require multiple conditions at once - for example, unlocking an app <em>only</em> when you are at Home <strong>and</strong> it is the evening, or latching a focus profile with an NFC card while at your office desk (automatically unlatching when you leave).
+      </p>
+
+      <h2>Hardening</h2>
+      <p>
+        So far, so good. Having implemented all of the above, despite being fairly easy to bypass, it was surprisingly effective. Most of the time it was <em>enough</em> to stop me being tempted. Not always, though - so I started looking at how to make the protections genuinely resilient. Where did the weak spots lie?
+      </p>
+      <ol>
+        <li><strong>Configuration:</strong> The most obvious loophole was that you could simply walk into Dry Toast's own Settings screen and change the rules. TikTok <em>Blocked</em> when you fancy a scroll? Just flip it back to <em>Allowed</em>.</li>
+        <li><strong>Switching or uninstalling:</strong> Dry Toast itself can be bypassed in Android's system settings by switching back to the stock launcher, force-stopping it, or uninstalling it outright.</li>
+        <li><strong>Side-door launches and running apps:</strong> Standard mode only governs launches <em>through Dry Toast</em>. It doesn't block deep links, notifications, or Recent Apps, nor does it close an app that is already open when a stricter profile kicks in.</li>
+      </ol>
+
+      <h3>Locking down configuration</h3>
+      <p>To stop myself weakening my own rules on impulse, I added two options:</p>
+      <ul>
+        <li><strong>Reboot-required:</strong> When enabled, any edits you make in Settings are staged and only take effect <em>after</em> you reboot the phone. Having to wait for a full restart makes an impulsive 10-second rule tweak considerably more tedious.</li>
+        <li><strong>Second-device QR + challenge lock:</strong> For a firmer barrier, Dry Toast can lock Settings completely behind <a href="/console">drytoast.app/console</a> on a second screen. A static QR code alone wouldn't be enough - you could just screenshot it once on another device or print it out and keep it in your pocket. Instead, scanning the QR opens a hidden prompt on the phone displaying a random 3-digit challenge (which immediately rotates if Dry Toast loses focus, so you can't switch over to a mobile browser on the same phone). Typing those 3 digits into the static web page computes a time-bucketed <code>HMAC-SHA256</code> 6-digit unlock code locally in the browser - still requiring zero internet access on the phone and zero accounts or backend on the website:</li>
+      </ul>
+      <pre><code>val payload = "$bucket:${domain.wireId}:$challenge"
+val mac = Mac.getInstance("HmacSHA256")
+mac.init(SecretKeySpec(secret.encodeToByteArray(), "HmacSHA256"))
+val digest = mac.doFinal(payload.encodeToByteArray())</code></pre>
+
+      <h3>Introducing Device Owner mode</h3>
+      <p>
+        For the final two hardening challenges, a different mechanism was needed: Android's <strong>Device Owner mode</strong>, exposed through the <code>DevicePolicyManager</code> API. Typically meant for enterprise management of company phones, it lets a designated management app control which packages can run and stop critical apps from being removed - all cleanly inside the OS, still without touching <code>AccessibilityService</code>.
+      </p>
+      <p>
+        Using either Android's 6-Tap QR provisioning flow on a fresh phone, or over USB from the browser via WebUSB (or <code>adb</code>) on an existing phone without a factory reset, Dry Toast can be set as the Device Owner. Deactivating Hardened Mode uses the same second-device QR and 3-digit challenge flow as Settings Lock, cleanly releasing Device Owner without wiping the phone.
+      </p>
+      <p>
+        Once active, <code>DevicePolicyManager</code> lets Dry Toast lock itself as the persistent default launcher (<code>addPersistentPreferredActivity</code>), block uninstallation and force-stopping (<code>setUninstallBlocked</code>, <code>setUserControlDisabledPackages</code>), prevent clock tampering (<code>DISALLOW_CONFIG_DATE_TIME</code>), and optionally block new app installs (<code>DISALLOW_INSTALL_APPS</code>).
+      </p>
+
+      <div class="essay-figures single">
+        <figure class="shot-card">
+          <img src="/images/hardened.png" alt="Dry Toast Hardened Mode settings screen" loading="lazy">
+          <figcaption>Hardened Mode</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        Even better, recalculating package state whenever the active profile changes - when a schedule boundary arrives, your location shifts, or an NFC card is tapped - closes the side-door launch loopholes for both <em>Blocked</em> and <em>Guarded</em> apps:
+      </p>
+      <ul>
+        <li><strong>Blocked apps</strong> are suspended at the OS level via <code>DevicePolicyManager.setPackagesSuspended</code>. Try opening one from Recent Apps, a notification, or a chat link and Android itself steps in with a system policy dialog.</li>
+        <li><strong>Guarded apps</strong> are a little more subtle: they <em>also</em> stay suspended in the OS at rest, and are only unsuspended once you pass a Dry Toast friction checkpoint - granting a short session lease (configurable from 0 to 30 minutes). Once that grace window expires and you return to the home screen or lock the phone, Dry Toast re-evaluates the working set and suspends the app again:</li>
+      </ul>
+      <pre><code>val targetPackages = buildSet {
+    for (pkg in blockedPackageNames) {
+        if (isSuspendablePackage(pkg, defaultDialerPackage)) add(pkg)
+    }
+    for (comp in guardedComponents) {
+        val pkg = comp.packageName
+        if (pkg !in blockedPackageNames &amp;&amp;
+            pkg !in activeGuardedLeases &amp;&amp;
+            isSuspendablePackage(pkg, defaultDialerPackage)
+        ) {
+            add(pkg)
+        }
+    }
+}
+bridge.setPackagesSuspended(adminComponent, toSuspend.toTypedArray(), true)</code></pre>
+
+      <h3>Break-glass mode</h3>
+      <p>
+        As a final escape hatch, I added one last spin on NFC. Sooner or later there is a moment in real life where your rules collide with reality, and you just need to unlock the phone, open any app, or install something new - say you're on holiday in a foreign country and can only pay for parking using some obscure local app.
+      </p>
+      <p>
+        For that, I added a <strong>Break-Glass</strong> card. You register a dedicated NFC card - then tuck it in a drawer, pack it in your suitcase, or hand it to your partner - and tapping it grants a temporary 15, 30, or 60-minute override of all restrictions (including app-install blocks) before relocking automatically.
+      </p>
+
+      <hr>
+
+      <p>
+        So, that's a quick tour of <a href="/">Dry Toast</a>. I wrote it for me, and it does the trick. If it works for you too, that's great - it's free and open source on <a href="https://play.google.com/store/apps/details?id=com.garan.drytoast">Google Play</a> and <a href="https://github.com/garanj/drytoast">GitHub</a>.
+      </p>
+    </article>
+  </main>
+
+  <footer>
+    <span>Dry Toast</span>
+    <div>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="https://github.com/garanj/drytoast">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>
