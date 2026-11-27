@@ -67,6 +67,23 @@ class DragSortSessionTest {
     }
 
     @Test
+    fun `initiallyCompletedIds pre-resolves matched pairs and marks complete when all matched`() {
+        val pairs = listOf(
+            GlyphPair(id = 0, targetPosition = Vector2D(100f, 100f), startPosition = Vector2D(300f, 500f)),
+            GlyphPair(id = 1, targetPosition = Vector2D(200f, 100f), startPosition = Vector2D(100f, 500f)),
+            GlyphPair(id = 2, targetPosition = Vector2D(260f, 100f), startPosition = Vector2D(150f, 500f)),
+        )
+
+        val partialSession = DragSortSession(pairs, initiallyCompletedIds = setOf(0, 2))
+        assertThat(partialSession.unmatchedIds).containsExactly(1)
+        assertThat(partialSession.isComplete).isFalse()
+
+        val completedSession = DragSortSession(pairs, initiallyCompletedIds = setOf(0, 1, 2))
+        assertThat(completedSession.unmatchedIds).isEmpty()
+        assertThat(completedSession.isComplete).isTrue()
+    }
+
+    @Test
     fun `generateLayout creates requested count within bounds with separation and no overlap`() {
         val random = Random(42)
         val width = 380f
