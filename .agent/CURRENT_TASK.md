@@ -1,10 +1,10 @@
 # Current Task
 
-- **Issue:** [#211](https://github.com/garanj/drytoast/issues/211) — `fix(security): enable activity resizability and reactive multi-window lock on QR challenge screens`
-- **Branch:** `fix/211-resizable-reactive-multiwindow-challenge`
+- **Issue:** [#212](https://github.com/garanj/drytoast/issues/212) — `fix(settings): preserve encrypted backup passphrase and import state across activity recreation`
+- **Branch:** `fix/212-preserve-backup-state-across-recreation`
 - **Status:** Ready for Review
 
 ## Checklist
-- [x] TDD Red: Added manifest resizability & orientation guard in `ArchitectureAndConfigGuardTest`, live `OnMultiWindowModeChangedListener` (`false <-> true`), `StateRestorationTester`, and hardware keyboard (`0–9` / `NumPad0–9` / `Backspace` / `Delete` / `Enter`) tests in `HardenedModeScreenTest`, split-screen Roborazzi golden in `DryToastScreenshotTest`, and on-device `DryToastChallengeMultiWindowInstrumentedTest`.
-- [x] TDD Green: Set `android:resizeableActivity="true"` on `MainActivity` in `AndroidManifest.xml`, tracked multi-window state reactively via `OnMultiWindowModeChangedProvider`, rotated challenge + cleared input on every multi-window transition, persisted `challenge` & `enteredCode` via `rememberSaveable` (ignoring config-change teardown pauses), and added hardware keyboard key handling on `ChallengeVerificationSection`.
-- [x] Verified `./gradlew spotlessCheck --no-daemon`, `./gradlew test`, `:app:compileReleaseKotlin`, `:app:compileDebugAndroidTestKotlin`, and zero `android.*` imports in `:core`.
+- [x] TDD Red: Added unit & end-to-end `MainActivity` `ActivityScenario.recreate()` tests in `ConfigBackupViewModelAndUiTest` and `ConfigBackupRecreationTest` verifying encrypted SAF export preserves passphrase across `recreate()`, fails closed if no export request is staged, cancels cleanly on `RESULT_CANCELED`, and preserves `ImportPassphraseBottomSheet` across `recreate()`.
+- [x] TDD Green: Moved `PendingExportRequest` and pending encrypted import state into `SettingsViewModel` and wired `MainActivity` (`DryToastRoute.Settings`) to fail closed rather than falling back to plaintext.
+- [x] Verified `./gradlew spotlessCheck --no-daemon`, `./gradlew test`, `:app:compileReleaseKotlin`, and zero `android.*` imports in `:core`.

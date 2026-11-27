@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import com.garan.drytoast.core.backup.ConfigBackupCodec
 import com.garan.drytoast.core.backup.ConfigImportError
+import com.garan.drytoast.core.backup.ConfigImportResult
 import com.garan.drytoast.core.model.AppAssignment
 import com.garan.drytoast.core.model.BaseProfileSettings
 import com.garan.drytoast.core.model.ComponentKey
@@ -161,6 +162,84 @@ class ConfigBackupViewModelAndUiTest {
         assertThat(stagedOutcome).isEqualTo(ConfigImportOutcome.Success(stagedForReboot = true))
         assertThat(callbackInvoked).isTrue()
         assertThat(repo.getSettings().hasPendingRebootChanges).isTrue()
+    }
+
+    @Test
+    fun viewModel_stagedExportRequest_consumesAtomicallyFailsClosedWhenMissingAndCancelsCleanly() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val repo = FakeSettingsRepository(
+            DryToastSettings(general = GeneralSettings(breakGlassTagUid = "04:11:22:33")),
+        )
+        val vm = SettingsViewModel(
+            packageIndexSource = emptyPackageSource,
+            settingsRepository = repo,
+            dialerPackageResolver = { "com.android.dialer" },
+            ioDispatcher = testDispatcher,
+            configBackupCodec = fastCodec,
+        )
+
+        // Fail-closed when no export request was staged (e.g., after background process death)
+        assertThat(vm.consumePendingExportJson()).isNull()
+
+        // Encrypted export request consumes once and then clears
+        vm.stageExportRequest("vault-key")
+        val encryptedJson = checkNotNull(vm.consumePendingExportJson())
+        assertThat(fastCodec.decode(encryptedJson, null)).isEqualTo(ConfigImportResult.PassphraseRequired)
+        assertThat(fastCodec.decode(encryptedJson, "vault-key")).isInstanceOf(ConfigImportResult.Success::class.java)
+        assertThat(vm.consumePendingExportJson()).isNull()
+
+        // Plaintext export request
+        vm.stageExportRequest(null)
+        val plainJson = checkNotNull(vm.consumePendingExportJson())
+        assertThat(fastCodec.decode(plainJson, null)).isInstanceOf(ConfigImportResult.Success::class.java)
+
+        // Cancel clears staged request
+        vm.stageExportRequest("vault-key")
+        vm.cancelPendingExportRequest()
+        assertThat(vm.consumePendingExportJson()).isNull()
+    }
+
+    @Test
+    fun viewModel_pendingEncryptedImportFlow_tracksSheetStateWrongPassphraseAndDismissal() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val repo = FakeSettingsRepository(DryToastSettings())
+        val vm = SettingsViewModel(
+            packageIndexSource = emptyPackageSource,
+            settingsRepository = repo,
+            dialerPackageResolver = { "com.android.dialer" },
+            ioDispatcher = testDispatcher,
+            configBackupCodec = fastCodec,
+        )
+
+        val encryptedJson = fastCodec.encode(
+            DryToastSettings(general = GeneralSettings(breakGlassDurationMinutes = 30)).editableSnapshot,
+            passphrase = "correct-passphrase",
+        )
+
+        assertThat(vm.handlePickedImportJson(encryptedJson)).isEqualTo(ConfigImportOutcome.PassphraseRequired)
+        assertThat(vm.uiState.value.showImportPassphraseSheet).isTrue()
+        assertThat(vm.uiState.value.hasImportPassphraseError).isFalse()
+
+        // Wrong passphrase keeps sheet open and sets error flag
+        val wrongOutcome = vm.submitPendingImportPassphrase("wrong-passphrase")
+        assertThat(wrongOutcome).isInstanceOf(ConfigImportOutcome.Error::class.java)
+        assertThat(vm.uiState.value.showImportPassphraseSheet).isTrue()
+        assertThat(vm.uiState.value.hasImportPassphraseError).isTrue()
+        assertThat(vm.uiState.value.isImportWorking).isFalse()
+
+        // Correct passphrase imports and closes sheet
+        val rightOutcome = vm.submitPendingImportPassphrase("correct-passphrase")
+        assertThat(rightOutcome).isEqualTo(ConfigImportOutcome.Success(stagedForReboot = false))
+        assertThat(vm.uiState.value.showImportPassphraseSheet).isFalse()
+        assertThat(vm.uiState.value.hasImportPassphraseError).isFalse()
+        assertThat(repo.getSettings().general.breakGlassDurationMinutes).isEqualTo(30)
+
+        // Dismiss clears pending state
+        vm.handlePickedImportJson(encryptedJson)
+        assertThat(vm.uiState.value.showImportPassphraseSheet).isTrue()
+        vm.dismissImportPassphraseSheet()
+        assertThat(vm.uiState.value.showImportPassphraseSheet).isFalse()
+        assertThat(vm.submitPendingImportPassphrase("correct-passphrase")).isNull()
     }
 
     // -------------------------------------------------------------------------

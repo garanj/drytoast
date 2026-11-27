@@ -20,8 +20,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -266,7 +266,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        if (appContainer.launcherRoleController.isDefaultLauncher() && isLaunchedAsStandardAppTask()) {
+        if (!isChangingConfigurations &&
+            appContainer.launcherRoleController.isDefaultLauncher() &&
+            isLaunchedAsStandardAppTask()
+        ) {
             finishAndRemoveTask()
         }
     }
@@ -697,21 +700,24 @@ class MainActivity : ComponentActivity() {
                                 settingsViewModel.ensureLoaded()
                             }
                             val coroutineScope = rememberCoroutineScope()
-                            var pendingExportPassphrase by remember { mutableStateOf<String?>(null) }
-                            var pendingEncryptedImportJson by remember { mutableStateOf<String?>(null) }
-                            var importPassphraseError by remember { mutableStateOf<String?>(null) }
-                            var isImportWorking by remember { mutableStateOf(false) }
-                            var backupStatusMessage by remember { mutableStateOf<String?>(null) }
+                            var backupStatusMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
                             val exportDocumentLauncher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.CreateDocument("application/json"),
                             ) { uri ->
-                                val passphrase = pendingExportPassphrase
-                                pendingExportPassphrase = null
-                                if (uri == null) return@rememberLauncherForActivityResult
+                                if (uri == null) {
+                                    settingsViewModel.cancelPendingExportRequest()
+                                    return@rememberLauncherForActivityResult
+                                }
                                 coroutineScope.launch {
+                                    val encoded = runCatching {
+                                        settingsViewModel.consumePendingExportJson()
+                                    }.getOrNull()
+                                    if (encoded == null) {
+                                        backupStatusMessage = getString(R.string.backup_export_failed)
+                                        return@launch
+                                    }
                                     val result = runCatching {
-                                        val encoded = settingsViewModel.exportConfigurationJson(passphrase)
                                         withContext(Dispatchers.IO) {
                                             contentResolver.openOutputStream(uri)?.use { stream ->
                                                 stream.write(encoded.toByteArray(Charsets.UTF_8))
@@ -739,7 +745,7 @@ class MainActivity : ComponentActivity() {
                                         backupStatusMessage = getString(R.string.backup_import_read_failed)
                                         return@launch
                                     }
-                                    when (val outcome = settingsViewModel.importConfigurationJson(rawJson, null)) {
+                                    when (val outcome = settingsViewModel.handlePickedImportJson(rawJson)) {
                                         is ConfigImportOutcome.Success -> {
                                             backupStatusMessage = getString(
                                                 if (outcome.stagedForReboot) {
@@ -749,10 +755,7 @@ class MainActivity : ComponentActivity() {
                                                 },
                                             )
                                         }
-                                        is ConfigImportOutcome.PassphraseRequired -> {
-                                            importPassphraseError = null
-                                            pendingEncryptedImportJson = rawJson
-                                        }
+                                        is ConfigImportOutcome.PassphraseRequired -> Unit
                                         is ConfigImportOutcome.SettingsLocked -> {
                                             backupStatusMessage = getString(R.string.backup_import_locked)
                                         }
@@ -794,26 +797,25 @@ class MainActivity : ComponentActivity() {
                                 onApplyPureBlackWallpaper = ::applyPureBlackWallpaper,
                                 onSendFeedback = ::launchFeedbackEmail,
                                 onRequestExport = { passphrase ->
-                                    pendingExportPassphrase = passphrase
+                                    settingsViewModel.stageExportRequest(passphrase)
                                     exportDocumentLauncher.launch(getString(R.string.backup_default_filename))
                                 },
                                 onRequestImport = {
                                     importDocumentLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
                                 },
-                                showImportPassphraseSheet = pendingEncryptedImportJson != null,
-                                importPassphraseError = importPassphraseError,
-                                isImportWorking = isImportWorking,
+                                showImportPassphraseSheet = settingsUiState.showImportPassphraseSheet,
+                                importPassphraseError = if (settingsUiState.hasImportPassphraseError) {
+                                    getString(R.string.backup_import_wrong_passphrase)
+                                } else {
+                                    null
+                                },
+                                isImportWorking = settingsUiState.isImportWorking,
                                 onSubmitImportPassphrase = { passphrase ->
-                                    val rawJson = pendingEncryptedImportJson ?: return@DryToastSettingsScreen
-                                    isImportWorking = true
-                                    importPassphraseError = null
                                     coroutineScope.launch {
-                                        val outcome = settingsViewModel.importConfigurationJson(rawJson, passphrase)
-                                        isImportWorking = false
+                                        val outcome = settingsViewModel.submitPendingImportPassphrase(passphrase)
+                                            ?: return@launch
                                         when (outcome) {
                                             is ConfigImportOutcome.Success -> {
-                                                pendingEncryptedImportJson = null
-                                                importPassphraseError = null
                                                 backupStatusMessage = getString(
                                                     if (outcome.stagedForReboot) {
                                                         R.string.backup_import_staged
@@ -822,24 +824,14 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                 )
                                             }
-                                            is ConfigImportOutcome.PassphraseRequired -> {
-                                                importPassphraseError =
-                                                    getString(R.string.backup_import_wrong_passphrase)
-                                            }
+                                            is ConfigImportOutcome.PassphraseRequired -> Unit
                                             is ConfigImportOutcome.SettingsLocked -> {
-                                                pendingEncryptedImportJson = null
-                                                importPassphraseError = null
                                                 backupStatusMessage = getString(R.string.backup_import_locked)
                                             }
                                             is ConfigImportOutcome.Error -> {
-                                                if (outcome.reason ==
+                                                if (outcome.reason !=
                                                     ConfigImportError.INVALID_PASSPHRASE_OR_TAMPERED
                                                 ) {
-                                                    importPassphraseError =
-                                                        getString(R.string.backup_import_wrong_passphrase)
-                                                } else {
-                                                    pendingEncryptedImportJson = null
-                                                    importPassphraseError = null
                                                     backupStatusMessage =
                                                         formatImportError(outcome.reason, outcome.detail)
                                                 }
@@ -847,10 +839,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                onDismissImportPassphraseSheet = {
-                                    pendingEncryptedImportJson = null
-                                    importPassphraseError = null
-                                },
+                                onDismissImportPassphraseSheet = settingsViewModel::dismissImportPassphraseSheet,
                                 backupStatusMessage = backupStatusMessage,
                                 onClearBackupStatusMessage = { backupStatusMessage = null },
                             )
