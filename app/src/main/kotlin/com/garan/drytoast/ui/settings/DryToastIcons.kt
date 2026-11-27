@@ -579,4 +579,91 @@ object DryToastIcons {
             }
         }.build()
     }
+
+    /**
+     * Canonical Material keyboard outline icon for switching time pickers to text input mode.
+     */
+    val Keyboard: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "Keyboard",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.White)) {
+                moveTo(20f, 5f)
+                horizontalLineTo(4f)
+                curveTo(2.9f, 5f, 2.01f, 5.9f, 2.01f, 7f)
+                lineTo(2f, 17f)
+                curveTo(2f, 18.1f, 2.9f, 19f, 4f, 19f)
+                horizontalLineTo(20f)
+                curveTo(21.1f, 19f, 22f, 18.1f, 22f, 17f)
+                verticalLineTo(7f)
+                curveTo(22f, 5.9f, 21.1f, 5f, 20f, 5f)
+                close()
+                moveTo(20f, 17f)
+                horizontalLineTo(4f)
+                verticalLineTo(7f)
+                horizontalLineTo(20f)
+                verticalLineTo(17f)
+                close()
+                moveTo(11f, 8f)
+                horizontalLineTo(13f)
+                verticalLineTo(10f)
+                horizontalLineTo(11f)
+                close()
+                moveTo(11f, 11f)
+                horizontalLineTo(13f)
+                verticalLineTo(13f)
+                horizontalLineTo(11f)
+                close()
+                moveTo(8f, 8f)
+                horizontalLineTo(10f)
+                verticalLineTo(10f)
+                horizontalLineTo(8f)
+                close()
+                moveTo(8f, 11f)
+                horizontalLineTo(10f)
+                verticalLineTo(13f)
+                horizontalLineTo(8f)
+                close()
+                moveTo(5f, 11f)
+                horizontalLineTo(7f)
+                verticalLineTo(13f)
+                horizontalLineTo(5f)
+                close()
+                moveTo(5f, 8f)
+                horizontalLineTo(7f)
+                verticalLineTo(10f)
+                horizontalLineTo(5f)
+                close()
+                moveTo(8f, 14f)
+                horizontalLineTo(16f)
+                verticalLineTo(16f)
+                horizontalLineTo(8f)
+                close()
+                moveTo(14f, 11f)
+                horizontalLineTo(16f)
+                verticalLineTo(13f)
+                horizontalLineTo(14f)
+                close()
+                moveTo(14f, 8f)
+                horizontalLineTo(16f)
+                verticalLineTo(10f)
+                horizontalLineTo(14f)
+                close()
+                moveTo(17f, 11f)
+                horizontalLineTo(19f)
+                verticalLineTo(13f)
+                horizontalLineTo(17f)
+                close()
+                moveTo(17f, 8f)
+                horizontalLineTo(19f)
+                verticalLineTo(10f)
+                horizontalLineTo(17f)
+                close()
+            }
+        }.build()
+    }
 }

@@ -36,6 +36,12 @@ object ProfilesTestTags {
     const val DELETE_CONFIRM_BUTTON = "profiles_delete_confirm_button"
     const val DELETE_CANCEL_BUTTON = "profiles_delete_cancel_button"
 
+    const val TIME_PICKER_DIAL = "time_picker_dial"
+    const val TIME_PICKER_INPUT = "time_picker_input"
+    const val TIME_PICKER_MODE_TOGGLE = "time_picker_mode_toggle"
+    const val TIME_PICKER_CONFIRM_BUTTON = "time_picker_confirm_button"
+    const val TIME_PICKER_CANCEL_BUTTON = "time_picker_cancel_button"
+
     fun profileCard(id: String): String = "profile_card_$id"
     fun profileToggle(id: String): String = "profile_toggle_$id"
     fun profileMoveUp(id: String): String = "profile_move_up_$id"

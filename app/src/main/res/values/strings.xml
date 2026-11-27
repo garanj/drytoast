@@ -234,6 +234,8 @@
     <string name="cd_delete">Remove</string>
     <string name="cd_add">Add</string>
     <string name="cd_open_dialer">Open dialer</string>
+    <string name="cd_time_picker_switch_to_input">Switch to keyboard time input</string>
+    <string name="cd_time_picker_switch_to_dial">Switch to clock dial</string>
     <string name="cd_active_profile">Active profile: %1$s</string>
     <string name="cd_missing_profile_permissions">Missing profile permissions</string>
     <string name="capability_fault_sheet_title">Profile permissions required</string>
