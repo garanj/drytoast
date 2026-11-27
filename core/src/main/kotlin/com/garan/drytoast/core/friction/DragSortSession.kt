@@ -26,8 +26,10 @@ sealed interface DropResult {
 /**
  * State machine managing the kinetic drag-to-match icon sorting friction checkpoint.
  */
-class DragSortSession(val pairs: List<GlyphPair>) {
-    private val _unmatchedIds = pairs.map { it.id }.toMutableSet()
+class DragSortSession(val pairs: List<GlyphPair>, initiallyCompletedIds: Set<Int> = emptySet()) {
+    private val _unmatchedIds = pairs.map { it.id }
+        .filterNot { it in initiallyCompletedIds }
+        .toMutableSet()
 
     /**
      * Set of glyph IDs that have not yet been matched.

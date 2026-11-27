@@ -1,10 +1,10 @@
 # Current Task
 
-- **Issue:** [#212](https://github.com/garanj/drytoast/issues/212) — `fix(settings): preserve encrypted backup passphrase and import state across activity recreation`
-- **Branch:** `fix/212-preserve-backup-state-across-recreation`
+- **Issue:** [#213](https://github.com/garanj/drytoast/issues/213) — `fix(friction): preserve Drag-to-Match progress across rotation/resize and bound playfield for large screens`
+- **Branch:** `fix/213-drag-sort-continuity-and-bounds`
 - **Status:** Ready for Review
 
 ## Checklist
-- [x] TDD Red: Added unit & end-to-end `MainActivity` `ActivityScenario.recreate()` tests in `ConfigBackupViewModelAndUiTest` and `ConfigBackupRecreationTest` verifying encrypted SAF export preserves passphrase across `recreate()`, fails closed if no export request is staged, cancels cleanly on `RESULT_CANCELED`, and preserves `ImportPassphraseBottomSheet` across `recreate()`.
-- [x] TDD Green: Moved `PendingExportRequest` and pending encrypted import state into `SettingsViewModel` and wired `MainActivity` (`DryToastRoute.Settings`) to fail closed rather than falling back to plaintext.
+- [x] TDD Red: Added live resize/rotation continuity, `StateRestorationTester` recreation survival, `1280x800dp` max-bounds (`560x680dp`), separating `FoldingFeature` hinge avoidance (`androidx.window:window-testing`), and `>= 48.dp` action button touch-target tests in `DragSortSurfaceTest` + `:core` `DragSortSessionTest`.
+- [x] TDD Green: Supported `initiallyCompletedIds` in `:core` `DragSortSession`, persisted `effectiveSeed` and `completedPairIds` via `rememberSaveable` in `DragSortSurface`, bounded playfield to `560x680dp` and kept clear of separating `FoldingFeature` hinges, and enforced `48.dp` min size on `"Go back"` / `"Open"`.
 - [x] Verified `./gradlew spotlessCheck --no-daemon`, `./gradlew test`, `:app:compileReleaseKotlin`, and zero `android.*` imports in `:core`.

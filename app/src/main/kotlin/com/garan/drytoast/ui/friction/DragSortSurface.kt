@@ -1,5 +1,8 @@
 package com.garan.drytoast.ui.friction
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -15,28 +18,34 @@ import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.ColorFilter
@@ -44,11 +53,19 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
 import com.garan.drytoast.R
 import com.garan.drytoast.core.friction.DragSortSession
 import com.garan.drytoast.core.friction.DropResult
@@ -60,9 +77,13 @@ import com.garan.drytoast.ui.theme.AmoledBlack
 import com.garan.drytoast.ui.theme.PureWhite
 import com.garan.drytoast.ui.theme.SubtleGray
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlin.math.hypot
 import kotlin.random.Random
+
+private val MAX_PLAYFIELD_WIDTH = 560.dp
+private val MAX_PLAYFIELD_HEIGHT = 680.dp
 
 private val GLYPH_DRAWABLES = listOf(
     R.drawable.ic_glyph_toast,
@@ -103,6 +124,22 @@ fun DragSortSurface(
 ) {
     BackHandler(enabled = !embedded, onBack = onDismiss)
 
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val windowLayoutInfoFlow = remember(context, activity) {
+        if (activity != null) {
+            WindowInfoTracker.getOrCreate(context).windowLayoutInfo(activity)
+        } else {
+            emptyFlow()
+        }
+    }
+    val windowLayoutInfo by windowLayoutInfoFlow.collectAsStateWithLifecycle(initialValue = null)
+    val separatingFold = remember(windowLayoutInfo) {
+        windowLayoutInfo?.displayFeatures
+            ?.filterIsInstance<FoldingFeature>()
+            ?.firstOrNull { it.isSeparating }
+    }
+
     val currentHapticEngine by rememberUpdatedState(hapticEngine)
     val currentOnDragActiveChanged by rememberUpdatedState(onDragActiveChanged)
     DisposableEffect(Unit) {
@@ -114,9 +151,12 @@ fun DragSortSurface(
     val targetPainters = rememberGlyphPainters()
     val draggablePainters = rememberGlyphPainters()
     val activePainters = rememberGlyphPainters()
-    var isComplete by remember { mutableStateOf(false) }
 
-    val effectiveSeed = remember(seed) { seed ?: Random.Default.nextLong() }
+    val effectiveSeed = rememberSaveable(seed) { seed ?: Random.Default.nextLong() }
+    var completedPairIds by rememberSaveable(pairCount, effectiveSeed) {
+        mutableStateOf(intArrayOf())
+    }
+    val isComplete = completedPairIds.size >= pairCount
 
     val rootModifier = if (embedded) {
         modifier
@@ -131,201 +171,225 @@ fun DragSortSurface(
             .testTag("drag_sort_surface")
     }
 
+    val density = LocalDensity.current
+    var stageBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
+    val hingePlacement = remember(separatingFold, stageBoundsInWindow, density) {
+        computeHingeSafePlacement(
+            separatingFold = separatingFold,
+            stageWindowBounds = stageBoundsInWindow,
+            density = density,
+        )
+    }
+
     Column(modifier = rootModifier) {
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .onGloballyPositioned { coords ->
+                    stageBoundsInWindow = coords.boundsInWindow()
+                }
+                .padding(hingePlacement.padding),
+            contentAlignment = hingePlacement.alignment,
         ) {
-            val density = LocalDensity.current
-            val widthPx = constraints.maxWidth.toFloat().coerceAtLeast(100f)
-            val heightPx = constraints.maxHeight.toFloat().coerceAtLeast(100f)
+            BoxWithConstraints(
+                modifier = Modifier
+                    .widthIn(max = MAX_PLAYFIELD_WIDTH)
+                    .heightIn(max = MAX_PLAYFIELD_HEIGHT)
+                    .fillMaxSize(),
+            ) {
+                val widthPx = constraints.maxWidth.toFloat().coerceAtLeast(100f)
+                val heightPx = constraints.maxHeight.toFloat().coerceAtLeast(100f)
 
-            val iconSizePx = with(density) { 40.dp.toPx() }
-            val activeIconSizePx = with(density) { 46.dp.toPx() }
-            val itemRadiusPx = with(density) { 28.dp.toPx() }
-            val tolerancePx = with(density) { 28.dp.toPx() }
-            val grabRadiusPx = with(density) { 36.dp.toPx() }
+                val iconSizePx = with(density) { 40.dp.toPx() }
+                val activeIconSizePx = with(density) { 46.dp.toPx() }
+                val itemRadiusPx = with(density) { 28.dp.toPx() }
+                val tolerancePx = with(density) { 28.dp.toPx() }
+                val grabRadiusPx = with(density) { 36.dp.toPx() }
 
-            val normalDrawSize = remember(iconSizePx) { Size(iconSizePx, iconSizePx) }
-            val activeDrawSize = remember(activeIconSizePx) { Size(activeIconSizePx, activeIconSizePx) }
+                val normalDrawSize = remember(iconSizePx) { Size(iconSizePx, iconSizePx) }
+                val activeDrawSize = remember(activeIconSizePx) { Size(activeIconSizePx, activeIconSizePx) }
 
-            val session = remember(widthPx, heightPx, pairCount, effectiveSeed) {
-                val random = Random(effectiveSeed)
-                val pairs = DragSortSession.generateLayout(
-                    pairCount = pairCount,
-                    containerWidth = widthPx,
-                    containerHeight = heightPx,
-                    itemRadius = itemRadiusPx,
-                    minPairSeparation = widthPx * 0.45f,
-                    random = random,
-                )
-                DragSortSession(pairs)
-            }
+                val session = remember(widthPx, heightPx, pairCount, effectiveSeed) {
+                    val random = Random(effectiveSeed)
+                    val pairs = DragSortSession.generateLayout(
+                        pairCount = pairCount,
+                        containerWidth = widthPx,
+                        containerHeight = heightPx,
+                        itemRadius = itemRadiusPx,
+                        minPairSeparation = widthPx * 0.45f,
+                        random = random,
+                    )
+                    DragSortSession(
+                        pairs = pairs,
+                        initiallyCompletedIds = completedPairIds.toSet(),
+                    )
+                }
 
-            LaunchedEffect(session) {
-                isComplete = session.isComplete
-            }
-
-            // Synchronous center coordinates for each draggable glyph in Canvas pixel space.
-            // Read only inside pointerInput and Canvas DrawScope to avoid recomposition during 120Hz drags.
-            val currentPositions = remember(session) {
-                mutableStateListOf<Offset>().apply {
-                    for (pair in session.pairs) {
-                        add(Offset(pair.startPosition.x, pair.startPosition.y))
+                // Synchronous center coordinates for each draggable glyph in Canvas pixel space.
+                // Read only inside pointerInput and Canvas DrawScope to avoid recomposition during 120Hz drags.
+                val currentPositions = remember(session) {
+                    mutableStateListOf<Offset>().apply {
+                        for (pair in session.pairs) {
+                            add(Offset(pair.startPosition.x, pair.startPosition.y))
+                        }
                     }
                 }
-            }
-            val snapBackJobs = remember(session) { arrayOfNulls<Job>(session.pairs.size) }
-            var unmatchedIds by remember(session) { mutableStateOf(session.unmatchedIds.toSet()) }
-            var activeDragId by remember(session) { mutableStateOf<Int?>(null) }
+                val snapBackJobs = remember(session) { arrayOfNulls<Job>(session.pairs.size) }
+                var unmatchedIds by remember(session) { mutableStateOf(session.unmatchedIds.toSet()) }
+                var activeDragId by remember(session) { mutableStateOf<Int?>(null) }
 
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("drag_sort_canvas")
-                    .pointerInput(session, grabRadiusPx, tolerancePx) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("drag_sort_canvas")
+                        .pointerInput(session, grabRadiusPx, tolerancePx) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
 
-                            // Find the closest unmatched draggable glyph within grabRadiusPx
-                            var closestId: Int? = null
-                            var closestDist = Float.MAX_VALUE
-                            for (pair in session.pairs) {
-                                val id = pair.id
-                                if (id in unmatchedIds) {
-                                    val pos = currentPositions[id]
-                                    val dist = hypot(down.position.x - pos.x, down.position.y - pos.y)
-                                    if (dist <= grabRadiusPx && dist < closestDist) {
-                                        closestDist = dist
-                                        closestId = id
-                                    }
-                                }
-                            }
-
-                            val draggedId = closestId ?: return@awaitEachGesture
-                            snapBackJobs[draggedId]?.cancel()
-                            activeDragId = draggedId
-                            currentOnDragActiveChanged(true)
-                            currentHapticEngine.rotaryDetent()
-
-                            val completedNormally = try {
-                                drag(down.id) { change ->
-                                    val delta = change.positionChange()
-                                    change.consume()
-                                    val current = currentPositions[draggedId]
-                                    currentPositions[draggedId] = Offset(
-                                        x = (current.x + delta.x).coerceIn(0f, widthPx),
-                                        y = (current.y + delta.y).coerceIn(0f, heightPx),
-                                    )
-                                }
-                            } finally {
-                                currentOnDragActiveChanged(false)
-                            }
-
-                            activeDragId = null
-                            val dropPos = currentPositions[draggedId]
-                            val pair = session.pairs[draggedId]
-
-                            if (completedNormally) {
-                                val result = session.drop(
-                                    id = draggedId,
-                                    dropPosition = Vector2D(dropPos.x, dropPos.y),
-                                    toleranceRadius = tolerancePx,
-                                )
-                                when (result) {
-                                    is DropResult.Match -> {
-                                        currentHapticEngine.relaySnap()
-                                        unmatchedIds = session.unmatchedIds.toSet()
-                                        if (session.isComplete) {
-                                            isComplete = true
-                                            currentHapticEngine.targetSnap()
+                                // Find the closest unmatched draggable glyph within grabRadiusPx
+                                var closestId: Int? = null
+                                var closestDist = Float.MAX_VALUE
+                                for (pair in session.pairs) {
+                                    val id = pair.id
+                                    if (id in unmatchedIds) {
+                                        val pos = currentPositions[id]
+                                        val dist = hypot(down.position.x - pos.x, down.position.y - pos.y)
+                                        if (dist <= grabRadiusPx && dist < closestDist) {
+                                            closestDist = dist
+                                            closestId = id
                                         }
                                     }
-                                    is DropResult.Mismatch -> {
-                                        currentHapticEngine.resistanceDetent()
-                                        val startOffset = dropPos
-                                        val targetOffset = Offset(pair.startPosition.x, pair.startPosition.y)
-                                        snapBackJobs[draggedId] = coroutineScope.launch {
-                                            Animatable(0f).animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = DryToastMotion.opticalTween(120),
-                                            ) {
-                                                currentPositions[draggedId] = lerp(
-                                                    start = startOffset,
-                                                    stop = targetOffset,
-                                                    fraction = value,
-                                                )
+                                }
+
+                                val draggedId = closestId ?: return@awaitEachGesture
+                                snapBackJobs[draggedId]?.cancel()
+                                activeDragId = draggedId
+                                currentOnDragActiveChanged(true)
+                                currentHapticEngine.rotaryDetent()
+
+                                val completedNormally = try {
+                                    drag(down.id) { change ->
+                                        val delta = change.positionChange()
+                                        change.consume()
+                                        val current = currentPositions[draggedId]
+                                        currentPositions[draggedId] = Offset(
+                                            x = (current.x + delta.x).coerceIn(0f, widthPx),
+                                            y = (current.y + delta.y).coerceIn(0f, heightPx),
+                                        )
+                                    }
+                                } finally {
+                                    currentOnDragActiveChanged(false)
+                                }
+
+                                activeDragId = null
+                                val dropPos = currentPositions[draggedId]
+                                val pair = session.pairs[draggedId]
+
+                                if (completedNormally) {
+                                    val result = session.drop(
+                                        id = draggedId,
+                                        dropPosition = Vector2D(dropPos.x, dropPos.y),
+                                        toleranceRadius = tolerancePx,
+                                    )
+                                    when (result) {
+                                        is DropResult.Match -> {
+                                            currentHapticEngine.relaySnap()
+                                            val remaining = session.unmatchedIds.toSet()
+                                            unmatchedIds = remaining
+                                            completedPairIds = session.pairs
+                                                .map { it.id }
+                                                .filterNot { it in remaining }
+                                                .toIntArray()
+                                            if (session.isComplete) {
+                                                currentHapticEngine.targetSnap()
+                                            }
+                                        }
+                                        is DropResult.Mismatch -> {
+                                            currentHapticEngine.resistanceDetent()
+                                            val startOffset = dropPos
+                                            val targetOffset = Offset(pair.startPosition.x, pair.startPosition.y)
+                                            snapBackJobs[draggedId] = coroutineScope.launch {
+                                                Animatable(0f).animateTo(
+                                                    targetValue = 1f,
+                                                    animationSpec = DryToastMotion.opticalTween(120),
+                                                ) {
+                                                    currentPositions[draggedId] = lerp(
+                                                        start = startOffset,
+                                                        stop = targetOffset,
+                                                        fraction = value,
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            } else {
-                                // Gesture cancelled: smoothly return to start position
-                                val startOffset = dropPos
-                                val targetOffset = Offset(pair.startPosition.x, pair.startPosition.y)
-                                snapBackJobs[draggedId] = coroutineScope.launch {
-                                    Animatable(0f).animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = DryToastMotion.opticalTween(120),
-                                    ) {
-                                        currentPositions[draggedId] = lerp(
-                                            start = startOffset,
-                                            stop = targetOffset,
-                                            fraction = value,
-                                        )
+                                } else {
+                                    // Gesture cancelled: smoothly return to start position
+                                    val startOffset = dropPos
+                                    val targetOffset = Offset(pair.startPosition.x, pair.startPosition.y)
+                                    snapBackJobs[draggedId] = coroutineScope.launch {
+                                        Animatable(0f).animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = DryToastMotion.opticalTween(120),
+                                        ) {
+                                            currentPositions[draggedId] = lerp(
+                                                start = startOffset,
+                                                stop = targetOffset,
+                                                fraction = value,
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                    },
-            ) {
-                val halfIconPx = iconSizePx * 0.5f
-                val halfActiveIconPx = activeIconSizePx * 0.5f
+                        },
+                ) {
+                    val halfIconPx = iconSizePx * 0.5f
+                    val halfActiveIconPx = activeIconSizePx * 0.5f
 
-                // 1. Fixed Target Silhouettes (Grey, isolated painter to prevent draw-size cross-talk)
-                for (pair in session.pairs) {
-                    if (pair.id in unmatchedIds) {
-                        val painter = targetPainters[pair.id % targetPainters.size]
-                        translate(
-                            left = pair.targetPosition.x - halfIconPx,
-                            top = pair.targetPosition.y - halfIconPx,
-                        ) {
-                            with(painter) {
-                                draw(size = normalDrawSize, colorFilter = TARGET_COLOR_FILTER)
+                    // 1. Fixed Target Silhouettes (Grey, isolated painter to prevent draw-size cross-talk)
+                    for (pair in session.pairs) {
+                        if (pair.id in unmatchedIds) {
+                            val painter = targetPainters[pair.id % targetPainters.size]
+                            translate(
+                                left = pair.targetPosition.x - halfIconPx,
+                                top = pair.targetPosition.y - halfIconPx,
+                            ) {
+                                with(painter) {
+                                    draw(size = normalDrawSize, colorFilter = TARGET_COLOR_FILTER)
+                                }
                             }
                         }
                     }
-                }
 
-                // 2. Inactive Draggable Foreground Glyphs (White)
-                for (pair in session.pairs) {
-                    val id = pair.id
-                    if (id in unmatchedIds && id != activeDragId) {
-                        val pos = currentPositions[id]
-                        val painter = draggablePainters[id % draggablePainters.size]
-                        translate(
-                            left = pos.x - halfIconPx,
-                            top = pos.y - halfIconPx,
-                        ) {
-                            with(painter) {
-                                draw(size = normalDrawSize, colorFilter = DRAGGABLE_COLOR_FILTER)
+                    // 2. Inactive Draggable Foreground Glyphs (White)
+                    for (pair in session.pairs) {
+                        val id = pair.id
+                        if (id in unmatchedIds && id != activeDragId) {
+                            val pos = currentPositions[id]
+                            val painter = draggablePainters[id % draggablePainters.size]
+                            translate(
+                                left = pos.x - halfIconPx,
+                                top = pos.y - halfIconPx,
+                            ) {
+                                with(painter) {
+                                    draw(size = normalDrawSize, colorFilter = DRAGGABLE_COLOR_FILTER)
+                                }
                             }
                         }
                     }
-                }
 
-                // 3. Actively Dragged Foreground Glyph (White, drawn on top in Z-order with dedicated active painter)
-                val activeId = activeDragId
-                if (activeId != null && activeId in unmatchedIds) {
-                    val pos = currentPositions[activeId]
-                    val painter = activePainters[activeId % activePainters.size]
-                    translate(
-                        left = pos.x - halfActiveIconPx,
-                        top = pos.y - halfActiveIconPx,
-                    ) {
-                        with(painter) {
-                            draw(size = activeDrawSize, colorFilter = DRAGGABLE_COLOR_FILTER)
+                    // 3. Actively Dragged Foreground Glyph (White, drawn on top in Z-order with dedicated active painter)
+                    val activeId = activeDragId
+                    if (activeId != null && activeId in unmatchedIds) {
+                        val pos = currentPositions[activeId]
+                        val painter = activePainters[activeId % activePainters.size]
+                        translate(
+                            left = pos.x - halfActiveIconPx,
+                            top = pos.y - halfActiveIconPx,
+                        ) {
+                            with(painter) {
+                                draw(size = activeDrawSize, colorFilter = DRAGGABLE_COLOR_FILTER)
+                            }
                         }
                     }
                 }
@@ -335,36 +399,124 @@ fun DragSortSurface(
         // Bottom Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite)
         Box(
             modifier = Modifier
-                .padding(horizontal = if (embedded) 16.dp else 24.dp, vertical = if (embedded) 12.dp else 24.dp),
+                .fillMaxWidth()
+                .padding(horizontal = if (embedded) 16.dp else 24.dp, vertical = if (embedded) 6.dp else 18.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                targetState = isComplete,
-                transitionSpec = {
-                    fadeIn(
-                        animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
-                    ) togetherWith
-                        fadeOut(animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS))
-                },
-                label = "ActionButtonTransition",
-            ) { complete ->
-                Text(
-                    text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (complete) PureWhite else SubtleGray,
-                    modifier = Modifier
-                        .clickable {
-                            if (complete) {
-                                onConfirmOpen()
-                            } else {
-                                onDismiss()
-                            }
-                        }
-                        .padding(vertical = 8.dp)
-                        .testTag("drag_sort_action_button"),
-                )
+            Box(
+                modifier = Modifier
+                    .widthIn(max = MAX_PLAYFIELD_WIDTH)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                AnimatedContent(
+                    targetState = isComplete,
+                    transitionSpec = {
+                        fadeIn(
+                            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
+                        ) togetherWith
+                            fadeOut(
+                                animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS),
+                            )
+                    },
+                    label = "ActionButtonTransition",
+                ) { complete ->
+                    Box(
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .testTag("drag_sort_action_button")
+                            .clickable(role = Role.Button) {
+                                if (complete) {
+                                    onConfirmOpen()
+                                } else {
+                                    onDismiss()
+                                }
+                            },
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (complete) PureWhite else SubtleGray,
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+private data class HingeSafePlacement(
+    val padding: PaddingValues = PaddingValues(0.dp),
+    val alignment: Alignment = Alignment.Center,
+)
+
+private fun computeHingeSafePlacement(
+    separatingFold: FoldingFeature?,
+    stageWindowBounds: Rect?,
+    density: Density,
+): HingeSafePlacement {
+    if (separatingFold == null || stageWindowBounds == null) {
+        return HingeSafePlacement()
+    }
+    val foldRect = separatingFold.bounds
+    return with(density) {
+        when (separatingFold.orientation) {
+            FoldingFeature.Orientation.VERTICAL -> {
+                val overlapsHorizontally =
+                    foldRect.left < stageWindowBounds.right && foldRect.right > stageWindowBounds.left
+                if (!overlapsHorizontally) {
+                    HingeSafePlacement()
+                } else {
+                    val leftPaneWidth = (foldRect.left - stageWindowBounds.left).coerceAtLeast(0f)
+                    val rightPaneWidth = (stageWindowBounds.right - foldRect.right).coerceAtLeast(0f)
+                    if (leftPaneWidth >= rightPaneWidth) {
+                        val endPadPx = (stageWindowBounds.right - foldRect.left).coerceAtLeast(0f)
+                        HingeSafePlacement(
+                            padding = PaddingValues(end = endPadPx.toDp()),
+                            alignment = Alignment.CenterStart,
+                        )
+                    } else {
+                        val startPadPx = (foldRect.right - stageWindowBounds.left).coerceAtLeast(0f)
+                        HingeSafePlacement(
+                            padding = PaddingValues(start = startPadPx.toDp()),
+                            alignment = Alignment.CenterEnd,
+                        )
+                    }
+                }
+            }
+            FoldingFeature.Orientation.HORIZONTAL -> {
+                val overlapsVertically =
+                    foldRect.top < stageWindowBounds.bottom && foldRect.bottom > stageWindowBounds.top
+                if (!overlapsVertically) {
+                    HingeSafePlacement()
+                } else {
+                    val topPaneHeight = (foldRect.top - stageWindowBounds.top).coerceAtLeast(0f)
+                    val bottomPaneHeight = (stageWindowBounds.bottom - foldRect.bottom).coerceAtLeast(0f)
+                    if (topPaneHeight >= bottomPaneHeight) {
+                        val bottomPadPx = (stageWindowBounds.bottom - foldRect.top).coerceAtLeast(0f)
+                        HingeSafePlacement(
+                            padding = PaddingValues(bottom = bottomPadPx.toDp()),
+                            alignment = Alignment.TopCenter,
+                        )
+                    } else {
+                        val topPadPx = (foldRect.bottom - stageWindowBounds.top).coerceAtLeast(0f)
+                        HingeSafePlacement(
+                            padding = PaddingValues(top = topPadPx.toDp()),
+                            alignment = Alignment.BottomCenter,
+                        )
+                    }
+                }
+            }
+            else -> HingeSafePlacement()
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable

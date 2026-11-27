@@ -262,6 +262,25 @@ class DryToastScreenshotTest {
     }
 
     @Test
+    fun snapshotDragSortCheckpointTabletExpanded() {
+        composeTestRule.setContent {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.ForcedSize(DpSize(1280.dp, 800.dp)),
+            ) {
+                DryToastTheme {
+                    com.garan.drytoast.ui.friction.DragSortSurface(
+                        pairCount = 6,
+                        seed = 42L,
+                        onConfirmOpen = {},
+                        onDismiss = {},
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("drag_sort_tablet_expanded.png")
+    }
+
+    @Test
     fun snapshotCaretTracingCheckpoint() {
         composeTestRule.mainClock.autoAdvance = false
         composeTestRule.setContent {
