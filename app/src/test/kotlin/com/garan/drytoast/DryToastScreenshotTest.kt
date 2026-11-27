@@ -295,6 +295,24 @@ class DryToastScreenshotTest {
     }
 
     @Test
+    fun snapshotCaretTracingPhoneLandscape() {
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.setContent {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.ForcedSize(DpSize(891.dp, 390.dp)),
+            ) {
+                DryToastTheme {
+                    com.garan.drytoast.ui.friction.CaretTracingSurface(
+                        onConfirmOpen = {},
+                        onDismiss = {},
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("caret_tracing_phone_landscape.png")
+    }
+
+    @Test
     fun snapshotHomeCanvasWithQuickActions() {
         val quickActions = persistentListOf(
             com.garan.drytoast.ui.search.QuickActionUiItem(

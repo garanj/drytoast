@@ -1,11 +1,15 @@
 package com.garan.drytoast.ui.friction
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.dp
 import com.garan.drytoast.core.port.HapticEngine
 import com.garan.drytoast.ui.theme.DryToastTheme
 import com.google.common.truth.Truth.assertThat
@@ -157,6 +161,89 @@ class TypedIntentionSurfaceTest {
         assertThat(haptic.resistanceDetentCount).isEqualTo(0)
         assertThat(haptic.targetSnapCount).isEqualTo(1)
         composeTestRule.onNodeWithText("Open").assertIsDisplayed()
+    }
+
+    @Test
+    fun midPhraseTyping_survivesStateRestorationWithSameRandomPhraseAndMatchedProgress() {
+        var confirmed = false
+        val restorationTester = StateRestorationTester(composeTestRule)
+
+        restorationTester.setContent {
+            DryToastTheme {
+                TypedIntentionSurface(
+                    appLabel = "Signal",
+                    onConfirmOpen = { confirmed = true },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        // Capture the randomly selected target phrase
+        val initialPhrase = composeTestRule.onNodeWithTag("typed_intention_phrase")
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .first()
+            .text
+        assertThat(initialPhrase.length).isGreaterThan(6)
+
+        val firstHalf = initialPhrase.substring(0, 6)
+        val secondHalf = initialPhrase.substring(6)
+
+        for (ch in firstHalf) {
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(ch.toString())
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onNodeWithText("Go back").assertIsDisplayed()
+
+        // Simulate foldable cover <-> inner densityDpi recreation
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Same random phrase must remain displayed
+        val restoredPhrase = composeTestRule.onNodeWithTag("typed_intention_phrase")
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .first()
+            .text
+        assertThat(restoredPhrase).isEqualTo(initialPhrase)
+
+        // Typing only the remaining characters completes the phrase and unlocks "Open"
+        for (ch in secondHalf) {
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(ch.toString())
+            composeTestRule.waitForIdle()
+        }
+
+        composeTestRule.onNodeWithText("Open").assertIsDisplayed().performClick()
+        assertThat(confirmed).isTrue()
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun expandedTablet_constrainsPhraseColumnMaxWidthAndEnforces48dpActionButtonHeight() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                TypedIntentionSurface(
+                    appLabel = "YouTube",
+                    overridePhrase = "I am opening YouTube intentionally",
+                    onConfirmOpen = {},
+                    onDismiss = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val density = composeTestRule.density
+        val phraseBounds = composeTestRule.onNodeWithTag("typed_intention_content_column")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val maxContentWidthPx = with(density) { 600.dp.toPx() } + 1f
+        assertThat(phraseBounds.width).isAtMost(maxContentWidthPx)
+
+        val actionTouchBounds = composeTestRule.onNodeWithTag("typed_intention_action_button")
+            .fetchSemanticsNode()
+            .touchBoundsInRoot
+        val minTouchPx = with(density) { 48.dp.toPx() } - 0.5f
+        assertThat(actionTouchBounds.height).isAtLeast(minTouchPx)
+        assertThat(actionTouchBounds.width).isAtLeast(minTouchPx)
     }
 
     private class TestHapticEngine : HapticEngine {

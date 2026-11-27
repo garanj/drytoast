@@ -15,10 +15,10 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,9 +37,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -809,11 +812,12 @@ fun CaretTracingSurface(
     val currentOnInteractionActiveChanged by rememberUpdatedState(onInteractionActiveChanged)
 
     var isHolding by remember { mutableStateOf(false) }
-    var isComplete by remember { mutableStateOf(false) }
-    var poppedCount by remember { mutableIntStateOf(0) }
+    var isComplete by rememberSaveable { mutableStateOf(false) }
+    var lastObservedDurationMs by rememberSaveable { mutableLongStateOf(totalDurationMs) }
+    var poppedCount by remember { mutableIntStateOf(if (isComplete) SLICE_COUNT else 0) }
 
     // Continuous mechanical animation states read strictly inside draw phase
-    val toastProgress = remember { Animatable(0f) }
+    val toastProgress = remember { Animatable(if (isComplete) SLICE_COUNT.toFloat() else 0f) }
     val leverProgress = remember { Animatable(0f) }
     val sliceOffsetsZ = remember { Array(SLICE_COUNT) { Animatable(0f) } }
 
@@ -824,15 +828,25 @@ fun CaretTracingSurface(
         }
     }
 
-    // Reset full state if totalDurationMs changes
+    // Reset full state only if totalDurationMs actually changes; preserve completed state across restoration
     LaunchedEffect(totalDurationMs) {
-        isHolding = false
-        isComplete = false
-        poppedCount = 0
-        toastProgress.snapTo(0f)
-        leverProgress.snapTo(0f)
-        for (i in 0 until SLICE_COUNT) {
-            sliceOffsetsZ[i].snapTo(0f)
+        if (lastObservedDurationMs != totalDurationMs) {
+            lastObservedDurationMs = totalDurationMs
+            isHolding = false
+            isComplete = false
+            poppedCount = 0
+            toastProgress.snapTo(0f)
+            leverProgress.snapTo(0f)
+            for (i in 0 until SLICE_COUNT) {
+                sliceOffsetsZ[i].snapTo(0f)
+            }
+        } else if (isComplete) {
+            poppedCount = SLICE_COUNT
+            toastProgress.snapTo(SLICE_COUNT.toFloat())
+            leverProgress.snapTo(0f)
+            for (i in 0 until SLICE_COUNT) {
+                sliceOffsetsZ[i].snapTo(0f)
+            }
         }
     }
 
@@ -996,19 +1010,9 @@ fun CaretTracingSurface(
     }
     val showIdleHint = !isHolding && !isComplete
 
-    val toasterBoxModifier = if (embedded) {
-        Modifier.size(216.dp)
-    } else {
-        Modifier
-            .widthIn(max = 420.dp)
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .aspectRatio(1f)
-    }
-
     Column(modifier = rootModifier) {
         // Centered Isometric Dualit Toaster Stage — entire middle area acts as the hold-to-toast lever zone
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
@@ -1040,79 +1044,112 @@ fun CaretTracingSurface(
                         }
                     }
                 },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = toasterBoxModifier
-                    .testTag("caret_tracing_canvas")
-                    .drawWithCache {
-                        if (size.width <= 0f || size.height <= 0f) {
-                            return@drawWithCache onDrawBehind {}
-                        }
-                        val scene = CachedToasterScene(size.width, size.height)
-                        onDrawBehind {
-                            scene.drawScene(
-                                scope = this,
-                                poppedCount = poppedCount,
-                                dialFraction = toastProgress.value / SLICE_COUNT.toFloat(),
-                                leverFraction = leverProgress.value,
-                                isHolding = isHolding,
-                                sliceOffsetsZ = sliceOffsetsZ,
-                            )
-                        }
-                    },
-            )
-
-            if (!embedded) {
-                Spacer(modifier = Modifier.height(8.dp))
+            val canvasSide = if (embedded) {
+                216.dp
+            } else {
+                val hintReserve = 28.dp
+                val maxCanvasWidth = (maxWidth.coerceAtMost(420.dp) - 16.dp).coerceAtLeast(96.dp)
+                val maxCanvasHeight = (maxHeight - hintReserve).coerceAtLeast(96.dp)
+                minOf(maxCanvasWidth, maxCanvasHeight)
             }
 
-            // Show only the idle "Hold lever down to toast" cue; keep space reserved so the toaster never jumps
-            Text(
-                text = idleHintText,
-                style = MaterialTheme.typography.labelMedium,
-                color = colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .alpha(if (showIdleHint) 1f else 0f)
-                    .testTag("caret_tracing_status_hint"),
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(canvasSide)
+                        .testTag("caret_tracing_canvas")
+                        .drawWithCache {
+                            if (size.width <= 0f || size.height <= 0f) {
+                                return@drawWithCache onDrawBehind {}
+                            }
+                            val scene = CachedToasterScene(size.width, size.height)
+                            onDrawBehind {
+                                scene.drawScene(
+                                    scope = this,
+                                    poppedCount = poppedCount,
+                                    dialFraction = toastProgress.value / SLICE_COUNT.toFloat(),
+                                    leverFraction = leverProgress.value,
+                                    isHolding = isHolding,
+                                    sliceOffsetsZ = sliceOffsetsZ,
+                                )
+                            }
+                        },
+                )
+
+                if (!embedded) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Show only the idle "Hold lever down to toast" cue; keep space reserved so the toaster never jumps
+                Text(
+                    text = idleHintText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .alpha(if (showIdleHint) 1f else 0f)
+                        .testTag("caret_tracing_status_hint"),
+                )
+            }
         }
 
         // Bottom Action Button: "Go back" morphs into "Open" with >= 48dp touch target
+        val compactHeight = !embedded && LocalConfiguration.current.screenHeightDp < 440
         Box(
             modifier = Modifier
-                .padding(horizontal = if (embedded) 16.dp else 24.dp, vertical = if (embedded) 8.dp else 20.dp),
+                .fillMaxWidth()
+                .padding(
+                    horizontal = if (embedded) 16.dp else 24.dp,
+                    vertical = when {
+                        embedded -> 8.dp
+                        compactHeight -> 8.dp
+                        else -> 20.dp
+                    },
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                targetState = isComplete,
-                transitionSpec = {
-                    fadeIn(
-                        animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
-                    ) togetherWith
-                        fadeOut(animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS))
-                },
-                label = "CaretTracingActionButtonTransition",
-            ) { complete ->
-                Box(
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .clickable(role = Role.Button) {
-                            if (complete) {
-                                onConfirmOpen()
-                            } else {
-                                onDismiss()
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                AnimatedContent(
+                    targetState = isComplete,
+                    transitionSpec = {
+                        fadeIn(
+                            animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_OPEN_DURATION_MS),
+                        ) togetherWith
+                            fadeOut(
+                                animationSpec = DryToastMotion.opticalTween(DryToastMotion.SHUTTER_CLOSE_DURATION_MS),
+                            )
+                    },
+                    label = "CaretTracingActionButtonTransition",
+                ) { complete ->
+                    Box(
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .testTag("caret_tracing_action_button")
+                            .clickable(role = Role.Button) {
+                                if (complete) {
+                                    onConfirmOpen()
+                                } else {
+                                    onDismiss()
+                                }
                             }
-                        }
-                        .padding(horizontal = 4.dp, vertical = 8.dp)
-                        .testTag("caret_tracing_action_button"),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (complete) colorScheme.onSurface else colorScheme.onSurfaceVariant,
-                    )
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (complete) colorScheme.onSurface else colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

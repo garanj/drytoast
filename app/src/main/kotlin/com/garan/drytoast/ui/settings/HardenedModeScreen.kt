@@ -819,13 +819,23 @@ private fun ChallengeVerificationSection(
     var challenge by rememberSaveable(initialChallenge) {
         mutableStateOf(initialChallenge ?: ChallengeResponseVerifier.generateChallenge())
     }
+    var lastVisibleChallenge by rememberSaveable(initialChallenge) {
+        mutableStateOf(challenge)
+    }
     var enteredCode by rememberSaveable { mutableStateOf("") }
     var hasError by rememberSaveable { mutableStateOf(false) }
     var lastObservedMultiWindow by rememberSaveable { mutableStateOf(isMultiWindow) }
     var hadWindowFocus by remember { mutableStateOf(false) }
 
     val rotateChallenge: () -> Unit = {
-        challenge = ChallengeResponseVerifier.generateChallenge(previousChallenge = challenge)
+        var next = ChallengeResponseVerifier.generateChallenge(previousChallenge = challenge)
+        while (next == lastVisibleChallenge) {
+            next = ChallengeResponseVerifier.generateChallenge(previousChallenge = challenge)
+        }
+        challenge = next
+        if (!isMultiWindow) {
+            lastVisibleChallenge = next
+        }
         enteredCode = ""
         hasError = false
     }
@@ -860,6 +870,7 @@ private fun ChallengeVerificationSection(
             rotateChallenge()
         }
         if (!isMultiWindow) {
+            lastVisibleChallenge = challenge
             runCatching { keypadFocusRequester.requestFocus() }
         }
     }
