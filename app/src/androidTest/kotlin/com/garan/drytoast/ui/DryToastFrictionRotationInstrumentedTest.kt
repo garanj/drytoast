@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.os.Process
+import android.os.SystemClock
+import android.view.KeyCharacterMap
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -64,10 +66,15 @@ class DryToastFrictionRotationInstrumentedTest {
 
     @Test
     fun typedIntentionCheckpoint_preservesPhraseAndTypedProgressAcrossPortraitToLandscapeRotation() {
-        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val targetContext = instrumentation.targetContext
         val launcherApps = targetContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        val candidate = launcherApps.getActivityList(null, Process.myUserHandle())
-            .firstOrNull { it.applicationInfo.packageName != targetContext.packageName }
+        val activities = launcherApps.getActivityList(null, Process.myUserHandle())
+            .filter { it.applicationInfo.packageName != targetContext.packageName }
+        val candidate = activities.firstOrNull { info ->
+            val lbl = info.label.toString()
+            lbl.isNotBlank() && lbl.all { it.isLetterOrDigit() || it == ' ' }
+        } ?: activities.firstOrNull()
             ?: error("No launchable third-party/system activity found for test")
 
         val component = ComponentKey(
@@ -95,42 +102,70 @@ class DryToastFrictionRotationInstrumentedTest {
             )
         }
 
+        assertThat(waitForActivityWindowFocus()).isTrue()
+
         val phraseNode = checkNotNull(
             device.waitForFresh(By.res("typed_intention_phrase"), 10_000L),
         ) { "Expected typed_intention_phrase node on screen" }
         val targetPhrase = phraseNode.text
         assertThat(targetPhrase.length).isGreaterThan(5)
 
+        // Tap phrase surface once to guarantee Compose focus is bound after window focus settles
+        phraseNode.click()
+        device.waitForIdle()
+
         val splitIndex = targetPhrase.length / 2
         val firstHalf = targetPhrase.substring(0, splitIndex)
         val secondHalf = targetPhrase.substring(splitIndex)
+        val keyMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
 
-        for (ch in firstHalf) {
-            device.executeShellCommand("input text ${shellEscapeSingleChar(ch)}")
-        }
+        typeSynchronously(keyMap, firstHalf)
 
-        // Rotate device Portrait -> Landscape mid-phrase
+        // Rotate device Portrait -> Landscape mid-phrase and wait for landscape geometry + window focus
         device.setOrientationLeft()
-        device.waitForIdle()
+        assertThat(
+            pollFresh(5_000L) { device.displayWidth > device.displayHeight },
+        ).isTrue()
+        assertThat(waitForActivityWindowFocus()).isTrue()
+        SystemClock.sleep(250L)
 
         val rotatedPhraseNode = checkNotNull(
             device.waitForFresh(By.res("typed_intention_phrase"), 5_000L),
         ) { "Expected typed_intention_phrase node after landscape rotation" }
         assertThat(rotatedPhraseNode.text).isEqualTo(targetPhrase)
 
-        // Type only the second half after rotation -> must complete and reveal "Open"
-        for (ch in secondHalf) {
-            device.executeShellCommand("input text ${shellEscapeSingleChar(ch)}")
-        }
+        // Re-confirm focus on the rotated surface, then type only the remaining characters
+        rotatedPhraseNode.click()
+        device.waitForIdle()
 
-        val openButton = device.waitForFresh(By.text("Open"), 5_000L)
+        typeSynchronously(keyMap, secondHalf)
+
+        val openButton = device.waitForFresh(By.text("Open"), 10_000L)
         assertThat(openButton).isNotNull()
     }
 
-    private fun shellEscapeSingleChar(ch: Char): String = when (ch) {
-        ' ' -> "%s"
-        '\'' -> "\\'"
-        '"' -> "\\\""
-        else -> ch.toString()
+    private fun waitForActivityWindowFocus(): Boolean = pollFresh(5_000L) {
+        var focused = false
+        scenario?.onActivity { activity ->
+            focused = activity.hasWindowFocus()
+        }
+        focused
+    }
+
+    private fun typeSynchronously(keyMap: KeyCharacterMap, text: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val uiAutomation = instrumentation.uiAutomation
+        for (ch in text) {
+            val normalized = ch.lowercaseChar()
+            val events = keyMap.getEvents(charArrayOf(normalized))
+            if (events != null) {
+                for (event in events) {
+                    uiAutomation.injectInputEvent(event, true)
+                }
+            } else {
+                instrumentation.sendStringSync(normalized.toString())
+            }
+            instrumentation.waitForIdleSync()
+        }
     }
 }

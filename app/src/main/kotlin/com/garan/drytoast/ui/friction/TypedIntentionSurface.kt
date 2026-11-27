@@ -42,7 +42,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -113,6 +115,8 @@ fun TypedIntentionSurface(
     }
     val isComplete = matchedCount >= targetPhrase.length
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val compactHeight = !embedded && LocalConfiguration.current.screenHeightDp < 440
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(embedded) {
         if (!embedded) {
@@ -158,7 +162,7 @@ fun TypedIntentionSurface(
                     focusRequester.requestFocus()
                 }
             }
-            .padding(horizontal = 24.dp, vertical = 24.dp)
+            .padding(horizontal = 24.dp, vertical = if (compactHeight) 8.dp else 24.dp)
     }
 
     val columnModifier = if (embedded) {
@@ -186,7 +190,7 @@ fun TypedIntentionSurface(
                 color = SubtleGray,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(if (compactHeight) 6.dp else 16.dp))
 
             // Dual-tone illuminated phrase: matched text is PureWhite, remaining is SubtleGray
             val annotatedPhrase = remember(matchedCount, targetPhrase) {
@@ -207,7 +211,7 @@ fun TypedIntentionSurface(
                 modifier = Modifier.testTag("typed_intention_phrase"),
             )
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 22.dp))
 
             // Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite) with >= 48dp touch bounds
             AnimatedContent(
@@ -269,6 +273,9 @@ fun TypedIntentionSurface(
                                     TypedIntentionSession.MatchResult.Completed -> {
                                         matchedCount = session.matchedCount
                                         hapticEngine.targetSnap()
+                                        if (!embedded) {
+                                            keyboardController?.hide()
+                                        }
                                         break
                                     }
                                     TypedIntentionSession.MatchResult.Mismatch -> {
@@ -296,6 +303,7 @@ fun TypedIntentionSurface(
             modifier = Modifier
                 .size(1.dp)
                 .alpha(0f)
+                .testTag("typed_intention_input")
                 .focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
