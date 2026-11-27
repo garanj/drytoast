@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.garan.drytoast.core.model.AppAccessState
@@ -702,5 +705,25 @@ class DryToastScreenshotTest {
             }
         }
         verifyAndArchiveSnapshot("settings_lock_screen.png")
+    }
+
+    @Test
+    fun snapshotSettingsLockScreenMultiWindowBlocked() {
+        composeTestRule.setContent {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.ForcedSize(DpSize(336.dp, 841.dp)),
+            ) {
+                DryToastTheme {
+                    com.garan.drytoast.ui.settings.SettingsLockScreen(
+                        isSettingsLocked = true,
+                        onConfirmSetSettingsLocked = {},
+                        onCancel = {},
+                        initialChallenge = "815",
+                        isMultiWindowOverride = true,
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("settings_lock_split_screen_blocked.png")
     }
 }

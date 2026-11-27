@@ -71,6 +71,9 @@ class ArchitectureAndConfigGuardTest {
         assertThat(manifest).contains("""android:label="@string/app_name"""")
         assertThat(manifest).contains("""android.intent.category.LAUNCHER""")
         assertThat(manifest).contains("""android:excludeFromRecents="true"""")
+        assertThat(manifest).contains("""android:resizeableActivity="true"""")
+        assertThat(manifest).doesNotContain("""android:resizeableActivity="false"""")
+        assertThat(manifest).doesNotContain("""android:screenOrientation=""")
 
         val mipmapAnyDpi = File(rootDir, "app/src/main/res/mipmap-anydpi-v26")
         assertThat(File(mipmapAnyDpi, "ic_launcher.xml").exists()).isTrue()

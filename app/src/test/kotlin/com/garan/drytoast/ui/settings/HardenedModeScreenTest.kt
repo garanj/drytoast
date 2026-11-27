@@ -1,21 +1,30 @@
 package com.garan.drytoast.ui.settings
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -35,7 +44,7 @@ import org.robolectric.annotation.Config
 class HardenedModeScreenTest {
 
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
     fun hardenedModeScreen_whenInactive_displaysStandardModeStatusAndLaunchesSetupWebsite() {
@@ -287,7 +296,7 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("· · · · · ·")
         val rotatedText = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE)
             .fetchSemanticsNode()
-            .config[androidx.compose.ui.semantics.SemanticsProperties.Text]
+            .config[SemanticsProperties.Text]
             .first()
             .text
         assertThat(rotatedText).isNotEqualTo("492")
@@ -346,5 +355,147 @@ class HardenedModeScreenTest {
         }
 
         composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_MULTI_WINDOW_NOTICE).assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsLockScreen_reactivelyBlocksAndRotatesChallengeAcrossLiveMultiWindowTransitions() {
+        composeRule.setContent {
+            DryToastTheme {
+                SettingsLockScreen(
+                    isSettingsLocked = true,
+                    onConfirmSetSettingsLocked = {},
+                    onCancel = {},
+                    initialChallenge = "492",
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE).assertTextEquals("492")
+        composeRule.onNodeWithTag(HardenedModeTestTags.keypadDigitTag(7)).performClick()
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("7 · · · · ·")
+
+        // Enter split-screen / multi-window live without recreating ComponentActivity
+        composeRule.runOnUiThread {
+            val config = Configuration(composeRule.activity.resources.configuration)
+            composeRule.activity.onMultiWindowModeChanged(true, config)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_MULTI_WINDOW_NOTICE).assertIsDisplayed()
+        composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE).assertDoesNotExist()
+        composeRule.onNodeWithTag(HardenedModeTestTags.CONFIRM_SETTINGS_LOCK_BUTTON).assertDoesNotExist()
+
+        // Exit split-screen back to full-screen -> notice clears, input resets, and challenge rotates
+        composeRule.runOnUiThread {
+            val config = Configuration(composeRule.activity.resources.configuration)
+            composeRule.activity.onMultiWindowModeChanged(false, config)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_MULTI_WINDOW_NOTICE).assertDoesNotExist()
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("· · · · · ·")
+        val rotatedChallenge = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .first()
+            .text
+        assertThat(rotatedChallenge).isNotEqualTo("492")
+        assertThat(rotatedChallenge).hasLength(3)
+    }
+
+    @Test
+    fun disableHardenedModeScreen_preservesChallengeAndPartialCodeAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeRule)
+
+        restorationTester.setContent {
+            DryToastTheme {
+                DisableHardenedModeScreen(
+                    isHardenedModeActive = true,
+                    onConfirmDisable = {},
+                    onCancel = {},
+                )
+            }
+        }
+
+        val initialChallenge = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .first()
+            .text
+        composeRule.onNodeWithTag(HardenedModeTestTags.keypadDigitTag(4)).performClick()
+        composeRule.onNodeWithTag(HardenedModeTestTags.keypadDigitTag(2)).performClick()
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("4 2 · · · ·")
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_CODE_VALUE).assertTextEquals(initialChallenge)
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("4 2 · · · ·")
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun settingsLockScreen_acceptsHardwareKeyboardDigitsBackspaceDeleteAndEnter() {
+        var unlockedState: Boolean? = null
+        val fixedNowMillis = 1_795_549_500_000L
+        val bucket = ChallengeResponseVerifier.timeBucket(fixedNowMillis)
+        val challenge = "638"
+
+        composeRule.setContent {
+            DryToastTheme {
+                SettingsLockScreen(
+                    isSettingsLocked = true,
+                    onConfirmSetSettingsLocked = { unlockedState = it },
+                    onCancel = {},
+                    initialChallenge = challenge,
+                    nowEpochMillisProvider = { fixedNowMillis },
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        // Type two digits, backspace one, then clear via Delete
+        composeRule.onRoot().performKeyInput {
+            pressKey(Key.Nine)
+            pressKey(Key.NumPad5)
+        }
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("9 5 · · · ·")
+
+        composeRule.onRoot().performKeyInput {
+            pressKey(Key.Backspace)
+        }
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("9 · · · · ·")
+
+        composeRule.onRoot().performKeyInput {
+            pressKey(Key.Delete)
+        }
+        composeRule.onNodeWithTag(HardenedModeTestTags.RESPONSE_CODE_DISPLAY).assertTextEquals("· · · · · ·")
+
+        // Type the valid 6-digit code via physical keyboard keys and submit with Enter
+        val validCode = ChallengeResponseVerifier.computeCodeForBucket(
+            domain = VerificationDomain.SETTINGS_LOCK,
+            challenge = challenge,
+            bucket = bucket,
+        )
+        val digitKeys = mapOf(
+            '0' to Key.Zero,
+            '1' to Key.One,
+            '2' to Key.Two,
+            '3' to Key.Three,
+            '4' to Key.Four,
+            '5' to Key.NumPad5,
+            '6' to Key.Six,
+            '7' to Key.Seven,
+            '8' to Key.Eight,
+            '9' to Key.Nine,
+        )
+        composeRule.onRoot().performKeyInput {
+            for (ch in validCode) {
+                pressKey(digitKeys.getValue(ch))
+            }
+            pressKey(Key.Enter)
+        }
+        composeRule.waitForIdle()
+
+        assertThat(unlockedState).isEqualTo(false)
     }
 }
