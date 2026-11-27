@@ -10,12 +10,12 @@ package com.garan.drytoast.core.friction
  * - Backspace decrements the matched count.
  * - Double-space period insertion is sanitized.
  */
-class TypedIntentionSession(val targetPhrase: String) {
+class TypedIntentionSession(val targetPhrase: String, initialMatchedCount: Int = 0) {
     init {
         require(targetPhrase.isNotBlank()) { "Target phrase cannot be blank" }
     }
 
-    var matchedCount: Int = 0
+    var matchedCount: Int = initialMatchedCount.coerceIn(0, targetPhrase.length)
         private set
 
     val isComplete: Boolean

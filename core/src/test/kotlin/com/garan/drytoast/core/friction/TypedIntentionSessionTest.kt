@@ -111,4 +111,21 @@ class TypedIntentionSessionTest {
         assertThat(session.backspace()).isFalse()
         assertThat(session.matchedCount).isEqualTo(0)
     }
+
+    @Test
+    fun initialMatchedCount_restoresProgressAndClampsBounds() {
+        val restored = TypedIntentionSession("Focus now", initialMatchedCount = 6)
+        assertThat(restored.matchedText).isEqualTo("Focus ")
+        assertThat(restored.remainingText).isEqualTo("now")
+        assertThat(restored.isComplete).isFalse()
+
+        assertThat(restored.typeChar('n')).isEqualTo(TypedIntentionSession.MatchResult.Matched)
+        assertThat(restored.typeChar('o')).isEqualTo(TypedIntentionSession.MatchResult.Matched)
+        assertThat(restored.typeChar('w')).isEqualTo(TypedIntentionSession.MatchResult.Completed)
+        assertThat(restored.isComplete).isTrue()
+
+        val clamped = TypedIntentionSession("Go", initialMatchedCount = 99)
+        assertThat(clamped.matchedCount).isEqualTo(2)
+        assertThat(clamped.isComplete).isTrue()
+    }
 }

@@ -3,11 +3,13 @@ package com.garan.drytoast.ui.friction
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import com.garan.drytoast.core.port.HapticEngine
 import com.garan.drytoast.ui.motion.DryToastMotion
 import com.garan.drytoast.ui.theme.DryToastTheme
@@ -219,6 +221,111 @@ class CaretTracingSurfaceTest {
         } finally {
             Settings.Global.putFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
         }
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun compactLandscapeViewport_fitsSquareCanvasHintAnd48dpActionButtonWithoutOverlap() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                CaretTracingSurface(
+                    onConfirmOpen = {},
+                    onDismiss = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val canvasNode = composeTestRule.onNodeWithTag("caret_tracing_canvas").assertIsDisplayed()
+        val hintNode = composeTestRule.onNodeWithTag("caret_tracing_status_hint").assertIsDisplayed()
+        val actionNode = composeTestRule.onNodeWithTag("caret_tracing_action_button").assertIsDisplayed()
+
+        val canvasBounds = canvasNode.fetchSemanticsNode().boundsInRoot
+        val hintBounds = hintNode.fetchSemanticsNode().boundsInRoot
+        val actionBounds = actionNode.fetchSemanticsNode().boundsInRoot
+        val actionTouchBounds = actionNode.fetchSemanticsNode().touchBoundsInRoot
+
+        // Square 1:1 aspect ratio preserved
+        assertThat(kotlin.math.abs(canvasBounds.width - canvasBounds.height)).isAtMost(1f)
+        // Strictly ordered vertically with zero clipping or overlap inside the 390dp height
+        assertThat(canvasBounds.top).isAtLeast(0f)
+        assertThat(canvasBounds.bottom).isAtMost(hintBounds.top + 0.5f)
+        assertThat(hintBounds.bottom).isAtMost(actionBounds.top + 0.5f)
+        assertThat(actionBounds.bottom).isAtMost(390f + 0.5f)
+
+        val minTouchPx = with(composeTestRule.density) { 48.dp.toPx() } - 0.5f
+        assertThat(actionTouchBounds.height).isAtLeast(minTouchPx)
+        assertThat(actionTouchBounds.width).isAtLeast(minTouchPx)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w411dp-h380dp-mdpi")
+    fun shortSplitScreenViewport_fitsSquareCanvasHintAndActionWithoutClipping() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                CaretTracingSurface(
+                    onConfirmOpen = {},
+                    onDismiss = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val canvasBounds = composeTestRule.onNodeWithTag("caret_tracing_canvas")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val hintBounds = composeTestRule.onNodeWithTag("caret_tracing_status_hint")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val actionBounds = composeTestRule.onNodeWithTag("caret_tracing_action_button")
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertThat(kotlin.math.abs(canvasBounds.width - canvasBounds.height)).isAtMost(1f)
+        assertThat(canvasBounds.bottom).isAtMost(hintBounds.top + 0.5f)
+        assertThat(hintBounds.bottom).isAtMost(actionBounds.top + 0.5f)
+        assertThat(actionBounds.bottom).isAtMost(380f + 0.5f)
+    }
+
+    @Test
+    fun completedHold_survivesStateRestorationWithoutReholding() {
+        var confirmed = false
+        val restorationTester = StateRestorationTester(composeTestRule)
+        composeTestRule.mainClock.autoAdvance = false
+
+        restorationTester.setContent {
+            DryToastTheme {
+                CaretTracingSurface(
+                    onConfirmOpen = { confirmed = true },
+                    onDismiss = {},
+                    totalDurationMs = 400L,
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            down(center)
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeByFrame()
+        repeat(35) {
+            composeTestRule.mainClock.advanceTimeBy(16L)
+        }
+        composeTestRule.onNodeWithTag("caret_tracing_lever").performTouchInput {
+            up()
+        }
+        composeTestRule.mainClock.advanceTimeBy(200L)
+        composeTestRule.onNodeWithText("Open").assertIsDisplayed()
+
+        composeTestRule.mainClock.autoAdvance = true
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeTestRule.onNodeWithText("Open").assertIsDisplayed().performClick()
+        assertThat(confirmed).isTrue()
     }
 
     private class TestHapticEngine : HapticEngine {

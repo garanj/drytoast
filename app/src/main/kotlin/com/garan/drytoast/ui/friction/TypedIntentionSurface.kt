@@ -7,11 +7,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -32,14 +34,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
@@ -60,6 +68,8 @@ import com.garan.drytoast.ui.theme.AmoledBlack
 import com.garan.drytoast.ui.theme.PureWhite
 import com.garan.drytoast.ui.theme.SubtleGray
 import kotlin.random.Random
+
+private val MAX_TYPED_INTENTION_WIDTH = 600.dp
 
 /**
  * Full-screen Typed Intention anti-impulse checkpoint for guarded applications.
@@ -85,7 +95,7 @@ fun TypedIntentionSurface(
     }
 
     val context = LocalContext.current
-    val targetPhrase = remember(appLabel, overridePhrase) {
+    val targetPhrase = rememberSaveable(appLabel, overridePhrase) {
         if (overridePhrase != null) {
             overridePhrase
         } else {
@@ -99,10 +109,14 @@ fun TypedIntentionSurface(
         }
     }
 
-    val session = remember(targetPhrase) { TypedIntentionSession(targetPhrase) }
-    var matchedCount by remember(session) { mutableIntStateOf(session.matchedCount) }
-    val isComplete = session.isComplete
+    var matchedCount by rememberSaveable(targetPhrase) { mutableIntStateOf(0) }
+    val session = remember(targetPhrase) {
+        TypedIntentionSession(targetPhrase = targetPhrase, initialMatchedCount = matchedCount)
+    }
+    val isComplete = matchedCount >= targetPhrase.length
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val compactHeight = !embedded && LocalConfiguration.current.screenHeightDp < 440
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(embedded) {
         if (!embedded) {
@@ -110,8 +124,13 @@ fun TypedIntentionSurface(
         }
     }
 
-    var textFieldValue by remember {
-        mutableStateOf(TextFieldValue(text = session.matchedText, selection = TextRange(session.matchedText.length)))
+    var textFieldValue by remember(session) {
+        mutableStateOf(
+            TextFieldValue(
+                text = session.matchedText,
+                selection = TextRange(session.matchedText.length),
+            ),
+        )
     }
 
     val baseLabelSmall = MaterialTheme.typography.labelSmall
@@ -126,11 +145,10 @@ fun TypedIntentionSurface(
         modifier
             .fillMaxWidth()
             .background(AmoledBlack)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                focusRequester.requestFocus()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    focusRequester.requestFocus()
+                }
             }
             .padding(horizontal = 16.dp, vertical = 20.dp)
     } else {
@@ -139,26 +157,31 @@ fun TypedIntentionSurface(
             .background(AmoledBlack)
             .safeDrawingPadding()
             .imePadding()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                focusRequester.requestFocus()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    focusRequester.requestFocus()
+                }
             }
-            .padding(horizontal = 24.dp, vertical = 32.dp)
+            .padding(horizontal = 24.dp, vertical = if (compactHeight) 8.dp else 24.dp)
     }
 
     val columnModifier = if (embedded) {
-        Modifier.fillMaxWidth()
+        Modifier
+            .widthIn(max = MAX_TYPED_INTENTION_WIDTH)
+            .fillMaxWidth()
     } else {
         Modifier
+            .widthIn(max = MAX_TYPED_INTENTION_WIDTH)
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     }
 
-    Box(modifier = containerModifier) {
+    Box(
+        modifier = containerModifier,
+        contentAlignment = if (embedded) Alignment.CenterStart else Alignment.Center,
+    ) {
         Column(
-            modifier = columnModifier.align(Alignment.CenterStart),
+            modifier = columnModifier.testTag("typed_intention_content_column"),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
@@ -167,7 +190,7 @@ fun TypedIntentionSurface(
                 color = SubtleGray,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(if (compactHeight) 6.dp else 16.dp))
 
             // Dual-tone illuminated phrase: matched text is PureWhite, remaining is SubtleGray
             val annotatedPhrase = remember(matchedCount, targetPhrase) {
@@ -185,11 +208,12 @@ fun TypedIntentionSurface(
                 text = annotatedPhrase,
                 style = MaterialTheme.typography.headlineMedium,
                 lineHeight = 36.sp,
+                modifier = Modifier.testTag("typed_intention_phrase"),
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 22.dp))
 
-            // Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite)
+            // Action Button: "Go back" (SubtleGray) morphs into "Open" (PureWhite) with >= 48dp touch bounds
             AnimatedContent(
                 targetState = isComplete,
                 transitionSpec = {
@@ -200,20 +224,25 @@ fun TypedIntentionSurface(
                 },
                 label = "ActionButtonTransition",
             ) { complete ->
-                Text(
-                    text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (complete) PureWhite else SubtleGray,
+                Box(
                     modifier = Modifier
-                        .clickable {
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        .testTag("typed_intention_action_button")
+                        .clickable(role = Role.Button) {
                             if (complete) {
                                 onConfirmOpen()
                             } else {
                                 onDismiss()
                             }
-                        }
-                        .padding(vertical = 8.dp),
-                )
+                        },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = stringResource(if (complete) R.string.action_open else R.string.action_go_back),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (complete) PureWhite else SubtleGray,
+                    )
+                }
             }
         }
 
@@ -244,6 +273,9 @@ fun TypedIntentionSurface(
                                     TypedIntentionSession.MatchResult.Completed -> {
                                         matchedCount = session.matchedCount
                                         hapticEngine.targetSnap()
+                                        if (!embedded) {
+                                            keyboardController?.hide()
+                                        }
                                         break
                                     }
                                     TypedIntentionSession.MatchResult.Mismatch -> {
@@ -271,6 +303,7 @@ fun TypedIntentionSurface(
             modifier = Modifier
                 .size(1.dp)
                 .alpha(0f)
+                .testTag("typed_intention_input")
                 .focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
