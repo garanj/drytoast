@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 sealed interface ConfigImportOutcome {
     data class Success(val stagedForReboot: Boolean) : ConfigImportOutcome
@@ -52,6 +54,9 @@ data class SettingsUiState(
     val showRoleRequiredWarning: Boolean = false,
     val isHardenedModeActive: Boolean = false,
     val breakGlassUntilEpochMillis: Long? = null,
+    val showImportPassphraseSheet: Boolean = false,
+    val hasImportPassphraseError: Boolean = false,
+    val isImportWorking: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -64,10 +69,17 @@ class SettingsViewModel(
     private val onConfigurationImported: suspend () -> Unit = {},
 ) : ViewModel() {
 
+    private sealed interface PendingExportRequest {
+        data object Plaintext : PendingExportRequest
+        data class Encrypted(val passphrase: String) : PendingExportRequest
+    }
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val isIndexLoaded = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val isIndexLoaded = AtomicBoolean(false)
+    private val pendingExportRequest = AtomicReference<PendingExportRequest?>(null)
+    private val pendingEncryptedImportJson = AtomicReference<String?>(null)
 
     @Volatile
     private var loadJob: Job? = null
@@ -392,12 +404,144 @@ class SettingsViewModel(
     }
 
     /**
+     * Stages a pending SAF export request inside the [ViewModel] so `densityDpi` or `fontScale`
+     * Activity recreation while Android's system file picker is open never drops an encryption
+     * passphrase and silently writes plaintext.
+     */
+    fun stageExportRequest(passphrase: String?) {
+        val normalized = passphrase?.takeIf { it.isNotEmpty() }
+        pendingExportRequest.set(
+            if (normalized != null) {
+                PendingExportRequest.Encrypted(normalized)
+            } else {
+                PendingExportRequest.Plaintext
+            },
+        )
+    }
+
+    fun cancelPendingExportRequest() {
+        pendingExportRequest.set(null)
+    }
+
+    /**
+     * Atomically consumes the staged export request and encodes the configuration JSON, or returns
+     * `null` (fail-closed) if no export request is staged (e.g., after background process death).
+     */
+    suspend fun consumePendingExportJson(): String? {
+        val request = pendingExportRequest.getAndSet(null) ?: return null
+        return when (request) {
+            is PendingExportRequest.Plaintext -> exportConfigurationJson(passphrase = null)
+            is PendingExportRequest.Encrypted -> exportConfigurationJson(passphrase = request.passphrase)
+        }
+    }
+
+    /**
      * Serializes the currently editable configuration snapshot to JSON (encrypted when
      * [passphrase] is non-empty, plaintext otherwise).
      */
     suspend fun exportConfigurationJson(passphrase: String?): String = withContext(ioDispatcher) {
         val snapshot = settingsRepository.getSettings().editableSnapshot
         configBackupCodec.encode(snapshot, passphrase?.takeIf { it.isNotEmpty() })
+    }
+
+    /**
+     * Evaluates a newly picked backup JSON payload; if encrypted, retains the payload in the
+     * [ViewModel] across Activity recreation and opens the passphrase bottom sheet.
+     */
+    suspend fun handlePickedImportJson(rawJson: String): ConfigImportOutcome {
+        val outcome = importConfigurationJson(rawJson, passphrase = null)
+        if (outcome is ConfigImportOutcome.PassphraseRequired) {
+            pendingEncryptedImportJson.set(rawJson)
+            _uiState.update { current ->
+                current.copy(
+                    showImportPassphraseSheet = true,
+                    hasImportPassphraseError = false,
+                    isImportWorking = false,
+                )
+            }
+        } else {
+            pendingEncryptedImportJson.set(null)
+            _uiState.update { current ->
+                current.copy(
+                    showImportPassphraseSheet = false,
+                    hasImportPassphraseError = false,
+                    isImportWorking = false,
+                )
+            }
+        }
+        return outcome
+    }
+
+    /**
+     * Decrypts and imports the pending encrypted JSON payload stored in this [ViewModel],
+     * returning `null` if no encrypted payload is awaiting a passphrase.
+     */
+    suspend fun submitPendingImportPassphrase(passphrase: String): ConfigImportOutcome? {
+        val rawJson = pendingEncryptedImportJson.get() ?: return null
+        _uiState.update { current ->
+            current.copy(isImportWorking = true, hasImportPassphraseError = false)
+        }
+        return try {
+            val outcome = importConfigurationJson(rawJson, passphrase)
+            when (outcome) {
+                is ConfigImportOutcome.PassphraseRequired -> {
+                    _uiState.update { current ->
+                        current.copy(
+                            showImportPassphraseSheet = true,
+                            hasImportPassphraseError = true,
+                            isImportWorking = false,
+                        )
+                    }
+                }
+                is ConfigImportOutcome.Error -> {
+                    if (outcome.reason == ConfigImportError.INVALID_PASSPHRASE_OR_TAMPERED) {
+                        _uiState.update { current ->
+                            current.copy(
+                                showImportPassphraseSheet = true,
+                                hasImportPassphraseError = true,
+                                isImportWorking = false,
+                            )
+                        }
+                    } else {
+                        pendingEncryptedImportJson.set(null)
+                        _uiState.update { current ->
+                            current.copy(
+                                showImportPassphraseSheet = false,
+                                hasImportPassphraseError = false,
+                                isImportWorking = false,
+                            )
+                        }
+                    }
+                }
+                is ConfigImportOutcome.Success,
+                is ConfigImportOutcome.SettingsLocked,
+                -> {
+                    pendingEncryptedImportJson.set(null)
+                    _uiState.update { current ->
+                        current.copy(
+                            showImportPassphraseSheet = false,
+                            hasImportPassphraseError = false,
+                            isImportWorking = false,
+                        )
+                    }
+                }
+            }
+            outcome
+        } catch (t: Throwable) {
+            _uiState.update { current -> current.copy(isImportWorking = false) }
+            throw t
+        }
+    }
+
+    fun dismissImportPassphraseSheet() {
+        pendingEncryptedImportJson.set(null)
+        _uiState.update { current ->
+            current.copy(
+                showImportPassphraseSheet = false,
+                hasImportPassphraseError = false,
+                isImportWorking = false,
+            )
+        }
     }
 
     /**
