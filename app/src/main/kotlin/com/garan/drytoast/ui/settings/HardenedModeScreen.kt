@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,9 +47,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -59,6 +68,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.MultiWindowModeChangedInfo
+import androidx.core.app.OnMultiWindowModeChangedProvider
+import androidx.core.util.Consumer
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -794,18 +806,22 @@ private fun ChallengeVerificationSection(
     isMultiWindowOverride: Boolean?,
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val windowInfo = LocalWindowInfo.current
+    val keypadFocusRequester = remember { FocusRequester() }
 
-    val isMultiWindow = isMultiWindowOverride ?: remember(context) {
-        context.findActivity()?.isInMultiWindowMode == true
-    }
+    val isMultiWindow = rememberIsInMultiWindowMode(
+        activity = activity,
+        override = isMultiWindowOverride,
+    )
 
-    var challenge by remember(initialChallenge) {
+    var challenge by rememberSaveable(initialChallenge) {
         mutableStateOf(initialChallenge ?: ChallengeResponseVerifier.generateChallenge())
     }
-    var enteredCode by remember { mutableStateOf("") }
-    var hasError by remember { mutableStateOf(false) }
+    var enteredCode by rememberSaveable { mutableStateOf("") }
+    var hasError by rememberSaveable { mutableStateOf(false) }
+    var lastObservedMultiWindow by rememberSaveable { mutableStateOf(isMultiWindow) }
     var hadWindowFocus by remember { mutableStateOf(false) }
 
     val rotateChallenge: () -> Unit = {
@@ -814,9 +830,43 @@ private fun ChallengeVerificationSection(
         hasError = false
     }
 
-    DisposableEffect(lifecycleOwner) {
+    val appendDigit: (Int) -> Unit = { digit ->
+        if (enteredCode.length < ChallengeResponseVerifier.RESPONSE_CODE_LENGTH) {
+            enteredCode += digit.toString()
+            hasError = false
+        }
+    }
+
+    val submitVerification: () -> Unit = {
+        if (enteredCode.length == ChallengeResponseVerifier.RESPONSE_CODE_LENGTH) {
+            val valid = ChallengeResponseVerifier.verify(
+                domain = domain,
+                challenge = challenge,
+                responseCode = enteredCode,
+                nowEpochMillis = nowEpochMillisProvider(),
+            )
+            if (valid) {
+                onVerified()
+            } else {
+                hasError = true
+                enteredCode = ""
+            }
+        }
+    }
+
+    LaunchedEffect(isMultiWindow) {
+        if (lastObservedMultiWindow != isMultiWindow) {
+            lastObservedMultiWindow = isMultiWindow
+            rotateChallenge()
+        }
+        if (!isMultiWindow) {
+            runCatching { keypadFocusRequester.requestFocus() }
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, activity) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) {
+            if (event == Lifecycle.Event.ON_PAUSE && activity?.isChangingConfigurations != true) {
                 rotateChallenge()
             }
         }
@@ -830,14 +880,52 @@ private fun ChallengeVerificationSection(
     LaunchedEffect(isWindowFocused) {
         if (isWindowFocused) {
             hadWindowFocus = true
-        } else if (hadWindowFocus) {
+        } else if (hadWindowFocus && activity?.isChangingConfigurations != true) {
             hadWindowFocus = false
             rotateChallenge()
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPreviewKeyEvent { keyEvent ->
+                if (isMultiWindow || keyEvent.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                }
+                val digit = keyToDigit(keyEvent.key)
+                when {
+                    digit != null -> {
+                        appendDigit(digit)
+                        true
+                    }
+                    keyEvent.key == Key.Backspace -> {
+                        if (enteredCode.isNotEmpty()) {
+                            enteredCode = enteredCode.dropLast(1)
+                            hasError = false
+                        }
+                        true
+                    }
+                    keyEvent.key == Key.Delete -> {
+                        enteredCode = ""
+                        hasError = false
+                        true
+                    }
+                    keyEvent.key == Key.Escape && enteredCode.isNotEmpty() -> {
+                        enteredCode = ""
+                        hasError = false
+                        true
+                    }
+                    (keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter) &&
+                        enteredCode.length == ChallengeResponseVerifier.RESPONSE_CODE_LENGTH -> {
+                        submitVerification()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusRequester(keypadFocusRequester)
+            .focusable(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (isMultiWindow) {
@@ -918,13 +1006,6 @@ private fun ChallengeVerificationSection(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.testTag(HardenedModeTestTags.CHALLENGE_ERROR_TEXT),
                 )
-            }
-
-            val appendDigit: (Int) -> Unit = { digit ->
-                if (enteredCode.length < ChallengeResponseVerifier.RESPONSE_CODE_LENGTH) {
-                    enteredCode += digit.toString()
-                    hasError = false
-                }
             }
 
             val digitRows = listOf(
@@ -1035,20 +1116,7 @@ private fun ChallengeVerificationSection(
 
             if (!isMultiWindow) {
                 Button(
-                    onClick = {
-                        val valid = ChallengeResponseVerifier.verify(
-                            domain = domain,
-                            challenge = challenge,
-                            responseCode = enteredCode,
-                            nowEpochMillis = nowEpochMillisProvider(),
-                        )
-                        if (valid) {
-                            onVerified()
-                        } else {
-                            hasError = true
-                            enteredCode = ""
-                        }
-                    },
+                    onClick = submitVerification,
                     enabled = enteredCode.length == ChallengeResponseVerifier.RESPONSE_CODE_LENGTH,
                     shape = RoundedCornerShape(2.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
@@ -1066,6 +1134,43 @@ private fun ChallengeVerificationSection(
             }
         }
     }
+}
+
+@Composable
+private fun rememberIsInMultiWindowMode(activity: Activity?, override: Boolean?): Boolean {
+    var inMultiWindow by remember(activity) {
+        mutableStateOf(activity?.isInMultiWindowMode == true)
+    }
+    DisposableEffect(activity) {
+        val provider = activity as? OnMultiWindowModeChangedProvider
+        if (provider == null) {
+            onDispose {}
+        } else {
+            inMultiWindow = activity.isInMultiWindowMode
+            val listener = Consumer<MultiWindowModeChangedInfo> { info ->
+                inMultiWindow = info.isInMultiWindowMode
+            }
+            provider.addOnMultiWindowModeChangedListener(listener)
+            onDispose {
+                provider.removeOnMultiWindowModeChangedListener(listener)
+            }
+        }
+    }
+    return override ?: inMultiWindow
+}
+
+private fun keyToDigit(key: Key): Int? = when (key) {
+    Key.Zero, Key.NumPad0 -> 0
+    Key.One, Key.NumPad1 -> 1
+    Key.Two, Key.NumPad2 -> 2
+    Key.Three, Key.NumPad3 -> 3
+    Key.Four, Key.NumPad4 -> 4
+    Key.Five, Key.NumPad5 -> 5
+    Key.Six, Key.NumPad6 -> 6
+    Key.Seven, Key.NumPad7 -> 7
+    Key.Eight, Key.NumPad8 -> 8
+    Key.Nine, Key.NumPad9 -> 9
+    else -> null
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
