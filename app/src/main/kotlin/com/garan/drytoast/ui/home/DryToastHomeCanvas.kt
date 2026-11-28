@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -77,7 +78,9 @@ import java.time.format.DateTimeFormatter
 const val HOME_DIALER_BUTTON_TEST_TAG = "home_dialer_button"
 const val HOME_HEADER_STANDARD_TEST_TAG = "home_header_standard"
 const val HOME_HEADER_COMPACT_TEST_TAG = "home_header_compact"
+const val HOME_CANVAS_CONTENT_TEST_TAG = "home_canvas_content"
 
+internal val CEREMONIAL_CANVAS_MAX_WIDTH = 600.dp
 internal val COMPACT_CANVAS_HEIGHT_THRESHOLD = 440.dp
 private val ULTRA_COMPACT_CANVAS_HEIGHT_THRESHOLD = 250.dp
 private val MIN_TABLETOP_PANE_HEIGHT = 140.dp
@@ -223,6 +226,7 @@ fun DryToastHomeCanvas(
             .onGloballyPositioned { coords ->
                 safeAreaBoundsInWindow = coords.boundsInWindow()
             },
+        contentAlignment = Alignment.TopCenter,
     ) {
         val safeTopPx = safeAreaBoundsInWindow?.top ?: 0f
         val safeBottomPx = safeAreaBoundsInWindow?.bottom ?: constraints.maxHeight.toFloat()
@@ -251,10 +255,14 @@ fun DryToastHomeCanvas(
         }
 
         if (tabletopSplitSpec != null) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 // Upper upright screen above horizontal crease: dedicated ambient instrument readout
                 Column(
                     modifier = Modifier
+                        .widthIn(max = CEREMONIAL_CANVAS_MAX_WIDTH)
                         .fillMaxWidth()
                         .height(tabletopSplitSpec.topPaneHeight)
                         .padding(horizontal = 24.dp, vertical = 16.dp),
@@ -291,8 +299,10 @@ fun DryToastHomeCanvas(
                 val compactBottomPane = tabletopSplitSpec.bottomPaneHeight < 300.dp
                 Column(
                     modifier = Modifier
+                        .widthIn(max = CEREMONIAL_CANVAS_MAX_WIDTH)
                         .fillMaxWidth()
                         .weight(1f)
+                        .testTag(HOME_CANVAS_CONTENT_TEST_TAG)
                         .padding(horizontal = 24.dp, vertical = 12.dp),
                 ) {
                     Column(
@@ -326,7 +336,9 @@ fun DryToastHomeCanvas(
 
             Column(
                 modifier = Modifier
+                    .widthIn(max = CEREMONIAL_CANVAS_MAX_WIDTH)
                     .fillMaxSize()
+                    .testTag(HOME_CANVAS_CONTENT_TEST_TAG)
                     .padding(horizontal = 24.dp, vertical = outerVerticalPadding),
             ) {
                 Column(

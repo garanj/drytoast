@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -52,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -129,6 +132,8 @@ object HardenedModeDeepLink {
     }
 }
 
+private val CHALLENGE_MONOLITH_MAX_WIDTH = 480.dp
+
 object HardenedModeTestTags {
     const val SCREEN_LIST = "hardened_mode_list"
     const val STATUS_CARD = "hardened_mode_status_card"
@@ -145,6 +150,7 @@ object HardenedModeTestTags {
     const val CONFIRM_DISABLE_BUTTON = "disable_hardened_mode_confirm_button"
     const val CANCEL_DISABLE_BUTTON = "disable_hardened_mode_cancel_button"
     const val SETTINGS_LOCK_SCREEN_ROOT = "settings_lock_screen"
+    const val CHALLENGE_SECTION = "challenge_verification_section"
     const val CONFIRM_SETTINGS_LOCK_BUTTON = "settings_lock_confirm_button"
     const val CANCEL_SETTINGS_LOCK_BUTTON = "settings_lock_cancel_button"
     const val CHALLENGE_CODE_VALUE = "challenge_code_value"
@@ -646,59 +652,65 @@ fun DisableHardenedModeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .consumeWindowInsets(innerPadding)
-                .padding(horizontal = 24.dp),
-            contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item(key = "headline") {
-                Text(
-                    text = stringResource(R.string.disable_hardened_mode_headline),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-
-            if (isHardenedModeActive) {
-                item(key = "challenge_verification") {
-                    ChallengeVerificationSection(
-                        domain = VerificationDomain.HARDENED_DISABLE,
-                        confirmButtonText = stringResource(R.string.action_disable_hardened_mode),
-                        confirmButtonTestTag = HardenedModeTestTags.CONFIRM_DISABLE_BUTTON,
-                        cancelButtonTestTag = HardenedModeTestTags.CANCEL_DISABLE_BUTTON,
-                        onVerified = onConfirmDisable,
-                        onCancel = onCancel,
-                        initialChallenge = initialChallenge,
-                        nowEpochMillisProvider = nowEpochMillisProvider,
-                        isMultiWindowOverride = isMultiWindowOverride,
-                    )
-                }
-            } else {
-                item(key = "inactive_body") {
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = CHALLENGE_MONOLITH_MAX_WIDTH)
+                    .fillMaxSize()
+                    .consumeWindowInsets(innerPadding)
+                    .padding(horizontal = 24.dp),
+                contentPadding = innerPadding,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                item(key = "headline") {
                     Text(
-                        text = stringResource(R.string.disable_hardened_mode_inactive_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringResource(R.string.disable_hardened_mode_headline),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
 
-                item(key = "cancel_only") {
-                    OutlinedButton(
-                        onClick = onCancel,
-                        shape = RoundedCornerShape(2.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .testTag(HardenedModeTestTags.CANCEL_DISABLE_BUTTON),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.action_cancel),
-                            style = MaterialTheme.typography.labelLarge,
+                if (isHardenedModeActive) {
+                    item(key = "challenge_verification") {
+                        ChallengeVerificationSection(
+                            domain = VerificationDomain.HARDENED_DISABLE,
+                            confirmButtonText = stringResource(R.string.action_disable_hardened_mode),
+                            confirmButtonTestTag = HardenedModeTestTags.CONFIRM_DISABLE_BUTTON,
+                            cancelButtonTestTag = HardenedModeTestTags.CANCEL_DISABLE_BUTTON,
+                            onVerified = onConfirmDisable,
+                            onCancel = onCancel,
+                            initialChallenge = initialChallenge,
+                            nowEpochMillisProvider = nowEpochMillisProvider,
+                            isMultiWindowOverride = isMultiWindowOverride,
                         )
+                    }
+                } else {
+                    item(key = "inactive_body") {
+                        Text(
+                            text = stringResource(R.string.disable_hardened_mode_inactive_body),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    item(key = "cancel_only") {
+                        OutlinedButton(
+                            onClick = onCancel,
+                            shape = RoundedCornerShape(2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .testTag(HardenedModeTestTags.CANCEL_DISABLE_BUTTON),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
             }
@@ -764,35 +776,41 @@ fun SettingsLockScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .consumeWindowInsets(innerPadding)
-                .padding(horizontal = 24.dp),
-            contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item(key = "headline") {
-                Text(
-                    text = stringResource(headlineRes),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = CHALLENGE_MONOLITH_MAX_WIDTH)
+                    .fillMaxSize()
+                    .consumeWindowInsets(innerPadding)
+                    .padding(horizontal = 24.dp),
+                contentPadding = innerPadding,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                item(key = "headline") {
+                    Text(
+                        text = stringResource(headlineRes),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
 
-            item(key = "challenge_verification") {
-                ChallengeVerificationSection(
-                    domain = VerificationDomain.SETTINGS_LOCK,
-                    confirmButtonText = stringResource(confirmActionRes),
-                    confirmButtonTestTag = HardenedModeTestTags.CONFIRM_SETTINGS_LOCK_BUTTON,
-                    cancelButtonTestTag = HardenedModeTestTags.CANCEL_SETTINGS_LOCK_BUTTON,
-                    onVerified = { onConfirmSetSettingsLocked(!isSettingsLocked) },
-                    onCancel = onCancel,
-                    initialChallenge = initialChallenge,
-                    nowEpochMillisProvider = nowEpochMillisProvider,
-                    isMultiWindowOverride = isMultiWindowOverride,
-                )
+                item(key = "challenge_verification") {
+                    ChallengeVerificationSection(
+                        domain = VerificationDomain.SETTINGS_LOCK,
+                        confirmButtonText = stringResource(confirmActionRes),
+                        confirmButtonTestTag = HardenedModeTestTags.CONFIRM_SETTINGS_LOCK_BUTTON,
+                        cancelButtonTestTag = HardenedModeTestTags.CANCEL_SETTINGS_LOCK_BUTTON,
+                        onVerified = { onConfirmSetSettingsLocked(!isSettingsLocked) },
+                        onCancel = onCancel,
+                        initialChallenge = initialChallenge,
+                        nowEpochMillisProvider = nowEpochMillisProvider,
+                        isMultiWindowOverride = isMultiWindowOverride,
+                    )
+                }
             }
         }
     }
@@ -905,6 +923,7 @@ private fun ChallengeVerificationSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(HardenedModeTestTags.CHALLENGE_SECTION)
             .onPreviewKeyEvent { keyEvent ->
                 if (isMultiWindow || keyEvent.type != KeyEventType.KeyDown) {
                     return@onPreviewKeyEvent false

@@ -367,6 +367,40 @@ class OnboardingScreenTest {
         assertThat(isDragActive).isFalse()
     }
 
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun onboardingScreen_tabletExpanded_centersHeaderPageAndFooterWithin600dp() {
+        composeRule.setContent {
+            DryToastTheme {
+                OnboardingScreen(
+                    isDefaultLauncher = false,
+                    onRequestDefaultLauncher = {},
+                    onCompleteOnboarding = {},
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        val rootBounds = composeRule.onNodeWithTag(OnboardingTestTags.ROOT).fetchSemanticsNode().boundsInRoot
+        val headerBounds = composeRule.onNodeWithTag(OnboardingTestTags.HEADER_CONTAINER)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val pageBounds = composeRule.onNodeWithTag(OnboardingTestTags.PAGE_CONTENT)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val footerBounds = composeRule.onNodeWithTag(OnboardingTestTags.FOOTER_CONTAINER)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertThat(rootBounds.width).isEqualTo(1280f)
+        assertThat(headerBounds.width).isAtMost(600.5f)
+        assertThat(pageBounds.width).isAtMost(600.5f)
+        assertThat(footerBounds.width).isAtMost(600.5f)
+        assertThat(kotlin.math.abs(headerBounds.center.x - rootBounds.center.x)).isAtMost(2f)
+        assertThat(kotlin.math.abs(pageBounds.center.x - rootBounds.center.x)).isAtMost(2f)
+        assertThat(kotlin.math.abs(footerBounds.center.x - rootBounds.center.x)).isAtMost(2f)
+    }
+
     private class RecordingHapticEngine : HapticEngine {
         var rotaryDetentCount = 0
             private set

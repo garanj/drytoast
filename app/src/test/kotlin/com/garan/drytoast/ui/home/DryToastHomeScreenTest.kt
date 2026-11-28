@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -1090,6 +1091,58 @@ class DryToastHomeScreenTest {
             .boundsInWindow
         assertThat(inputWindowBounds.top).isAtLeast(430f)
         assertThat(cameraWindowBounds.top).isAtLeast(430f)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun tabletExpanded_centersHomeAndSearchWithin600dp_andPreservesOuterMarginGestures() {
+        val viewModel = SearchViewModel(packageIndexSource = fakePackageIndexSource)
+        val launcher = FakeAppLauncher()
+        var settingsOpenedCount = 0
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                    onOpenSettings = { settingsOpenedCount++ },
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val rootBounds = composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val contentBounds = composeTestRule.onNodeWithTag(HOME_CANVAS_CONTENT_TEST_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val searchPlaceholderBounds = composeTestRule.onNodeWithTag(SEARCH_PLACEHOLDER_TEST_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertThat(rootBounds.width).isEqualTo(1280f)
+        assertThat(contentBounds.width).isAtMost(600.5f)
+        assertThat(searchPlaceholderBounds.width).isAtMost(600.5f)
+        assertThat(kotlin.math.abs(contentBounds.center.x - rootBounds.center.x)).isAtMost(2f)
+
+        // 3-second long press deep in the left pure-black margin (x = 40px < contentBounds.left) opens Settings
+        assertThat(40f).isLessThan(contentBounds.left)
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput {
+            down(Offset(40f, 400f))
+            advanceEventTime(SETTINGS_LONG_PRESS_TIMEOUT_MS + 100L)
+            up()
+        }
+        composeTestRule.waitForIdle()
+        assertThat(settingsOpenedCount).isEqualTo(1)
+
+        // Upward swipe deep in the right pure-black margin (x = 1240px > contentBounds.right) activates Search
+        assertThat(1240f).isGreaterThan(contentBounds.right)
+        composeTestRule.onNodeWithTag(HOME_CANVAS_TEST_TAG).performTouchInput {
+            down(Offset(1240f, 500f))
+            moveTo(Offset(1240f, 350f))
+            up()
+        }
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.isSearching).isTrue()
     }
 
     private class FakeSoftwareKeyboardController : SoftwareKeyboardController {

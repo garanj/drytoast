@@ -526,4 +526,54 @@ class HardenedModeScreenTest {
         composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_SHEET).assertIsDisplayed()
         composeRule.onNodeWithText("If found call +44 7700 900077").assertIsDisplayed()
     }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun settingsLockAndDisableScreens_tabletExpanded_centerChallengeAndKeypadWithin480dp() {
+        val showDisableScreen = androidx.compose.runtime.mutableStateOf(false)
+
+        composeRule.setContent {
+            DryToastTheme {
+                if (showDisableScreen.value) {
+                    DisableHardenedModeScreen(
+                        isHardenedModeActive = true,
+                        onConfirmDisable = {},
+                        onCancel = {},
+                        initialChallenge = "492",
+                    )
+                } else {
+                    SettingsLockScreen(
+                        isSettingsLocked = true,
+                        onConfirmSetSettingsLocked = {},
+                        onCancel = {},
+                        initialChallenge = "815",
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+
+        val lockRootBounds = composeRule.onNodeWithTag(HardenedModeTestTags.SETTINGS_LOCK_SCREEN_ROOT)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val lockChallengeBounds = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_SECTION)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertThat(lockRootBounds.width).isEqualTo(1280f)
+        assertThat(lockChallengeBounds.width).isAtMost(480.5f)
+        assertThat(kotlin.math.abs(lockChallengeBounds.center.x - lockRootBounds.center.x)).isAtMost(2f)
+
+        showDisableScreen.value = true
+        composeRule.waitForIdle()
+
+        val disableRootBounds = composeRule.onNodeWithTag(HardenedModeTestTags.DISABLE_SCREEN_ROOT)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val disableChallengeBounds = composeRule.onNodeWithTag(HardenedModeTestTags.CHALLENGE_SECTION)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertThat(disableRootBounds.width).isEqualTo(1280f)
+        assertThat(disableChallengeBounds.width).isAtMost(480.5f)
+        assertThat(kotlin.math.abs(disableChallengeBounds.center.x - disableRootBounds.center.x)).isAtMost(2f)
+    }
 }
