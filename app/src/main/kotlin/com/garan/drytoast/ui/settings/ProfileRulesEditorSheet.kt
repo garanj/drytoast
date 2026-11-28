@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,10 +36,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -57,11 +64,34 @@ internal sealed interface TriggerAttachTarget {
     data class AndInRule(val ruleIndex: Int) : TriggerAttachTarget
 }
 
+private val TriggerRuleListSaver: Saver<List<TriggerRule>, Any> = listSaver(
+    save = { ruleList -> ruleList.map { ArrayList(it.triggerIds) } },
+    restore = { saved -> saved.map { TriggerRule(it) } },
+)
+
+private val TriggerAttachTargetSaver = Saver<TriggerAttachTarget?, Int>(
+    save = { target ->
+        when (target) {
+            null -> -2
+            is TriggerAttachTarget.NewOrRule -> -1
+            is TriggerAttachTarget.AndInRule -> target.ruleIndex
+        }
+    },
+    restore = { encoded ->
+        when {
+            encoded == -2 -> null
+            encoded == -1 -> TriggerAttachTarget.NewOrRule
+            encoded >= 0 -> TriggerAttachTarget.AndInRule(encoded)
+            else -> null
+        }
+    },
+)
+
 /**
  * Material 3 [ModalBottomSheet] for editing a [CustomProfile]'s name and its `AND` / `OR`
  * [TriggerRule] activation conditions, with inline trigger creation and editing via [TriggerEditorSheet].
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ProfileRulesEditorSheet(
     initialName: String,
@@ -80,8 +110,8 @@ fun ProfileRulesEditorSheet(
     onRegisterNfcRegistrationListener: (((NfcTagRegistrationResult) -> Unit)?) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var profileName by remember { mutableStateOf(initialName) }
-    var rules by remember { mutableStateOf(initialRules) }
+    var profileName by rememberSaveable { mutableStateOf(initialName) }
+    var rules by rememberSaveable(stateSaver = TriggerRuleListSaver) { mutableStateOf(initialRules) }
 
     // Ephemeral map of newly-created/edited triggers within this sheet session so UI updates immediately
     var sessionTriggers by remember { mutableStateOf<Map<String, SavedTrigger>>(emptyMap()) }
@@ -92,9 +122,14 @@ fun ProfileRulesEditorSheet(
         map
     }
 
-    var attachTarget by remember { mutableStateOf<TriggerAttachTarget?>(null) }
-    var isCreatingTriggerForTarget by remember { mutableStateOf<TriggerAttachTarget?>(null) }
-    var editingInlineTrigger by remember { mutableStateOf<SavedTrigger?>(null) }
+    var attachTarget by rememberSaveable(stateSaver = TriggerAttachTargetSaver) {
+        mutableStateOf(null)
+    }
+    var isCreatingTriggerForTarget by rememberSaveable(stateSaver = TriggerAttachTargetSaver) {
+        mutableStateOf(null)
+    }
+    var editingInlineTriggerId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editingInlineTrigger = editingInlineTriggerId?.let { id -> triggersById[id] }
 
     fun attachTriggerIdToTarget(triggerId: String, target: TriggerAttachTarget) {
         rules = when (target) {
@@ -148,11 +183,12 @@ fun ProfileRulesEditorSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        modifier = modifier,
+        modifier = modifier.semantics { testTagsAsResourceId = true },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp),
@@ -350,7 +386,7 @@ fun ProfileRulesEditorSheet(
                                         .testTag(ProfilesTestTags.profileRuleTriggerRow(ruleIndex, triggerId))
                                         .clickable(enabled = saved != null) {
                                             if (saved != null) {
-                                                editingInlineTrigger = saved
+                                                editingInlineTriggerId = saved.id
                                             }
                                         },
                                 )
@@ -459,6 +495,7 @@ fun ProfileRulesEditorSheet(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier
@@ -595,9 +632,9 @@ fun ProfileRulesEditorSheet(
                 )
                 sessionTriggers = sessionTriggers + (updated.id to updated)
                 onSaveTrigger(updated)
-                editingInlineTrigger = null
+                editingInlineTriggerId = null
             },
-            onDismiss = { editingInlineTrigger = null },
+            onDismiss = { editingInlineTriggerId = null },
         )
     }
 }

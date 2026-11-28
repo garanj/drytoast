@@ -3,14 +3,17 @@ package com.garan.drytoast.ui.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import com.garan.drytoast.core.model.AppAssignment
 import com.garan.drytoast.core.model.ComponentKey
 import com.garan.drytoast.core.model.FrictionChoice
@@ -196,5 +199,41 @@ class ConfigureAppsScreenTest {
 
         assertThat(savedMap).isNotNull()
         assertThat(savedMap?.get(chromeKey)).isEqualTo(AppAssignment.Blocked)
+    }
+
+    @Test
+    fun filterAndExpandedGuardedApp_preserveSelectionAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val initial = mapOf(
+            chromeKey to AppAssignment.Guarded(),
+            socialKey to AppAssignment.Blocked,
+        )
+
+        restorationTester.setContent {
+            DryToastTheme {
+                ConfigureAppsScreen(
+                    availableApps = apps,
+                    initialAssignments = initial,
+                    defaultFriction = FrictionChoice.TYPED_INTENTION,
+                    onSave = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        // Select GUARDED filter and expand Chrome's friction override drawer
+        composeTestRule.onNodeWithText("GUARDED (1)").performClick()
+        composeTestRule.onNodeWithTag("configure_app_row_${chromeKey.id}")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Override friction").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Instagram").assertDoesNotExist()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Both GUARDED filter and Chrome's expanded drawer remain intact
+        composeTestRule.onNodeWithText("Chrome").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Override friction").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Instagram").assertDoesNotExist()
     }
 }

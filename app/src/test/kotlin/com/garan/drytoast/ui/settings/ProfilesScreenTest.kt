@@ -4,6 +4,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -938,5 +940,90 @@ class ProfilesScreenTest {
         composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_MODE_TOGGLE).performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_DIAL).assertIsDisplayed()
+    }
+
+    @Test
+    fun profilesScreen_preservesSelectedTabOpenEditorsAndDraftFieldsAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val existingTrigger = SavedTrigger(
+            id = "t-morning",
+            name = "Morning Block",
+            trigger = ProfileTrigger.Schedule(
+                ScheduleTrigger(
+                    days = setOf(DayOfWeek.MONDAY),
+                    startTime = TimeOfDay(7, 0),
+                    endTime = TimeOfDay(9, 0),
+                ),
+            ),
+        )
+
+        restorationTester.setContent {
+            DryToastTheme {
+                ProfilesScreen(
+                    profiles = emptyList(),
+                    savedTriggers = listOf(existingTrigger),
+                    onSaveProfile = {},
+                    onDeleteProfile = {},
+                    onReorderProfiles = {},
+                    onConfigureProfileApps = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        // 1. Switch to Triggers tab, open New Trigger editor, switch to Geo, type draft name & coords
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TAB_TRIGGERS)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.ADD_TRIGGER_BUTTON).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_NAME_INPUT)
+            .performTextInput("Studio Zone")
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_TYPE_GEO)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Coordinates (lat, lng)")
+            .performTextInput("51.5074, -0.1278")
+        composeTestRule.waitForIdle()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Triggers tab + New Trigger sheet + Geo kind + draft name & coordinates all preserved
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_NAME_INPUT)
+            .assertIsDisplayed()
+            .assertTextContains("Studio Zone")
+        composeTestRule.onNodeWithText("51.5074, -0.1278").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_SAVE_BUTTON).assertIsEnabled()
+
+        // Dismiss TriggerEditorSheet -> verify still on Triggers tab, then switch to Profiles tab
+        // and verify ProfileRulesEditorSheet preserves draft name + attached rules across restore
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_CANCEL_BUTTON)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.ADD_TRIGGER_BUTTON).assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TAB_PROFILES)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.ADD_PROFILE_BUTTON).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(ProfilesTestTags.PROFILE_EDITOR_NAME_INPUT)
+            .performTextInput("Deep Focus")
+        composeTestRule.onNodeWithTag(ProfilesTestTags.PROFILE_EDITOR_ADD_FIRST_TRIGGER)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.triggerPickerItem("t-morning"))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeTestRule.onNodeWithTag(ProfilesTestTags.PROFILE_EDITOR_NAME_INPUT)
+            .assertIsDisplayed()
+            .assertTextContains("Deep Focus")
+        composeTestRule.onNodeWithTag(ProfilesTestTags.profileRuleTriggerRow(0, "t-morning"))
+            .assertIsDisplayed()
     }
 }

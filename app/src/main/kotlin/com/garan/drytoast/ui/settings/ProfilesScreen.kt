@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -164,14 +165,18 @@ fun ProfilesScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    var selectedTab by remember { mutableStateOf(ProfilesTab.PROFILES) }
-    var editingProfile by remember { mutableStateOf<CustomProfile?>(null) }
-    var isCreatingNewProfile by remember { mutableStateOf(false) }
-    var editingTrigger by remember { mutableStateOf<SavedTrigger?>(null) }
-    var isCreatingNewStandaloneTrigger by remember { mutableStateOf(false) }
-    var showExactAlarmPermissionSheet by remember { mutableStateOf(false) }
-    var profilePendingDeletion by remember { mutableStateOf<CustomProfile?>(null) }
-    var triggerPendingDeletion by remember { mutableStateOf<SavedTrigger?>(null) }
+    var selectedTab by rememberSaveable { mutableStateOf(ProfilesTab.PROFILES) }
+    var editingProfileId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editingProfile = editingProfileId?.let { id -> profiles.firstOrNull { it.id == id } }
+    var isCreatingNewProfile by rememberSaveable { mutableStateOf(false) }
+    var editingTriggerId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editingTrigger = editingTriggerId?.let { id -> savedTriggersById[id] }
+    var isCreatingNewStandaloneTrigger by rememberSaveable { mutableStateOf(false) }
+    var showExactAlarmPermissionSheet by rememberSaveable { mutableStateOf(false) }
+    var profilePendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    val profilePendingDeletion = profilePendingDeletionId?.let { id -> profiles.firstOrNull { it.id == id } }
+    var triggerPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    val triggerPendingDeletion = triggerPendingDeletionId?.let { id -> savedTriggersById[id] }
 
     fun checkPermissionsForTriggers(triggers: List<ProfileTrigger>) {
         if (triggers.any { it is ProfileTrigger.Schedule } && !canScheduleExactAlarms()) {
@@ -354,11 +359,11 @@ fun ProfilesScreen(
                                         checkPermissionsForTriggers(profile.resolvedTriggers(savedTriggersById))
                                     }
                                 },
-                                onEditProfile = { editingProfile = profile },
+                                onEditProfile = { editingProfileId = profile.id },
                                 onConfigureApps = { onConfigureProfileApps(profile.id) },
                                 onDelete = {
                                     hapticEngine.rotaryDetent()
-                                    profilePendingDeletion = profile
+                                    profilePendingDeletionId = profile.id
                                 },
                             )
                         }
@@ -453,10 +458,10 @@ fun ProfilesScreen(
                                 savedTrigger = savedTrigger,
                                 referencingProfiles = referencingProfiles,
                                 currentLocation = currentLocation,
-                                onEdit = { editingTrigger = savedTrigger },
+                                onEdit = { editingTriggerId = savedTrigger.id },
                                 onDelete = {
                                     hapticEngine.rotaryDetent()
-                                    triggerPendingDeletion = savedTrigger
+                                    triggerPendingDeletionId = savedTrigger.id
                                 },
                             )
                         }
@@ -529,9 +534,9 @@ fun ProfilesScreen(
                     val currentMap = effectiveSavedTriggers.associateBy { it.id }
                     checkPermissionsForTriggers(updatedProfile.resolvedTriggers(currentMap))
                 }
-                editingProfile = null
+                editingProfileId = null
             },
-            onDismiss = { editingProfile = null },
+            onDismiss = { editingProfileId = null },
         )
     }
 
@@ -593,9 +598,9 @@ fun ProfilesScreen(
                     ),
                 )
                 checkPermissionsForTriggers(listOf(updatedTrigger))
-                editingTrigger = null
+                editingTriggerId = null
             },
-            onDismiss = { editingTrigger = null },
+            onDismiss = { editingTriggerId = null },
         )
     }
 
@@ -630,6 +635,7 @@ fun ProfilesScreen(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier
@@ -675,7 +681,8 @@ fun ProfilesScreen(
 
     profilePendingDeletion?.let { targetProfile ->
         AlertDialog(
-            onDismissRequest = { profilePendingDeletion = null },
+            onDismissRequest = { profilePendingDeletionId = null },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
             title = {
                 Text(
                     text = "Delete profile?",
@@ -693,7 +700,7 @@ fun ProfilesScreen(
                     onClick = {
                         hapticEngine.rotaryDetent()
                         onDeleteProfile(targetProfile.id)
-                        profilePendingDeletion = null
+                        profilePendingDeletionId = null
                     },
                     modifier = Modifier.testTag(ProfilesTestTags.DELETE_CONFIRM_BUTTON),
                 ) {
@@ -706,7 +713,7 @@ fun ProfilesScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { profilePendingDeletion = null },
+                    onClick = { profilePendingDeletionId = null },
                     modifier = Modifier.testTag(ProfilesTestTags.DELETE_CANCEL_BUTTON),
                 ) {
                     Text("Cancel")
@@ -728,7 +735,8 @@ fun ProfilesScreen(
                 "and disable any profile left with no triggers."
         }
         AlertDialog(
-            onDismissRequest = { triggerPendingDeletion = null },
+            onDismissRequest = { triggerPendingDeletionId = null },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
             title = {
                 Text(
                     text = "Delete trigger?",
@@ -746,7 +754,7 @@ fun ProfilesScreen(
                     onClick = {
                         hapticEngine.rotaryDetent()
                         removeTrigger(targetTrigger.id)
-                        triggerPendingDeletion = null
+                        triggerPendingDeletionId = null
                     },
                     modifier = Modifier.testTag(ProfilesTestTags.DELETE_CONFIRM_BUTTON),
                 ) {
@@ -759,7 +767,7 @@ fun ProfilesScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { triggerPendingDeletion = null },
+                    onClick = { triggerPendingDeletionId = null },
                     modifier = Modifier.testTag(ProfilesTestTags.DELETE_CANCEL_BUTTON),
                 ) {
                     Text("Cancel")

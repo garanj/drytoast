@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -69,6 +71,8 @@ object SettingsTestTags {
     const val NAV_PROFILES = "settings_nav_profiles"
     const val NAV_CONFIGURE_APPS = "settings_nav_configure_apps"
     const val ADD_QUICK_ACTION = "settings_add_quick_action"
+    const val ADD_QUICK_ACTION_SHEET = "settings_add_quick_action_sheet"
+    const val ADD_QUICK_ACTION_SEARCH_INPUT = "settings_add_quick_action_search_input"
     const val PENDING_REBOOT_BANNER = "settings_pending_reboot_banner"
     const val DISCARD_PENDING_CHANGES_BUTTON = "settings_discard_pending_changes"
     const val TOGGLE_SHOW_DIALER_ICON = "settings_toggle_show_dialer_icon"
@@ -146,12 +150,12 @@ fun DryToastSettingsScreen(
         runCatching { context.startActivity(intent) }
     }
 
-    var showAddQuickActionSheet by remember { mutableStateOf(false) }
-    var showGuardedGraceSheet by remember { mutableStateOf(false) }
-    var showExportConfigSheet by remember { mutableStateOf(false) }
-    var showConfirmRequireRebootDialog by remember { mutableStateOf(false) }
-    var showConfirmBlackWallpaperDialog by remember { mutableStateOf(false) }
-    var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
+    var showAddQuickActionSheet by rememberSaveable { mutableStateOf(false) }
+    var showGuardedGraceSheet by rememberSaveable { mutableStateOf(false) }
+    var showExportConfigSheet by rememberSaveable { mutableStateOf(false) }
+    var showConfirmRequireRebootDialog by rememberSaveable { mutableStateOf(false) }
+    var showConfirmBlackWallpaperDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingSecondDeviceUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -803,7 +807,7 @@ fun DryToastSettingsScreen(
     // Add Quick Action Searchable ModalBottomSheet
     if (showAddQuickActionSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        var searchQuery by remember { mutableStateOf("") }
+        var searchQuery by rememberSaveable { mutableStateOf("") }
         val availableToAdd = remember(uiState.availableApps, uiState.baseProfile.quickActions, searchQuery) {
             val pinnedComponents = uiState.baseProfile.quickActions.mapTo(hashSetOf()) { it.component }
             uiState.availableApps
@@ -817,10 +821,14 @@ fun DryToastSettingsScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag(SettingsTestTags.ADD_QUICK_ACTION_SHEET),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .heightIn(max = 480.dp)
                     .padding(bottom = 16.dp),
             ) {
@@ -838,7 +846,8 @@ fun DryToastSettingsScreen(
                     keyboardOptions = SearchKeyboardOptions,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag(SettingsTestTags.ADD_QUICK_ACTION_SEARCH_INPUT),
                 )
 
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -870,6 +879,7 @@ fun DryToastSettingsScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier

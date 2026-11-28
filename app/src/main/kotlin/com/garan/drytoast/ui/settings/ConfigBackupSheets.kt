@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,15 +25,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.garan.drytoast.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 internal fun ExportConfigBottomSheet(onDismiss: () -> Unit, onConfirmExport: (passphrase: String?) -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -47,11 +51,14 @@ internal fun ExportConfigBottomSheet(onDismiss: () -> Unit, onConfirmExport: (pa
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.testTag(SettingsTestTags.EXPORT_CONFIG_SHEET),
+        modifier = Modifier
+            .semantics { testTagsAsResourceId = true }
+            .testTag(SettingsTestTags.EXPORT_CONFIG_SHEET),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
@@ -141,7 +148,7 @@ internal fun ExportConfigBottomSheet(onDismiss: () -> Unit, onConfirmExport: (pa
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 internal fun ImportPassphraseBottomSheet(
     errorMessage: String?,
@@ -156,11 +163,14 @@ internal fun ImportPassphraseBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.testTag(SettingsTestTags.IMPORT_PASSPHRASE_SHEET),
+        modifier = Modifier
+            .semantics { testTagsAsResourceId = true }
+            .testTag(SettingsTestTags.IMPORT_PASSPHRASE_SHEET),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),

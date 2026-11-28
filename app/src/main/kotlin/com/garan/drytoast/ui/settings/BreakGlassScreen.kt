@@ -36,10 +36,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.garan.drytoast.R
 import com.garan.drytoast.core.model.GeneralSettings
@@ -61,7 +65,7 @@ object BreakGlassTestTags {
     const val DURATION_OPTION_PREFIX = "break_glass_duration_"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun BreakGlassScreen(
     breakGlassTagUid: String?,
@@ -84,8 +88,8 @@ fun BreakGlassScreen(
     } ?: 0
     val isActive = remainingMinutes > 0
 
-    var isScanning by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isScanning by rememberSaveable { mutableStateOf(false) }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     val collisionErrorText = stringResource(R.string.break_glass_error_collision)
     val unsupportedErrorText = stringResource(R.string.break_glass_error_unsupported)
@@ -130,6 +134,7 @@ fun BreakGlassScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
+            .semantics { testTagsAsResourceId = true }
             .testTag(BreakGlassTestTags.SCREEN),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
