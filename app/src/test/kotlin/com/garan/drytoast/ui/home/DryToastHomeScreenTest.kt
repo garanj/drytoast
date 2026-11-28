@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
@@ -18,12 +20,19 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.window.layout.FoldingFeature
+import androidx.window.testing.layout.FoldingFeature
+import androidx.window.testing.layout.TestWindowLayoutInfo
+import androidx.window.testing.layout.WindowLayoutInfoPublisherRule
 import com.garan.drytoast.MainActivity
 import com.garan.drytoast.core.model.AppAccessState
 import com.garan.drytoast.core.model.ComponentKey
@@ -35,6 +44,8 @@ import com.garan.drytoast.core.port.PackageChangeEvent
 import com.garan.drytoast.core.port.PackageIndexSource
 import com.garan.drytoast.core.search.SearchItem
 import com.garan.drytoast.ui.launcher.AppLauncher
+import com.garan.drytoast.ui.search.SEARCH_INPUT_TEST_TAG
+import com.garan.drytoast.ui.search.SEARCH_PLACEHOLDER_TEST_TAG
 import com.garan.drytoast.ui.search.SearchViewModel
 import com.garan.drytoast.ui.theme.DryToastTheme
 import com.google.common.truth.Truth.assertThat
@@ -42,6 +53,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
@@ -51,8 +63,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class DryToastHomeScreenTest {
 
+    private val publisherRule = WindowLayoutInfoPublisherRule()
+    private val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+    val testRule: RuleChain = RuleChain.outerRule(publisherRule).around(composeTestRule)
 
     private val cameraComponent = ComponentKey("com.android.camera", "com.android.camera.CameraActivity", 0L)
 
@@ -932,6 +947,149 @@ class DryToastHomeScreenTest {
         composeTestRule.waitForIdle()
         assertThat(viewModel.uiState.value.query).isEqualTo("cam")
         composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun compactHeightLandscape_ambientCanvasUsesCompactHeader_andScrollsAllSevenQuickActions() {
+        val sevenApps = (1..7).map { idx ->
+            InstalledApp(
+                component = ComponentKey("com.example.app$idx", "MainActivity", 0L),
+                label = "Quick App $idx",
+            )
+        }
+        val fakeSettingsRepo = com.garan.drytoast.ui.settings.FakeSettingsRepository()
+        kotlinx.coroutines.runBlocking {
+            val base = fakeSettingsRepo.getSettings().baseProfile
+            fakeSettingsRepo.updateBaseProfile(base.copy(quickActions = sevenApps))
+        }
+        val viewModel = SearchViewModel(
+            packageIndexSource = FakePackageIndexSource(sevenApps),
+            settingsRepository = fakeSettingsRepo,
+        )
+        val launcher = FakeAppLauncher()
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(HOME_HEADER_COMPACT_TEST_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(HOME_HEADER_STANDARD_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertIsDisplayed()
+
+        // Scroll to the 7th Quick Action on a 390dp-tall landscape viewport and launch it
+        composeTestRule.onNodeWithText("07   Quick App 7")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        assertThat(launcher.launchedComponents).containsExactly(sevenApps.last().component)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun compactHeightLandscape_activeSearchAboveIme_hidesDialerAndRetainsMultipleVisibleResults() {
+        val apps = listOf(
+            InstalledApp(ComponentKey("com.android.camera", "CameraActivity", 0L), "Camera"),
+            InstalledApp(ComponentKey("com.android.calculator", "CalcActivity", 0L), "Calculator"),
+            InstalledApp(ComponentKey("com.android.calendar", "CalendarActivity", 0L), "Calendar"),
+        )
+        val viewModel = SearchViewModel(packageIndexSource = FakePackageIndexSource(apps))
+        val launcher = FakeAppLauncher()
+
+        // Simulate 390dp phone landscape with ~188dp soft keyboard + 24dp status bar
+        // (~178dp inner height after Robolectric's ~72dp system-bar safeDrawingPadding)
+        composeTestRule.setContent {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.ForcedSize(DpSize(891.dp, 250.dp)),
+            ) {
+                DryToastTheme {
+                    DryToastHomeScreen(
+                        viewModel = viewModel,
+                        appLauncher = launcher,
+                        isImeVisible = true,
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Type to launch...").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(SEARCH_INPUT_TEST_TAG).performTextInput("ca")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(HOME_HEADER_COMPACT_TEST_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(HOME_DIALER_BUTTON_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SEARCH_INPUT_TEST_TAG).assertIsDisplayed()
+
+        val firstRowBounds = composeTestRule.onNodeWithText("Camera").fetchSemanticsNode().boundsInRoot
+        val secondRowBounds = composeTestRule.onNodeWithText("Calculator").fetchSemanticsNode().boundsInRoot
+        assertThat(firstRowBounds.height).isGreaterThan(30f)
+        assertThat(secondRowBounds.height).isGreaterThan(30f)
+
+        composeTestRule.onNodeWithText("Camera").performClick()
+        composeTestRule.waitForIdle()
+        assertThat(launcher.launchedComponents).containsExactly(apps.first().component)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w680dp-h840dp-mdpi")
+    fun tabletopHorizontalHalfOpenedFold_placesHeaderAboveCreaseAndSearchBelowCrease() {
+        val apps = listOf(
+            InstalledApp(ComponentKey("com.android.camera", "CameraActivity", 0L), "Camera"),
+            InstalledApp(ComponentKey("com.android.calculator", "CalcActivity", 0L), "Calculator"),
+        )
+        val viewModel = SearchViewModel(packageIndexSource = FakePackageIndexSource(apps))
+        val launcher = FakeAppLauncher()
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeScreen(
+                    viewModel = viewModel,
+                    appLauncher = launcher,
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Publish horizontal HALF_OPENED tabletop hinge spanning y = [410, 430]
+        val horizontalHinge = FoldingFeature(
+            activity = composeTestRule.activity,
+            center = 420,
+            size = 20,
+            state = FoldingFeature.State.HALF_OPENED,
+            orientation = FoldingFeature.Orientation.HORIZONTAL,
+        )
+        publisherRule.overrideWindowLayoutInfo(TestWindowLayoutInfo(listOf(horizontalHinge)))
+        composeTestRule.waitForIdle()
+
+        val placeholderWindowBounds = composeTestRule.onNodeWithTag(SEARCH_PLACEHOLDER_TEST_TAG)
+            .fetchSemanticsNode()
+            .boundsInWindow
+        assertThat(placeholderWindowBounds.top).isAtLeast(430f)
+
+        // Activate search and verify input + result rows remain below the horizontal crease
+        composeTestRule.onNodeWithTag(SEARCH_PLACEHOLDER_TEST_TAG).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(SEARCH_INPUT_TEST_TAG).performTextInput("ca")
+        composeTestRule.waitForIdle()
+
+        val inputWindowBounds = composeTestRule.onNodeWithTag(SEARCH_INPUT_TEST_TAG)
+            .fetchSemanticsNode()
+            .boundsInWindow
+        val cameraWindowBounds = composeTestRule.onNodeWithText("Camera")
+            .fetchSemanticsNode()
+            .boundsInWindow
+        assertThat(inputWindowBounds.top).isAtLeast(430f)
+        assertThat(cameraWindowBounds.top).isAtLeast(430f)
     }
 
     private class FakeSoftwareKeyboardController : SoftwareKeyboardController {
