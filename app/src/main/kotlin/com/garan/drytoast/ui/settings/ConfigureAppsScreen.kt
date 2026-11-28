@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -110,8 +111,8 @@ fun ConfigureAppsScreen(
         onSave(assignments.toMap())
     }
 
-    var selectedFilter by remember { mutableStateOf(AppListFilter.ALL) }
-    var expandedAppKey by remember { mutableStateOf<ComponentKey?>(null) }
+    var selectedFilter by rememberSaveable { mutableStateOf(AppListFilter.ALL) }
+    var expandedAppId by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Efficient derived counts for filter chip bar
     val blockedCount by remember {
@@ -273,7 +274,7 @@ fun ConfigureAppsScreen(
             } else {
                 items(filteredApps, key = { it.component.id }) { app ->
                     val assignment = assignments[app.component]
-                    val isExpanded = expandedAppKey == app.component
+                    val isExpanded = expandedAppId == app.component.id
 
                     UnifiedAppRow(
                         app = app,
@@ -281,22 +282,22 @@ fun ConfigureAppsScreen(
                         defaultFriction = defaultFriction,
                         isExpanded = isExpanded,
                         onToggleExpand = {
-                            expandedAppKey = if (isExpanded) null else app.component
+                            expandedAppId = if (isExpanded) null else app.component.id
                         },
                         onSelectToggle = { toggleState ->
                             when (toggleState) {
                                 BaseToggleState.ALLOW -> {
                                     assignments.remove(app.component)
-                                    if (isExpanded) expandedAppKey = null
+                                    if (isExpanded) expandedAppId = null
                                 }
                                 BaseToggleState.GUARD -> {
                                     val existing = assignments[app.component] as? AppAssignment.Guarded
                                     assignments[app.component] = existing ?: AppAssignment.Guarded(null)
-                                    expandedAppKey = app.component
+                                    expandedAppId = app.component.id
                                 }
                                 BaseToggleState.BLOCK -> {
                                     assignments[app.component] = AppAssignment.Blocked
-                                    if (isExpanded) expandedAppKey = null
+                                    if (isExpanded) expandedAppId = null
                                 }
                             }
                             commitAssignments()
@@ -305,20 +306,20 @@ fun ConfigureAppsScreen(
                             when (override) {
                                 null -> {
                                     assignments.remove(app.component)
-                                    if (isExpanded) expandedAppKey = null
+                                    if (isExpanded) expandedAppId = null
                                 }
                                 BaseToggleState.ALLOW -> {
                                     assignments[app.component] = AppAssignment.Standard
-                                    if (isExpanded) expandedAppKey = null
+                                    if (isExpanded) expandedAppId = null
                                 }
                                 BaseToggleState.GUARD -> {
                                     val existing = assignments[app.component] as? AppAssignment.Guarded
                                     assignments[app.component] = existing ?: AppAssignment.Guarded(null)
-                                    expandedAppKey = app.component
+                                    expandedAppId = app.component.id
                                 }
                                 BaseToggleState.BLOCK -> {
                                     assignments[app.component] = AppAssignment.Blocked
-                                    if (isExpanded) expandedAppKey = null
+                                    if (isExpanded) expandedAppId = null
                                 }
                             }
                             commitAssignments()
@@ -501,6 +502,7 @@ private fun UnifiedAppRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .testTag("configure_app_row_${app.component.id}")
             .clickable(
                 enabled = assignment is AppAssignment.Guarded,
                 onClick = onToggleExpand,

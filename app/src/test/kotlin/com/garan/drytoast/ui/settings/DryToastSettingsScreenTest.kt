@@ -4,13 +4,16 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.garan.drytoast.core.model.BaseProfileSettings
 import com.garan.drytoast.core.model.ComponentKey
@@ -18,6 +21,7 @@ import com.garan.drytoast.core.model.GeneralSettings
 import com.garan.drytoast.core.model.InstalledApp
 import com.garan.drytoast.ui.theme.DryToastTheme
 import com.google.common.truth.Truth.assertThat
+import kotlinx.collections.immutable.persistentListOf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -423,5 +427,51 @@ class DryToastSettingsScreenTest {
             .performSemanticsAction(SemanticsActions.OnClick)
 
         assertThat(openedUrls).containsExactly("https://drytoast.app/console")
+    }
+
+    @Test
+    fun addQuickActionSheet_preservesOpenSheetAndSearchQueryAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeRule)
+        val apps = persistentListOf(
+            InstalledApp(ComponentKey("com.android.camera", "CameraActivity"), "Camera"),
+            InstalledApp(ComponentKey("com.android.calculator", "CalcActivity"), "Calculator"),
+            InstalledApp(ComponentKey("com.google.android.apps.maps", "MapsActivity"), "Maps"),
+        )
+
+        restorationTester.setContent {
+            DryToastTheme {
+                DryToastSettingsScreen(
+                    uiState = SettingsUiState(
+                        availableApps = apps,
+                        isLoading = false,
+                    ),
+                    onBack = {},
+                    onNavigateToConfigureApps = {},
+                    onUpdateShowUnlocks = {},
+                    onUpdateShowRest = {},
+                    onUpdateRequireFullTyping = {},
+                    onUpdateDefaultFriction = {},
+                    onAddQuickAction = {},
+                    onRemoveQuickAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SettingsTestTags.ADD_QUICK_ACTION).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(SettingsTestTags.ADD_QUICK_ACTION_SEARCH_INPUT)
+            .performTextInput("Map")
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Maps").assertIsDisplayed()
+        composeRule.onNodeWithText("Camera").assertDoesNotExist()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithTag(SettingsTestTags.ADD_QUICK_ACTION_SHEET).assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsTestTags.ADD_QUICK_ACTION_SEARCH_INPUT)
+            .assertTextContains("Map")
+        composeRule.onNodeWithText("Maps").assertIsDisplayed()
+        composeRule.onNodeWithText("Camera").assertDoesNotExist()
     }
 }

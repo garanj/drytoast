@@ -3,6 +3,7 @@ package com.garan.drytoast.ui.settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -111,5 +112,35 @@ class BreakGlassScreenTest {
         composeTestRule.onNodeWithTag(BreakGlassTestTags.DURATION_OPTION_PREFIX + "60")
             .performScrollTo()
             .assertIsNotEnabled()
+    }
+
+    @Test
+    fun scanningState_preservedAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+
+        restorationTester.setContent {
+            DryToastTheme {
+                BreakGlassScreen(
+                    breakGlassTagUid = null,
+                    breakGlassDurationMinutes = 15,
+                    breakGlassUntilEpochMillis = null,
+                    savedTriggers = emptyList(),
+                    isSettingsLocked = false,
+                    onSaveBreakGlassTagUid = {},
+                    onUpdateDurationMinutes = {},
+                    onEndBreakGlassEarly = {},
+                    onSetNfcRegistrationListener = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(BreakGlassTestTags.REGISTER_BUTTON).performClick()
+        composeTestRule.onNodeWithTag(BreakGlassTestTags.SCANNING_PROMPT).assertIsDisplayed()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeTestRule.onNodeWithTag(BreakGlassTestTags.SCANNING_PROMPT).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(BreakGlassTestTags.CANCEL_SCAN_BUTTON).assertIsDisplayed()
     }
 }

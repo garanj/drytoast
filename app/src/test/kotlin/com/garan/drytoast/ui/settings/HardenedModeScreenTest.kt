@@ -23,6 +23,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.lifecycle.Lifecycle
@@ -497,5 +498,32 @@ class HardenedModeScreenTest {
         composeRule.waitForIdle()
 
         assertThat(unlockedState).isEqualTo(false)
+    }
+
+    @Test
+    fun lockScreenTextSheet_preservesOpenSheetAndDraftFieldsAcrossStateRestoration() {
+        val restorationTester = StateRestorationTester(composeRule)
+
+        restorationTester.setContent {
+            DryToastTheme {
+                HardenedModeScreen(
+                    isHardenedModeActive = true,
+                    hardenedOwnerName = "Garan",
+                    hardenedLockScreenInfo = "",
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_TEXT_ROW).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_INFO_INPUT)
+            .performTextInput("If found call +44 7700 900077")
+        composeRule.waitForIdle()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithTag(HardenedModeTestTags.LOCK_SCREEN_SHEET).assertIsDisplayed()
+        composeRule.onNodeWithText("If found call +44 7700 900077").assertIsDisplayed()
     }
 }

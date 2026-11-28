@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -172,8 +175,8 @@ fun HardenedModeScreen(
 
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    var pendingSecondDeviceUrl by remember { mutableStateOf<String?>(null) }
-    var showLockScreenTextSheet by remember { mutableStateOf(false) }
+    var pendingSecondDeviceUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var showLockScreenTextSheet by rememberSaveable { mutableStateOf(false) }
 
     val openWebsiteHandler: (String) -> Unit = onOpenWebsite ?: { url ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -516,8 +519,8 @@ private fun LockScreenTextBottomSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var ownerName by remember(initialOwnerName) { mutableStateOf(initialOwnerName) }
-    var lockScreenInfo by remember(initialLockScreenInfo) { mutableStateOf(initialLockScreenInfo) }
+    var ownerName by rememberSaveable(initialOwnerName) { mutableStateOf(initialOwnerName) }
+    var lockScreenInfo by rememberSaveable(initialLockScreenInfo) { mutableStateOf(initialLockScreenInfo) }
     val previewName = ownerName.trim().ifEmpty { GeneralSettings.DEFAULT_HARDENED_OWNER_NAME }
 
     ModalBottomSheet(
@@ -531,6 +534,8 @@ private fun LockScreenTextBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +39,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,6 +85,86 @@ internal sealed interface TimeEditTarget {
     data class DayStart(val day: DayOfWeek) : TimeEditTarget
     data class DayEnd(val day: DayOfWeek) : TimeEditTarget
 }
+
+private val DayOfWeekSetSaver: Saver<Set<DayOfWeek>, Any> = listSaver(
+    save = { days -> days.map { it.name } },
+    restore = { names -> names.map { DayOfWeek.valueOf(it) }.toSet() },
+)
+
+private val TimeWindowSaver: Saver<TimeWindow, Any> = listSaver(
+    save = { w -> listOf(w.startTime.hour, w.startTime.minute, w.endTime.hour, w.endTime.minute) },
+    restore = { ints ->
+        TimeWindow(
+            startTime = TimeOfDay(ints[0], ints[1]),
+            endTime = TimeOfDay(ints[2], ints[3]),
+        )
+    },
+)
+
+private val PerDayWindowsSaver = Saver<Map<DayOfWeek, TimeWindow>, IntArray>(
+    save = { map ->
+        val out = IntArray(map.size * 5)
+        var i = 0
+        for ((day, win) in map) {
+            out[i++] = day.ordinal
+            out[i++] = win.startTime.hour
+            out[i++] = win.startTime.minute
+            out[i++] = win.endTime.hour
+            out[i++] = win.endTime.minute
+        }
+        out
+    },
+    restore = { arr ->
+        val entries = DayOfWeek.entries
+        buildMap {
+            var i = 0
+            while (i + 4 < arr.size) {
+                val day = entries[arr[i]]
+                put(
+                    day,
+                    TimeWindow(
+                        startTime = TimeOfDay(arr[i + 1], arr[i + 2]),
+                        endTime = TimeOfDay(arr[i + 3], arr[i + 4]),
+                    ),
+                )
+                i += 5
+            }
+        }
+    },
+)
+
+private val TimeEditTargetSaver = Saver<TimeEditTarget?, String>(
+    save = { target ->
+        when (target) {
+            null -> ""
+            is TimeEditTarget.UniformStart -> "US"
+            is TimeEditTarget.UniformEnd -> "UE"
+            is TimeEditTarget.DayStart -> "DS:${target.day.name}"
+            is TimeEditTarget.DayEnd -> "DE:${target.day.name}"
+        }
+    },
+    restore = { encoded ->
+        when {
+            encoded.isEmpty() -> null
+            encoded == "US" -> TimeEditTarget.UniformStart
+            encoded == "UE" -> TimeEditTarget.UniformEnd
+            encoded.startsWith("DS:") ->
+                runCatching { TimeEditTarget.DayStart(DayOfWeek.valueOf(encoded.removePrefix("DS:"))) }.getOrNull()
+            encoded.startsWith("DE:") ->
+                runCatching { TimeEditTarget.DayEnd(DayOfWeek.valueOf(encoded.removePrefix("DE:"))) }.getOrNull()
+            else -> null
+        }
+    },
+)
+
+private val NfcTagEntryListSaver: Saver<List<NfcTagEntry>, Any> = listSaver(
+    save = { tags -> tags.flatMap { listOf(it.uid, it.label) } },
+    restore = { flat ->
+        flat.chunked(2).mapNotNull { pair ->
+            if (pair.size == 2) NfcTagEntry(uid = pair[0], label = pair[1]) else null
+        }
+    },
+)
 
 /**
  * Cohesive Material 3 [ModalBottomSheet] for creating or editing a reusable [ProfileTrigger]
@@ -189,9 +272,9 @@ fun ProfileEditorSheet(
     nfcDefaultName: String = "NFC Profile",
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var profileName by remember { mutableStateOf(initialName) }
+    var profileName by rememberSaveable { mutableStateOf(initialName) }
 
-    var selectedKind by remember {
+    var selectedKind by rememberSaveable {
         mutableStateOf(
             when (initialTrigger) {
                 is ProfileTrigger.Geo -> EditorTriggerKind.GEO
@@ -203,10 +286,12 @@ fun ProfileEditorSheet(
 
     // Schedule state
     val seedSchedule = (initialTrigger as? ProfileTrigger.Schedule)?.schedule ?: initialSchedule
-    var selectedDays by remember { mutableStateOf(seedSchedule.days) }
-    var sameScheduleEveryDay by remember { mutableStateOf(seedSchedule.sameScheduleEveryDay) }
+    var selectedDays by rememberSaveable(stateSaver = DayOfWeekSetSaver) {
+        mutableStateOf(seedSchedule.days)
+    }
+    var sameScheduleEveryDay by rememberSaveable { mutableStateOf(seedSchedule.sameScheduleEveryDay) }
 
-    var uniformWindow by remember {
+    var uniformWindow by rememberSaveable(stateSaver = TimeWindowSaver) {
         mutableStateOf(
             TimeWindow(
                 startTime = seedSchedule.startTime,
@@ -215,7 +300,7 @@ fun ProfileEditorSheet(
         )
     }
 
-    var perDayWindows by remember {
+    var perDayWindows by rememberSaveable(stateSaver = PerDayWindowsSaver) {
         mutableStateOf(
             DayOfWeek.entries.associateWith { day ->
                 seedSchedule.dailyWindows[day]
@@ -224,13 +309,17 @@ fun ProfileEditorSheet(
         )
     }
 
-    var activeTimeEdit by remember { mutableStateOf<TimeEditTarget?>(null) }
+    var activeTimeEdit by rememberSaveable(stateSaver = TimeEditTargetSaver) {
+        mutableStateOf(null)
+    }
 
     // Geo state
     val seedGeo = (initialTrigger as? ProfileTrigger.Geo)?.geo
-    var geoMode by remember { mutableStateOf(seedGeo?.mode ?: GeoTriggerMode.INSIDE) }
-    var geoRadiusMeters by remember { mutableIntStateOf(seedGeo?.radiusMeters ?: GeoTrigger.DEFAULT_RADIUS_METERS) }
-    var coordinateInput by remember {
+    var geoMode by rememberSaveable { mutableStateOf(seedGeo?.mode ?: GeoTriggerMode.INSIDE) }
+    var geoRadiusMeters by rememberSaveable {
+        mutableIntStateOf(seedGeo?.radiusMeters ?: GeoTrigger.DEFAULT_RADIUS_METERS)
+    }
+    var coordinateInput by rememberSaveable {
         mutableStateOf(
             when {
                 seedGeo != null -> seedGeo.center.formattedCoordinates()
@@ -247,12 +336,14 @@ fun ProfileEditorSheet(
 
     // NFC state
     val seedNfc = (initialTrigger as? ProfileTrigger.Nfc)?.nfc
-    var nfcMode by remember { mutableStateOf(seedNfc?.mode ?: NfcTriggerMode.TOGGLE_ON_TAP) }
-    var nfcDurationMinutes by remember {
+    var nfcMode by rememberSaveable { mutableStateOf(seedNfc?.mode ?: NfcTriggerMode.TOGGLE_ON_TAP) }
+    var nfcDurationMinutes by rememberSaveable {
         mutableIntStateOf(seedNfc?.durationMinutes ?: NfcTrigger.DEFAULT_DURATION_MINUTES)
     }
-    var nfcMaxDailyUses by remember { mutableStateOf(seedNfc?.maxDailyUses) }
-    var nfcTags by remember { mutableStateOf(seedNfc?.tags ?: emptyList()) }
+    var nfcMaxDailyUses by rememberSaveable { mutableStateOf(seedNfc?.maxDailyUses) }
+    var nfcTags by rememberSaveable(stateSaver = NfcTagEntryListSaver) {
+        mutableStateOf(seedNfc?.tags ?: emptyList())
+    }
     var lastNfcRegistrationResult by remember { mutableStateOf<NfcTagRegistrationResult?>(null) }
 
     DisposableEffect(selectedKind, onRegisterNfcScanListener, onRegisterNfcRegistrationListener) {
@@ -293,6 +384,7 @@ fun ProfileEditorSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp),
