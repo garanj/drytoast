@@ -108,13 +108,30 @@ echo "    SUCCESS: Phone memory consumption within strict budget (${PHONE_PSS} K
 
 # 7. Memory Ceiling Check on Tablet 2560x1600 @ 320dpi (1280x800dp EXPANDED) Viewport
 echo "==> Step 7: Cold-starting on 2560x1600 @ 320dpi tablet viewport and asserting TOTAL PSS (< ${CEILING_KB} KB)..."
+adb shell cmd role remove-role-holder android.app.role.HOME "$PACKAGE_NAME" >/dev/null 2>&1 || true
 adb shell am force-stop "$PACKAGE_NAME"
 adb shell wm size 2560x1600
 adb shell wm density 320
-sleep 1
-adb shell cmd role add-role-holder android.app.role.HOME "$PACKAGE_NAME" >/dev/null 2>&1 || true
+sleep 2
+
+TABLET_ROLE_GRANTED=0
+for i in {1..12}; do
+    if adb shell cmd role add-role-holder android.app.role.HOME "$PACKAGE_NAME" 2>/dev/null; then
+        ROLE_HOLDERS=$(adb shell cmd role get-role-holders android.app.role.HOME 2>/dev/null | tr -d '\r')
+        if [[ "$ROLE_HOLDERS" == *"$PACKAGE_NAME"* ]]; then
+            TABLET_ROLE_GRANTED=1
+            break
+        fi
+    fi
+    sleep 1
+done
+if [ "$TABLET_ROLE_GRANTED" -ne 1 ]; then
+    echo "ERROR: Failed to re-grant Home role to $PACKAGE_NAME on 2560x1600 tablet viewport!" >&2
+    exit 1
+fi
+
 adb shell input keyevent KEYCODE_HOME
-sleep 3
+sleep 2
 
 TABLET_FOCUS=$(adb shell dumpsys window 2>/dev/null | (grep -E "mCurrentFocus|mFocusedApp" || true))
 echo "    Tablet Current Focus: $TABLET_FOCUS"
