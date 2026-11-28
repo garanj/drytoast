@@ -821,7 +821,9 @@ fun DryToastSettingsScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-            modifier = Modifier.testTag(SettingsTestTags.ADD_QUICK_ACTION_SHEET),
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag(SettingsTestTags.ADD_QUICK_ACTION_SHEET),
         ) {
             Column(
                 modifier = Modifier
@@ -877,6 +879,7 @@ fun DryToastSettingsScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier

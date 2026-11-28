@@ -374,12 +374,13 @@ fun ProfileEditorSheet(
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        modifier = modifier,
+        modifier = modifier.semantics { testTagsAsResourceId = true },
     ) {
         Column(
             modifier = Modifier

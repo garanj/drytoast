@@ -635,6 +635,7 @@ fun ProfilesScreen(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier
@@ -681,6 +682,7 @@ fun ProfilesScreen(
     profilePendingDeletion?.let { targetProfile ->
         AlertDialog(
             onDismissRequest = { profilePendingDeletionId = null },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
             title = {
                 Text(
                     text = "Delete profile?",
@@ -734,6 +736,7 @@ fun ProfilesScreen(
         }
         AlertDialog(
             onDismissRequest = { triggerPendingDeletionId = null },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
             title = {
                 Text(
                     text = "Delete trigger?",

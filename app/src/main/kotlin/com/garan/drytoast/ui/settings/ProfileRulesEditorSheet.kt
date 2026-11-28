@@ -41,8 +41,11 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -88,7 +91,7 @@ private val TriggerAttachTargetSaver = Saver<TriggerAttachTarget?, Int>(
  * Material 3 [ModalBottomSheet] for editing a [CustomProfile]'s name and its `AND` / `OR`
  * [TriggerRule] activation conditions, with inline trigger creation and editing via [TriggerEditorSheet].
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ProfileRulesEditorSheet(
     initialName: String,
@@ -180,7 +183,7 @@ fun ProfileRulesEditorSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        modifier = modifier,
+        modifier = modifier.semantics { testTagsAsResourceId = true },
     ) {
         Column(
             modifier = Modifier
@@ -492,6 +495,7 @@ fun ProfileRulesEditorSheet(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             Column(
                 modifier = Modifier

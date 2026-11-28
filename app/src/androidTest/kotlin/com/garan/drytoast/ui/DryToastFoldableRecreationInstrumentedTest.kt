@@ -2,7 +2,7 @@ package com.garan.drytoast.ui
 
 import android.content.Intent
 import android.os.SystemClock
-import android.view.KeyCharacterMap
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -113,11 +113,9 @@ class DryToastFoldableRecreationInstrumentedTest {
             val nameField = checkNotNull(
                 device.waitForFresh(By.res(ProfilesTestTags.TRIGGER_EDITOR_NAME_INPUT), 10_000L),
             ) { "Expected TriggerEditorSheet name input on cover display" }
-            nameField.click()
+            nameField.text = "Studio Fold"
             device.waitForIdle()
-
-            val keyMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
-            typeSynchronously(keyMap, "studiofold")
+            assertThat(device.waitForFresh(By.textContains("Studio Fold"), 5_000L)).isNotNull()
 
             // Switch trigger kind to Geo so both text draft and selected kind are verified
             checkNotNull(
@@ -137,16 +135,19 @@ class DryToastFoldableRecreationInstrumentedTest {
                 },
             ).isTrue()
 
+            // Note: While ModalBottomSheet is open, its dialog sub-window holds window focus above MainActivity,
+            // so check RESUMED lifecycle state + new Activity instance identity rather than activity.hasWindowFocus().
             assertThat(
                 pollFresh(10_000L) {
-                    var recreated = false
+                    var recreatedAndResumed = false
                     runCatching {
                         scenario?.onActivity { activity ->
-                            recreated = System.identityHashCode(activity) != initialActivityIdentity &&
-                                activity.hasWindowFocus()
+                            recreatedAndResumed =
+                                System.identityHashCode(activity) != initialActivityIdentity &&
+                                activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
                         }
                     }
-                    recreated
+                    recreatedAndResumed
                 },
             ).isTrue()
             SystemClock.sleep(250L)
@@ -156,7 +157,7 @@ class DryToastFoldableRecreationInstrumentedTest {
                 device.waitForFresh(By.res(ProfilesTestTags.TRIGGER_EDITOR_NAME_INPUT), 10_000L),
             ).isNotNull()
             assertThat(
-                device.waitForFresh(By.textContains("studiofold"), 5_000L),
+                device.waitForFresh(By.textContains("Studio Fold"), 5_000L),
             ).isNotNull()
             assertThat(
                 device.waitForFresh(By.text("Inside zone"), 5_000L),
@@ -175,22 +176,5 @@ class DryToastFoldableRecreationInstrumentedTest {
             }
         }
         focused
-    }
-
-    private fun typeSynchronously(keyMap: KeyCharacterMap, text: String) {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val uiAutomation = instrumentation.uiAutomation
-        for (ch in text) {
-            val normalized = ch.lowercaseChar()
-            val events = keyMap.getEvents(charArrayOf(normalized))
-            if (events != null) {
-                for (event in events) {
-                    uiAutomation.injectInputEvent(event, true)
-                }
-            } else {
-                instrumentation.sendStringSync(normalized.toString())
-            }
-            instrumentation.waitForIdleSync()
-        }
     }
 }
