@@ -288,7 +288,7 @@ fun DryToastHomeScreen(
                 activeProfiles = uiState.activeProfiles,
                 hasCapabilityIssues = uiState.capabilityIssues.isNotEmpty(),
                 onCapabilityFaultClick = { showCapabilityFaultSheet = true },
-                showDialerIcon = uiState.generalSettings.showDialerIcon && !inSearch,
+                showDialerIcon = uiState.generalSettings.showDialerIcon && !inSearch && !isImeVisible,
                 onDialerClick = {
                     hapticEngine.rotaryDetent()
                     val launched = appLauncher.launchDialer()
@@ -296,13 +296,12 @@ fun DryToastHomeScreen(
                         resetSearchAndHideIme()
                     }
                 },
+                contentTopSpacing = 24.dp,
                 onTimeTick = {
                     antiMetricsRepository?.refreshForCurrentDate()
                     viewModel.refreshScheduleEvaluation()
                 },
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
-
                 DryToastSearchSurface(
                     query = uiState.query,
                     onQueryChange = viewModel::onQueryChanged,

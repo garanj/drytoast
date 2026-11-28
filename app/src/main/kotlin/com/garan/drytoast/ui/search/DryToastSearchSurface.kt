@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +61,7 @@ import com.garan.drytoast.core.port.NoOpHapticEngine
 import com.garan.drytoast.core.search.MatchType
 import com.garan.drytoast.core.search.SearchItem
 import com.garan.drytoast.core.search.SearchResult
+import com.garan.drytoast.ui.home.LocalHomeCanvasCompact
 import com.garan.drytoast.ui.motion.DryToastMotion
 import com.garan.drytoast.ui.theme.AmoledBlack
 import com.garan.drytoast.ui.theme.HairlineBorder
@@ -69,6 +72,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 
 private val CursorSolidBrush = SolidColor(PureWhite)
+const val SEARCH_PLACEHOLDER_TEST_TAG = "search_input_placeholder"
+const val SEARCH_INPUT_TEST_TAG = "search_input_field"
+const val SEARCH_RESULTS_LIST_TEST_TAG = "search_results_list"
+const val QUICK_ACTIONS_LIST_TEST_TAG = "home_quick_actions_list"
+
 internal val SearchKeyboardOptions = KeyboardOptions(
     capitalization = KeyboardCapitalization.None,
     autoCorrectEnabled = false,
@@ -79,7 +87,7 @@ internal val SearchKeyboardOptions = KeyboardOptions(
 /**
  * Mechanical, typographic search surface for Dry Toast.
  * Features monospaced tabular numerals, real-time filtering, friction indicators,
- * and edge-to-edge safe drawing insets.
+ * and adaptive vertical rhythm on compact-height / landscape viewports.
  */
 @Composable
 fun DryToastSearchSurface(
@@ -97,6 +105,7 @@ fun DryToastSearchSurface(
     quickActions: ImmutableList<QuickActionUiItem> = kotlinx.collections.immutable.persistentListOf(),
     onQuickActionClick: (QuickActionUiItem) -> Unit = {},
 ) {
+    val isCompact = LocalHomeCanvasCompact.current
     val baseBodyLarge = MaterialTheme.typography.bodyLarge
     val inputTextStyle = remember(baseBodyLarge) { baseBodyLarge.copy(color = PureWhite) }
     val baseLabelSmall = MaterialTheme.typography.labelSmall
@@ -116,7 +125,7 @@ fun DryToastSearchSurface(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = if (isCompact) 4.dp else 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
             val active = isSearchActive || query.isNotEmpty()
@@ -137,6 +146,7 @@ fun DryToastSearchSurface(
                         color = SubtleGray,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag(SEARCH_PLACEHOLDER_TEST_TAG)
                             .clickable(onClick = onActivateSearch),
                     )
                 } else {
@@ -185,6 +195,7 @@ fun DryToastSearchSurface(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .testTag(SEARCH_INPUT_TEST_TAG)
                                 .focusRequester(focusRequester),
                             textStyle = inputTextStyle,
                             cursorBrush = CursorSolidBrush,
@@ -213,7 +224,7 @@ fun DryToastSearchSurface(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(if (isCompact) 2.dp else 6.dp))
 
         // Hairline Shutter Wipe (1dp rule anchors transitions)
         HorizontalDivider(
@@ -228,11 +239,18 @@ fun DryToastSearchSurface(
             enter = DryToastMotion.ResultRevealEnter,
             exit = DryToastMotion.ResultRevealExit,
         ) {
+            val quickActionsScrollState = rememberScrollState()
+            val canScrollQuickActions =
+                quickActionsScrollState.canScrollForward || quickActionsScrollState.canScrollBackward
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = 12.dp),
+                    .verticalScroll(
+                        state = quickActionsScrollState,
+                        enabled = canScrollQuickActions,
+                    )
+                    .padding(top = if (isCompact) 6.dp else 12.dp)
+                    .testTag(QUICK_ACTIONS_LIST_TEST_TAG),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 quickActions.forEach { item ->
@@ -244,6 +262,7 @@ fun DryToastSearchSurface(
                         } else {
                             null
                         },
+                        compact = isCompact,
                     )
                 }
             }
@@ -256,14 +275,14 @@ fun DryToastSearchSurface(
             exit = DryToastMotion.ResultRevealExit,
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (isCompact) 2.dp else 12.dp))
 
                 if (results.isEmpty()) {
                     Text(
                         text = stringResource(R.string.search_no_matching_apps),
                         style = emptyStateTextStyle,
                         color = SubtleGray,
-                        modifier = Modifier.padding(vertical = 12.dp),
+                        modifier = Modifier.padding(vertical = if (isCompact) 8.dp else 12.dp),
                     )
                 } else {
                     val topResultKey = results.firstOrNull()?.item?.key
@@ -284,8 +303,10 @@ fun DryToastSearchSurface(
 
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(SEARCH_RESULTS_LIST_TEST_TAG),
+                        verticalArrangement = Arrangement.spacedBy(if (isCompact) 0.dp else 4.dp),
                     ) {
                         items(
                             items = results,
@@ -300,6 +321,7 @@ fun DryToastSearchSurface(
                                 } else {
                                     null
                                 },
+                                compact = isCompact,
                                 modifier = Modifier.animateItem(
                                     fadeInSpec = DryToastMotion.opticalTween(
                                         DryToastMotion.RESULT_REVEAL_DURATION_MS,
@@ -327,6 +349,7 @@ fun SearchResultRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val baseLabelSmall = MaterialTheme.typography.labelSmall
     val badgeTextStyle = remember(baseLabelSmall) {
@@ -336,14 +359,27 @@ fun SearchResultRow(
         )
     }
 
-    Row(
-        modifier = modifier
+    val rowModifier = if (compact) {
+        modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .padding(vertical = 8.dp)
+    } else {
+        modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(vertical = 12.dp),
+            .padding(vertical = 12.dp)
+    }
+
+    Row(
+        modifier = rowModifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -381,6 +417,7 @@ fun QuickActionRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val baseLabelMedium = MaterialTheme.typography.labelMedium
     val badgeTextStyle = remember(baseLabelMedium) {
@@ -398,11 +435,12 @@ fun QuickActionRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(vertical = 14.dp),
+            .padding(vertical = if (compact) 10.dp else 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

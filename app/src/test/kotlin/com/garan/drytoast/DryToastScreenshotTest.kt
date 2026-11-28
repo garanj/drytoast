@@ -1,5 +1,6 @@
 package com.garan.drytoast
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.CompositionLocalProvider
@@ -7,11 +8,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ForcedSize
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.window.layout.FoldingFeature
+import androidx.window.testing.layout.FoldingFeature
+import androidx.window.testing.layout.TestWindowLayoutInfo
+import androidx.window.testing.layout.WindowLayoutInfoPublisherRule
 import com.garan.drytoast.core.model.AppAccessState
 import com.garan.drytoast.core.model.ComponentKey
 import com.garan.drytoast.core.model.FrictionPolicy
@@ -27,6 +32,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -38,8 +44,11 @@ import java.io.File
 @Config(sdk = [34])
 class DryToastScreenshotTest {
 
+    private val publisherRule = WindowLayoutInfoPublisherRule()
+    private val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val testRule: RuleChain = RuleChain.outerRule(publisherRule).around(composeTestRule)
 
     private fun verifyAndArchiveSnapshot(fileName: String) {
         val goldenFile = File("src/test/snapshots/$fileName")
@@ -779,5 +788,129 @@ class DryToastScreenshotTest {
             }
         }
         verifyAndArchiveSnapshot("trigger_time_picker_phone_landscape.png")
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun snapshotHomeCanvasPhoneLandscape() {
+        val activeProfiles = persistentListOf(
+            com.garan.drytoast.core.model.CustomProfile(
+                id = "deep-work",
+                name = "Deep Work",
+                priority = 0,
+                colorIndex = 0,
+            ),
+        )
+        val quickActions = persistentListOf(
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 1,
+                component = ComponentKey("com.android.camera", "CameraActivity"),
+                label = "Camera",
+                accessState = AppAccessState.Direct,
+            ),
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 2,
+                component = ComponentKey("com.google.android.gm", "ConversationListActivityGmail"),
+                label = "Gmail",
+                accessState = AppAccessState.Guarded(FrictionPolicy.TypedIntention),
+            ),
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 3,
+                component = ComponentKey("com.google.android.apps.maps", "MapsActivity"),
+                label = "Maps",
+                accessState = AppAccessState.Direct,
+            ),
+        )
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeCanvas(
+                    timeText = "10:09",
+                    dateText = "Monday, November 2",
+                    statusText = "REST 48M  ·  2 UNLOCKS",
+                    activeProfiles = activeProfiles,
+                    contentTopSpacing = 24.dp,
+                ) {
+                    DryToastSearchSurface(
+                        query = "",
+                        onQueryChange = {},
+                        results = persistentListOf(),
+                        onItemClick = {},
+                        quickActions = quickActions,
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("home_canvas_phone_landscape.png")
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w680dp-h840dp-mdpi")
+    fun snapshotHomeSearchFoldableTabletop() {
+        val cameraKey = ComponentKey("com.android.camera", "com.android.camera.CameraActivity", 0L)
+        val calcKey = ComponentKey("com.android.calculator", "com.android.calculator.CalcActivity", 0L)
+        val socialKey = ComponentKey("com.example.social", "com.example.social.MainActivity", 0L)
+        val activeProfiles = persistentListOf(
+            com.garan.drytoast.core.model.CustomProfile(
+                id = "deep-work",
+                name = "Deep Work",
+                priority = 0,
+                colorIndex = 0,
+            ),
+        )
+        val results = persistentListOf(
+            SearchResult(
+                item = SearchItem.App(cameraKey, "Camera", AppAccessState.Direct),
+                score = 100,
+                matchType = MatchType.PREFIX,
+            ),
+            SearchResult(
+                item = SearchItem.App(calcKey, "Calculator", AppAccessState.Direct),
+                score = 85,
+                matchType = MatchType.PREFIX,
+            ),
+            SearchResult(
+                item = SearchItem.App(
+                    component = socialKey,
+                    label = "Social Feed",
+                    accessState = AppAccessState.Guarded(FrictionPolicy.TimedDelay(10)),
+                ),
+                score = 70,
+                matchType = MatchType.SUBSTRING,
+            ),
+        )
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeCanvas(
+                    timeText = "10:09",
+                    dateText = "Monday, November 2",
+                    statusText = "REST 48M  ·  2 UNLOCKS",
+                    activeProfiles = activeProfiles,
+                    showDialerIcon = false,
+                    contentTopSpacing = 24.dp,
+                ) {
+                    DryToastSearchSurface(
+                        query = "ca",
+                        onQueryChange = {},
+                        results = results,
+                        onItemClick = {},
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val horizontalHinge = FoldingFeature(
+            activity = composeTestRule.activity,
+            center = 420,
+            size = 20,
+            state = FoldingFeature.State.HALF_OPENED,
+            orientation = FoldingFeature.Orientation.HORIZONTAL,
+        )
+        publisherRule.overrideWindowLayoutInfo(TestWindowLayoutInfo(listOf(horizontalHinge)))
+        composeTestRule.waitForIdle()
+
+        verifyAndArchiveSnapshot("home_search_foldable_tabletop.png")
     }
 }

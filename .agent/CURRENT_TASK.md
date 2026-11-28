@@ -1,10 +1,10 @@
 # Current Task
 
-- **Issue:** [#215](https://github.com/garanj/drytoast/issues/215) — `fix(ui): use compact TimeInput in TriggerEditorSheet on short viewports so dialog actions never clip`
-- **Branch:** `fix/215-adaptive-trigger-time-input`
+- **Issue:** [#216](https://github.com/garanj/drytoast/issues/216) — `feat(home): adapt Home canvas and Search surface to compact heights, landscape IME, and tabletop posture`
+- **Branch:** `feat/216-home-search-compact-height-tabletop`
 - **Status:** Ready for Review
 
 ## Checklist
-- [x] TDD Red: Added landscape (`w891dp-h390dp-land`) compact `TimeInput` & visible-action bounds test and portrait (`w411dp-h891dp`) dial-to-keyboard mode toggle test in `ProfilesScreenTest`.
-- [x] TDD Green: Added `DryToastIcons.Keyboard` vector icon, defaulted `DryToastTimeInputDialog` (`TriggerEditorSheet.kt`) to `TimeInput` when `screenHeightDp < 500`, added dial/keyboard mode toggle `IconButton` on taller viewports, wrapped dialog content in `verticalScroll` safety, and recorded `trigger_time_picker_phone_landscape.png` Roborazzi golden.
-- [x] Verified `./gradlew spotlessCheck --no-daemon`, `./gradlew test`, `:app:compileReleaseKotlin`, and zero `android.*` imports in `:core`.
+- [x] TDD Red: Added landscape compact-height (7 Quick Actions scroll + active Search with IME) and horizontal `HALF_OPENED` Tabletop `FoldingFeature` tests in `DryToastHomeScreenTest`.
+- [x] TDD Green: Implemented compact single-row instrument header, Tabletop two-zone crease-safe layout, and compact Search vertical rhythm across `DryToastHomeCanvas`, `DryToastHomeScreen`, and `DryToastSearchSurface`; recorded `home_canvas_phone_landscape.png` and `home_search_foldable_tabletop.png` Roborazzi goldens; added `DryToastSearchRotationInstrumentedTest` (`androidTest`).
+- [x] Verified `./gradlew spotlessCheck --no-daemon`, `./gradlew test`, `:app:compileReleaseKotlin`, `:app:compileDebugAndroidTestKotlin`, and zero `android.*` imports in `:core`.
