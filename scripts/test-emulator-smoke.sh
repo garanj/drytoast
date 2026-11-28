@@ -107,11 +107,21 @@ fi
 echo "    SUCCESS: Phone memory consumption within strict budget (${PHONE_PSS} KB <= ${CEILING_KB} KB)."
 
 # 7. Memory Ceiling Check on Tablet 2560x1600 @ 320dpi (1280x800dp EXPANDED) Viewport
-echo "==> Step 7: Resizing to 2560x1600 @ 320dpi tablet viewport and asserting TOTAL PSS (< ${CEILING_KB} KB)..."
+echo "==> Step 7: Cold-starting on 2560x1600 @ 320dpi tablet viewport and asserting TOTAL PSS (< ${CEILING_KB} KB)..."
+adb shell am force-stop "$PACKAGE_NAME"
 adb shell wm size 2560x1600
 adb shell wm density 320
+sleep 1
+adb shell cmd role add-role-holder android.app.role.HOME "$PACKAGE_NAME" >/dev/null 2>&1 || true
 adb shell input keyevent KEYCODE_HOME
-sleep 2
+sleep 3
+
+TABLET_FOCUS=$(adb shell dumpsys window 2>/dev/null | (grep -E "mCurrentFocus|mFocusedApp" || true))
+echo "    Tablet Current Focus: $TABLET_FOCUS"
+if [[ "$TABLET_FOCUS" != *"$PACKAGE_NAME"* ]]; then
+    echo "ERROR: Dry Toast was not brought to the foreground on 2560x1600 tablet viewport!" >&2
+    exit 1
+fi
 
 APP_PID=$(adb shell pidof "$PACKAGE_NAME" 2>/dev/null | tr -d '\r' || true)
 if [ -n "$APP_PID" ]; then
