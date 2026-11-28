@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -68,6 +70,9 @@ import kotlinx.coroutines.launch
 
 object OnboardingTestTags {
     const val ROOT = "onboarding_root"
+    const val HEADER_CONTAINER = "onboarding_header_container"
+    const val FOOTER_CONTAINER = "onboarding_footer_container"
+    const val PAGE_CONTENT = "onboarding_page_content"
     const val PAGER = "onboarding_pager"
     const val STEP_INDICATOR = "onboarding_step_indicator"
     const val BACK_BUTTON = "onboarding_back_button"
@@ -83,6 +88,7 @@ object OnboardingTestTags {
 }
 
 internal const val ONBOARDING_PAGE_COUNT = 6
+private val ONBOARDING_MAX_WIDTH = 600.dp
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -122,6 +128,8 @@ fun OnboardingScreen(
         }
     }
 
+    val isCompactHeight = LocalConfiguration.current.screenHeightDp < 440
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -129,20 +137,29 @@ fun OnboardingScreen(
             .testTag(OnboardingTestTags.ROOT),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
                     .statusBarsPadding(),
+                contentAlignment = Alignment.Center,
             ) {
-                OnboardingHeaderBar(
-                    currentPage = pagerState.currentPage,
-                    totalPages = ONBOARDING_PAGE_COUNT,
-                )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp,
-                )
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = ONBOARDING_MAX_WIDTH)
+                        .fillMaxWidth()
+                        .testTag(OnboardingTestTags.HEADER_CONTAINER),
+                ) {
+                    OnboardingHeaderBar(
+                        currentPage = pagerState.currentPage,
+                        totalPages = ONBOARDING_PAGE_COUNT,
+                        compact = isCompactHeight,
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp,
+                    )
+                }
             }
         },
         bottomBar = {
@@ -150,6 +167,7 @@ fun OnboardingScreen(
                 currentPage = pagerState.currentPage,
                 totalPages = ONBOARDING_PAGE_COUNT,
                 isDefaultLauncher = isDefaultLauncher,
+                compact = isCompactHeight,
                 onPreviousPage = {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(
@@ -220,58 +238,67 @@ private fun OnboardingBottomBar(
     onRequestDefaultLauncher: () -> Unit,
     onCompleteOnboarding: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding(),
+        contentAlignment = Alignment.Center,
     ) {
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
-            thickness = 1.dp,
-        )
-        Row(
+        Column(
             modifier = Modifier
+                .widthIn(max = ONBOARDING_MAX_WIDTH)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .testTag(OnboardingTestTags.FOOTER_CONTAINER),
         ) {
-            if (currentPage > 0) {
-                OutlinedButton(
-                    onClick = onPreviousPage,
-                    shape = RoundedCornerShape(2.dp),
-                    modifier = Modifier.testTag(OnboardingTestTags.BACK_BUTTON),
-                ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_back),
-                        style = MaterialTheme.typography.labelLarge,
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = if (compact) 10.dp else 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (currentPage > 0) {
+                    OutlinedButton(
+                        onClick = onPreviousPage,
+                        shape = RoundedCornerShape(2.dp),
+                        modifier = Modifier.testTag(OnboardingTestTags.BACK_BUTTON),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.onboarding_back),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
+                }
+
+                if (currentPage < totalPages - 1) {
+                    OnboardingPrimaryButton(
+                        text = stringResource(R.string.onboarding_next),
+                        testTag = OnboardingTestTags.NEXT_BUTTON,
+                        onClick = onNextPage,
+                    )
+                } else if (isDefaultLauncher) {
+                    OnboardingPrimaryButton(
+                        text = stringResource(R.string.onboarding_enter_drytoast),
+                        testTag = OnboardingTestTags.FINISH_BUTTON,
+                        onClick = onCompleteOnboarding,
+                    )
+                } else {
+                    OnboardingPrimaryButton(
+                        text = stringResource(R.string.onboarding_set_default_launcher),
+                        testTag = OnboardingTestTags.SET_DEFAULT_LAUNCHER_BUTTON,
+                        onClick = onRequestDefaultLauncher,
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-            } else {
-                Spacer(modifier = Modifier.width(1.dp))
-            }
-
-            if (currentPage < totalPages - 1) {
-                OnboardingPrimaryButton(
-                    text = stringResource(R.string.onboarding_next),
-                    testTag = OnboardingTestTags.NEXT_BUTTON,
-                    onClick = onNextPage,
-                )
-            } else if (isDefaultLauncher) {
-                OnboardingPrimaryButton(
-                    text = stringResource(R.string.onboarding_enter_drytoast),
-                    testTag = OnboardingTestTags.FINISH_BUTTON,
-                    onClick = onCompleteOnboarding,
-                )
-            } else {
-                OnboardingPrimaryButton(
-                    text = stringResource(R.string.onboarding_set_default_launcher),
-                    testTag = OnboardingTestTags.SET_DEFAULT_LAUNCHER_BUTTON,
-                    onClick = onRequestDefaultLauncher,
-                )
             }
         }
     }
@@ -303,12 +330,17 @@ private fun OnboardingPrimaryButton(
 }
 
 @Composable
-private fun OnboardingHeaderBar(currentPage: Int, totalPages: Int, modifier: Modifier = Modifier) {
+private fun OnboardingHeaderBar(
+    currentPage: Int,
+    totalPages: Int,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
     val stepText = stringResource(R.string.onboarding_step_indicator_format, currentPage + 1, totalPages)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 24.dp, vertical = if (compact) 10.dp else 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -714,39 +746,47 @@ private fun OnboardingPageContainer(
     scrollEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState(), enabled = scrollEnabled)
-            .padding(horizontal = 24.dp, vertical = 24.dp),
+    val isCompactHeight = LocalConfiguration.current.screenHeightDp < 440
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Text(
-            text = eyebrow,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = 1.5.sp,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = body,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        content()
+        Column(
+            modifier = Modifier
+                .widthIn(max = ONBOARDING_MAX_WIDTH)
+                .fillMaxSize()
+                .testTag(OnboardingTestTags.PAGE_CONTENT)
+                .verticalScroll(rememberScrollState(), enabled = scrollEnabled)
+                .padding(horizontal = 24.dp, vertical = if (isCompactHeight) 16.dp else 24.dp),
+        ) {
+            Text(
+                text = eyebrow,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.5.sp,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(if (isCompactHeight) 12.dp else 16.dp))
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(if (isCompactHeight) 16.dp else 24.dp))
+            content()
+        }
     }
 }
 

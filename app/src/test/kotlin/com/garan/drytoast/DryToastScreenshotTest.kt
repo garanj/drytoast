@@ -913,4 +913,90 @@ class DryToastScreenshotTest {
 
         verifyAndArchiveSnapshot("home_search_foldable_tabletop.png")
     }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun snapshotHomeCanvasTabletExpanded() {
+        val activeProfiles = persistentListOf(
+            com.garan.drytoast.core.model.CustomProfile(
+                id = "deep-work",
+                name = "Deep Work",
+                priority = 0,
+                colorIndex = 0,
+            ),
+        )
+        val quickActions = persistentListOf(
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 1,
+                component = ComponentKey("com.android.camera", "CameraActivity"),
+                label = "Camera",
+                accessState = AppAccessState.Direct,
+            ),
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 2,
+                component = ComponentKey("com.google.android.gm", "ConversationListActivityGmail"),
+                label = "Gmail",
+                accessState = AppAccessState.Guarded(FrictionPolicy.TypedIntention),
+            ),
+            com.garan.drytoast.ui.search.QuickActionUiItem(
+                slotNumber = 3,
+                component = ComponentKey("com.google.android.apps.maps", "MapsActivity"),
+                label = "Maps",
+                accessState = AppAccessState.Direct,
+            ),
+        )
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                DryToastHomeCanvas(
+                    timeText = "10:09",
+                    dateText = "Monday, November 2",
+                    statusText = "REST 48M  ·  2 UNLOCKS",
+                    activeProfiles = activeProfiles,
+                    contentTopSpacing = 24.dp,
+                ) {
+                    DryToastSearchSurface(
+                        query = "",
+                        onQueryChange = {},
+                        results = persistentListOf(),
+                        onItemClick = {},
+                        quickActions = quickActions,
+                    )
+                }
+            }
+        }
+        verifyAndArchiveSnapshot("home_canvas_tablet_expanded.png")
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun snapshotOnboardingTabletExpanded() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                OnboardingScreen(
+                    isDefaultLauncher = false,
+                    onRequestDefaultLauncher = {},
+                    onCompleteOnboarding = {},
+                    initialPage = 0,
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("onboarding_tablet_expanded.png")
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w1280dp-h800dp-mdpi")
+    fun snapshotSettingsLockTabletExpanded() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                com.garan.drytoast.ui.settings.SettingsLockScreen(
+                    isSettingsLocked = true,
+                    onConfirmSetSettingsLocked = {},
+                    onCancel = {},
+                    initialChallenge = "815",
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("settings_lock_tablet_expanded.png")
+    }
 }
