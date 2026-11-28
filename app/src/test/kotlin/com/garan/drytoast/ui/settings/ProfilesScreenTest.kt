@@ -847,4 +847,96 @@ class ProfilesScreenTest {
             .onNodeWithTag(ProfilesTestTags.triggerEditorNfcTagLabel("04:A2:3F:8B"))
             .assertIsDisplayed()
     }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun triggerEditorSheet_inLandscapeShortViewport_opensCompactTimeInputWithVisibleActionsAndCommits() {
+        var savedTriggerResult: ProfileTrigger? = null
+
+        composeTestRule.setContent {
+            DryToastTheme {
+                TriggerEditorSheet(
+                    initialName = "Morning Focus",
+                    initialTrigger = ProfileTrigger.Schedule(
+                        ScheduleTrigger(
+                            days = setOf(DayOfWeek.MONDAY),
+                            startTime = TimeOfDay(8, 30),
+                            endTime = TimeOfDay(17, 0),
+                        ),
+                    ),
+                    isNewTrigger = false,
+                    onSaveTrigger = { _, trigger -> savedTriggerResult = trigger },
+                    onDismiss = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Start time").performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        // Short landscape viewport (< 500dp height) must default to compact TimeInput, not the oversized clock dial
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_INPUT).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_DIAL).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_MODE_TOGGLE).assertDoesNotExist()
+
+        // Both OK and Cancel buttons must be unclipped and displayed inside the 390dp landscape window
+        val confirmNode = composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_CONFIRM_BUTTON)
+            .assertIsDisplayed()
+        val cancelNode = composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_CANCEL_BUTTON)
+            .assertIsDisplayed()
+        assertThat(confirmNode.fetchSemanticsNode().boundsInRoot.bottom).isAtMost(390f + 0.5f)
+        assertThat(cancelNode.fetchSemanticsNode().boundsInRoot.bottom).isAtMost(390f + 0.5f)
+
+        confirmNode.performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TRIGGER_EDITOR_SAVE_BUTTON)
+            .performSemanticsAction(SemanticsActions.OnClick)
+        val savedSchedule = (savedTriggerResult as? ProfileTrigger.Schedule)?.schedule
+        assertThat(savedSchedule?.startTime).isEqualTo(TimeOfDay(8, 30))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w411dp-h891dp-mdpi")
+    fun triggerEditorSheet_inPortraitViewport_defaultsToClockDialAndTogglesToTimeInput() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                TriggerEditorSheet(
+                    initialName = "Work Hours",
+                    initialTrigger = ProfileTrigger.Schedule(
+                        ScheduleTrigger(
+                            days = setOf(DayOfWeek.MONDAY),
+                            startTime = TimeOfDay(9, 0),
+                            endTime = TimeOfDay(17, 0),
+                        ),
+                    ),
+                    isNewTrigger = false,
+                    onSaveTrigger = { _, _ -> },
+                    onDismiss = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Start time").performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        // Tall portrait viewport (>= 500dp height) defaults to TimePicker clock dial with mode toggle
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_DIAL).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_INPUT).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_CONFIRM_BUTTON).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_CANCEL_BUTTON).assertIsDisplayed()
+
+        // Toggle to compact keyboard TimeInput
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_MODE_TOGGLE).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_INPUT).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_DIAL).assertDoesNotExist()
+
+        // Toggle back to clock dial
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_MODE_TOGGLE).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(ProfilesTestTags.TIME_PICKER_DIAL).assertIsDisplayed()
+    }
 }

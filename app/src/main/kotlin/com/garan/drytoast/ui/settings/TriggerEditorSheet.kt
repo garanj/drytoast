@@ -1,6 +1,7 @@
 package com.garan.drytoast.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -26,6 +28,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
@@ -35,14 +38,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.garan.drytoast.R
 import com.garan.drytoast.core.model.CoordinateParseResult
 import com.garan.drytoast.core.model.DayOfWeek
 import com.garan.drytoast.core.model.GeoCoordinateParser
@@ -633,9 +643,9 @@ fun ProfileEditorSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun DryToastTimeInputDialog(
+internal fun DryToastTimeInputDialog(
     title: String,
     initialHour: Int,
     initialMinute: Int,
@@ -647,20 +657,74 @@ private fun DryToastTimeInputDialog(
         initialMinute = initialMinute,
         is24Hour = true,
     )
+    val isShortViewport = LocalConfiguration.current.screenHeightDp < 500
+    var preferDial by rememberSaveable { mutableStateOf(true) }
+    val showDial = preferDial && !isShortViewport
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = MaterialTheme.typography.titleMedium) },
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                if (!isShortViewport) {
+                    IconButton(
+                        onClick = { preferDial = !preferDial },
+                        modifier = Modifier.testTag(ProfilesTestTags.TIME_PICKER_MODE_TOGGLE),
+                    ) {
+                        Icon(
+                            imageVector = if (showDial) DryToastIcons.Keyboard else DryToastIcons.Schedule,
+                            contentDescription = stringResource(
+                                if (showDial) {
+                                    R.string.cd_time_picker_switch_to_input
+                                } else {
+                                    R.string.cd_time_picker_switch_to_dial
+                                },
+                            ),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        },
         text = {
-            TimePicker(state = state)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (showDial) {
+                    Box(modifier = Modifier.testTag(ProfilesTestTags.TIME_PICKER_DIAL)) {
+                        TimePicker(state = state)
+                    }
+                } else {
+                    Box(modifier = Modifier.testTag(ProfilesTestTags.TIME_PICKER_INPUT)) {
+                        TimeInput(state = state)
+                    }
+                }
+            }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
+            TextButton(
+                onClick = { onConfirm(state.hour, state.minute) },
+                modifier = Modifier.testTag(ProfilesTestTags.TIME_PICKER_CONFIRM_BUTTON),
+            ) {
                 Text("OK", fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag(ProfilesTestTags.TIME_PICKER_CANCEL_BUTTON),
+            ) {
                 Text("Cancel")
             }
         },

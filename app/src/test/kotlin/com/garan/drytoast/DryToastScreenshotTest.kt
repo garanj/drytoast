@@ -763,4 +763,21 @@ class DryToastScreenshotTest {
         }
         verifyAndArchiveSnapshot("settings_lock_split_screen_blocked.png")
     }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h390dp-land-mdpi")
+    fun snapshotTriggerTimePickerPhoneLandscape() {
+        composeTestRule.setContent {
+            DryToastTheme {
+                com.garan.drytoast.ui.settings.DryToastTimeInputDialog(
+                    title = "Start time",
+                    initialHour = 8,
+                    initialMinute = 30,
+                    onConfirm = { _, _ -> },
+                    onDismiss = {},
+                )
+            }
+        }
+        verifyAndArchiveSnapshot("trigger_time_picker_phone_landscape.png")
+    }
 }
